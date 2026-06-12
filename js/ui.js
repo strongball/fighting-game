@@ -27,7 +27,9 @@ export function createUI() {
       card.className = 'char-card';
       card.dataset.id = c.id;
       card.innerHTML = `
-        <div class="char-badge" style="background:${c.color}">${shapeIcon(c.shape)}</div>
+        <div class="char-art" style="--char-color:${c.color}">
+          ${c.sprite ? `<img src="${c.sprite}" alt="" loading="lazy" />` : `<span>${shapeIcon(c.shape)}</span>`}
+        </div>
         <div class="char-name">${c.name}</div>
         <div class="char-stat">HP ${c.maxHp} · MP ${c.maxMana}</div>
         <div class="char-desc">${c.desc}</div>

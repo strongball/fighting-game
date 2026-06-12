@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Berserker">
+  <defs>
+    <radialGradient id="aura" cx="50%" cy="44%" r="66%">
+      <stop offset="0" stop-color="#ffb0a7" stop-opacity=".62"/>
+      <stop offset=".46" stop-color="#922b21" stop-opacity=".34"/>
+      <stop offset="1" stop-color="#0b1118" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rage" x1="30" x2="98" y1="18" y2="112">
+      <stop stop-color="#ff7a66"/>
+      <stop offset=".44" stop-color="#9f251e"/>
+      <stop offset="1" stop-color="#3d080a"/>
+    </linearGradient>
+    <linearGradient id="axe" x1="17" x2="110" y1="20" y2="108">
+      <stop stop-color="#f7fbff"/>
+      <stop offset=".48" stop-color="#9aa5ae"/>
+      <stop offset="1" stop-color="#50565f"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="5" flood-color="#000" flood-opacity=".48"/>
+    </filter>
+  </defs>
+  <ellipse cx="64" cy="73" rx="50" ry="45" fill="url(#aura)"/>
+  <g filter="url(#shadow)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M45 35c-17-19-27-19-31 0 14-7 21-3 26 11zM83 35c17-19 27-19 31 0-14-7-21-3-26 11z" fill="#d6c09a" stroke="#3a1e14" stroke-width="4"/>
+    <path d="M64 14l34 31-12 58-22 15-22-15-12-58z" fill="url(#rage)" stroke="#260607" stroke-width="4"/>
+    <path d="M45 50h38l-8 15H53z" fill="#341015" stroke="#ff9a85" stroke-width="3"/>
+    <path d="M22 98l30-38M16 83c10-13 24-14 35-5-10 12-23 15-35 5z" fill="url(#axe)" stroke="#181d22" stroke-width="3"/>
+    <path d="M106 98L76 60M112 83c-10-13-24-14-35-5 10 12 23 15 35 5z" fill="url(#axe)" stroke="#181d22" stroke-width="3"/>
+    <path d="M45 82l19 18 19-18M54 61h20M64 72v34" stroke="#ffb0a7" stroke-width="4" stroke-opacity=".62"/>
+    <circle cx="55" cy="59" r="3" fill="#ffd166"/>
+    <circle cx="73" cy="59" r="3" fill="#ffd166"/>
+  </g>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Assassin">
+  <defs>
+    <radialGradient id="aura" cx="50%" cy="45%" r="64%">
+      <stop offset="0" stop-color="#f0d3ff" stop-opacity=".58"/>
+      <stop offset=".44" stop-color="#9b59b6" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#0b1118" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cloak" x1="30" x2="98" y1="14" y2="113">
+      <stop stop-color="#d7a5f5"/>
+      <stop offset=".4" stop-color="#7b3298"/>
+      <stop offset="1" stop-color="#25103f"/>
+    </linearGradient>
+    <linearGradient id="blade" x1="22" x2="105" y1="24" y2="104">
+      <stop stop-color="#ffffff"/>
+      <stop offset=".5" stop-color="#bbc6d5"/>
+      <stop offset="1" stop-color="#5a6474"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000" flood-opacity=".45"/>
+    </filter>
+  </defs>
+  <ellipse cx="64" cy="72" rx="48" ry="44" fill="url(#aura)"/>
+  <g filter="url(#shadow)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M64 10l33 31-14 76-19-11-19 11-14-76z" fill="url(#cloak)" stroke="#160b24" stroke-width="4"/>
+    <path d="M42 43l22-22 22 22-9 14H51z" fill="#2a123c" stroke="#a970c8" stroke-width="3"/>
+    <path d="M50 58h28l-8 10H58z" fill="#e8dbff"/>
+    <path d="M22 100l28-43 8 8-22 46zM106 100L78 57l-8 8 22 46z" fill="url(#blade)" stroke="#151b24" stroke-width="3"/>
+    <path d="M43 86l21 15 21-15" fill="none" stroke="#cf8fff" stroke-width="4" stroke-opacity=".65"/>
+    <path d="M56 76h16M64 67v38" stroke="#230b33" stroke-width="4"/>
+    <circle cx="55" cy="58" r="2.5" fill="#ffebff"/>
+    <circle cx="73" cy="58" r="2.5" fill="#ffebff"/>
+  </g>
+</svg>

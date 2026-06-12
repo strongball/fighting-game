@@ -18,7 +18,7 @@
 
 export const CHARACTERS = [
   {
-    id: 0, name: '戰士', color: '#e74c3c', shape: 'square',
+    id: 0, name: '戰士', color: '#e74c3c', shape: 'square', sprite: 'assets/characters/warrior.svg',
     maxHp: 150, maxMana: 50, speed: 175,
     desc: '高血量近戰，衝鋒接戰吼。強：肉與爆發；弱：沒有遠程手段。',
     basic: { name: '揮砍', type: 'melee', dmg: 14, range: 72, arc: 1.3, knockback: 180, cd: 0.5, color: '#ff6b5b' },
@@ -26,7 +26,7 @@ export const CHARACTERS = [
     skill2: { name: '戰吼', type: 'buff', shield: 45, effect: { kind: 'haste', duration: 5, factor: 1.25 }, duration: 5, manaCost: 20, cd: 11, color: '#ffd166' },
   },
   {
-    id: 1, name: '法師', color: '#3498db', shape: 'circle',
+    id: 1, name: '法師', color: '#3498db', shape: 'circle', sprite: 'assets/characters/mage.svg',
     maxHp: 80, maxMana: 150, speed: 160,
     desc: '遠程與範圍法術壓制。強：遠程 AoE；弱：血量薄。',
     basic: { name: '火球', type: 'projectile', dmg: 11, speed: 430, radius: 9, lifetime: 1.3, knockback: 60, cd: 0.55, color: '#ff9f43' },
@@ -34,7 +34,7 @@ export const CHARACTERS = [
     skill2: { name: '閃電鏈', type: 'projectile', dmg: 34, speed: 760, radius: 8, lifetime: 0.85, pierce: true, knockback: 40, manaCost: 40, cd: 7, color: '#b388ff' },
   },
   {
-    id: 2, name: '刺客', color: '#9b59b6', shape: 'triangle',
+    id: 2, name: '刺客', color: '#9b59b6', shape: 'triangle', sprite: 'assets/characters/assassin.svg',
     maxHp: 90, maxMana: 80, speed: 240,
     desc: '高機動瞬間爆發。強：突進與爆發；弱：容錯極低。',
     basic: { name: '快刀', type: 'melee', dmg: 12, range: 56, arc: 0.95, knockback: 70, cd: 0.34, color: '#c39bd3' },
@@ -42,7 +42,7 @@ export const CHARACTERS = [
     skill2: { name: '背刺爆發', type: 'melee', dmg: 42, range: 62, arc: 1.5, knockback: 120, manaCost: 35, cd: 7, color: '#e056fd' },
   },
   {
-    id: 3, name: '坦克', color: '#7f8c8d', shape: 'square',
+    id: 3, name: '坦克', color: '#7f8c8d', shape: 'square', sprite: 'assets/characters/tank.svg',
     maxHp: 220, maxMana: 70, speed: 125,
     desc: '超高血量與控場。強：肉盾與暈眩；弱：移動慢、輸出低。',
     basic: { name: '重拳', type: 'melee', dmg: 11, range: 76, arc: 1.0, knockback: 280, cd: 0.62, color: '#aab7b8' },
@@ -50,7 +50,7 @@ export const CHARACTERS = [
     skill2: { name: '震地', type: 'zone', range: 0, radius: 155, dmg: 18, lifetime: 0.4, tick: 0.4, effect: { kind: 'stun', duration: 1.2 }, manaCost: 40, cd: 12, color: '#a0744a' },
   },
   {
-    id: 4, name: '弓箭手', color: '#27ae60', shape: 'circle',
+    id: 4, name: '弓箭手', color: '#27ae60', shape: 'circle', sprite: 'assets/characters/archer.svg',
     maxHp: 100, maxMana: 90, speed: 188,
     desc: '穩定遠程輸出。強：遠程射擊與走位；弱：近身弱勢。',
     basic: { name: '射箭', type: 'projectile', dmg: 13, speed: 580, radius: 6, lifetime: 1.4, knockback: 60, cd: 0.5, color: '#2ecc71' },
@@ -58,7 +58,7 @@ export const CHARACTERS = [
     skill2: { name: '後撤陷阱', type: 'zone', range: 0, radius: 95, dmg: 6, lifetime: 4, tick: 0.6, effect: { kind: 'slow', duration: 1.3, factor: 0.4 }, recoil: 560, manaCost: 30, cd: 8, color: '#1abc9c' },
   },
   {
-    id: 5, name: '治療師', color: '#ecf0f1', shape: 'circle',
+    id: 5, name: '治療師', color: '#ecf0f1', shape: 'circle', sprite: 'assets/characters/healer.svg',
     maxHp: 110, maxMana: 130, speed: 170,
     desc: '高續航自我支援。強：耐久與自療；弱：輸出低。',
     basic: { name: '聖光彈', type: 'projectile', dmg: 8, speed: 390, radius: 8, lifetime: 1.2, knockback: 50, cd: 0.6, color: '#f1c40f' },
@@ -66,7 +66,7 @@ export const CHARACTERS = [
     skill2: { name: '淨化加速', type: 'buff', heal: 20, cleanse: true, effect: { kind: 'haste', duration: 5, factor: 1.5 }, duration: 5, manaCost: 35, cd: 10, color: '#55efc4' },
   },
   {
-    id: 6, name: '狂戰士', color: '#922b21', shape: 'square',
+    id: 6, name: '狂戰士', color: '#922b21', shape: 'square', sprite: 'assets/characters/berserker.svg',
     maxHp: 140, maxMana: 60, speed: 152,
     desc: '殘血越戰越猛。強：低血暴傷與血怒；弱：高風險、無遠程。',
     basic: { name: '雙斧', type: 'melee', dmg: 13, range: 66, arc: 1.15, knockback: 120, cd: 0.46, lowHpBonus: true, color: '#cd6155' },
@@ -74,7 +74,7 @@ export const CHARACTERS = [
     skill2: { name: '旋風斬', type: 'melee', dmg: 22, range: 96, arc: 7, knockback: 160, manaCost: 30, cd: 7, color: '#ec7063' },
   },
   {
-    id: 7, name: '忍者', color: '#2c3e50', shape: 'triangle',
+    id: 7, name: '忍者', color: '#2c3e50', shape: 'triangle', sprite: 'assets/characters/ninja.svg',
     maxHp: 95, maxMana: 90, speed: 235,
     desc: '隱身與瞬移難以捉摸。強：高機動與脫戰；弱：血量低。',
     basic: { name: '飛鏢', type: 'projectile', dmg: 10, speed: 620, radius: 5, lifetime: 1.0, knockback: 30, cd: 0.4, color: '#95a5a6' },
@@ -82,7 +82,7 @@ export const CHARACTERS = [
     skill2: { name: '影分身瞬移', type: 'blink', range: 300, manaCost: 30, cd: 5, color: '#636e72' },
   },
   {
-    id: 8, name: '元素使', color: '#e67e22', shape: 'circle',
+    id: 8, name: '元素使', color: '#e67e22', shape: 'circle', sprite: 'assets/characters/elementalist.svg',
     maxHp: 105, maxMana: 140, speed: 160,
     desc: '地面範圍壓制。強：持續範圍傷害；弱：技能前搖明顯。',
     basic: { name: '火花', type: 'melee', dmg: 9, range: 92, arc: 0.8, knockback: 40, cd: 0.4, color: '#f39c12' },
@@ -90,7 +90,7 @@ export const CHARACTERS = [
     skill2: { name: '隕石', type: 'zone', range: 170, radius: 135, dmg: 55, lifetime: 0.4, tick: 0.4, delay: 1.2, manaCost: 50, cd: 10, color: '#c0392b' },
   },
   {
-    id: 9, name: '格鬥家', color: '#f1c40f', shape: 'circle',
+    id: 9, name: '格鬥家', color: '#f1c40f', shape: 'circle', sprite: 'assets/characters/fighter.svg',
     maxHp: 130, maxMana: 70, speed: 196,
     desc: '均衡近戰連段。強：穩定連段與擊飛；弱：缺乏遠程。',
     basic: { name: '連環拳', type: 'melee', dmg: 10, range: 56, arc: 1.0, knockback: 90, cd: 0.3, color: '#f7dc6f' },

@@ -13,6 +13,7 @@ export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
+  const spriteCache = new Map();
 
   function drawShape(shape, cx, cy, r) {
     ctx.beginPath();
@@ -82,6 +83,7 @@ export function createRenderer(canvas) {
     const bx = sx(p.x), by = sy(p.y);
     const topY = by - BODY_HEIGHT;
     const r = PLAYER_RADIUS;
+    const sprite = getSprite(c.sprite);
 
     drawShadow(p.x, p.y, r);
 
@@ -89,32 +91,49 @@ export function createRenderer(canvas) {
     const invis = p.effects && p.effects.invis;
     ctx.globalAlpha = invis ? (isSelf ? 0.5 : 0.22) : 1;
 
-    // 連接腳底與身體的柱體
-    ctx.fillStyle = shade(c.color, -25);
-    ctx.fillRect(bx - r, topY, r * 2, BODY_HEIGHT);
+    if (sprite) {
+      const size = r * 4.15;
+      ctx.save();
+      ctx.translate(bx, topY);
+      ctx.rotate(p.facing + Math.PI / 2);
+      ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+      ctx.restore();
 
-    // 身體頂部形狀
-    ctx.fillStyle = c.color;
-    ctx.strokeStyle = isSelf ? '#ffffff' : 'rgba(0,0,0,0.45)';
-    ctx.lineWidth = isSelf ? 3 : 2;
-    drawShape(c.shape, bx, topY, r);
-    ctx.fill();
-    ctx.stroke();
+      if (isSelf) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(bx, topY, r + 19, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else {
+      // 連接腳底與身體的柱體
+      ctx.fillStyle = shade(c.color, -25);
+      ctx.fillRect(bx - r, topY, r * 2, BODY_HEIGHT);
 
-    // 面向指示
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(bx, topY);
-    ctx.lineTo(bx + Math.cos(p.facing) * (r + 8), topY + Math.sin(p.facing) * (r + 8));
-    ctx.stroke();
+      // 身體頂部形狀
+      ctx.fillStyle = c.color;
+      ctx.strokeStyle = isSelf ? '#ffffff' : 'rgba(0,0,0,0.45)';
+      ctx.lineWidth = isSelf ? 3 : 2;
+      drawShape(c.shape, bx, topY, r);
+      ctx.fill();
+      ctx.stroke();
+
+      // 面向指示
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(bx, topY);
+      ctx.lineTo(bx + Math.cos(p.facing) * (r + 8), topY + Math.sin(p.facing) * (r + 8));
+      ctx.stroke();
+    }
 
     // 護盾圈
     if (p.shield > 0) {
       ctx.strokeStyle = 'rgba(120,220,255,0.85)';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(bx, topY, r + 6, 0, Math.PI * 2);
+      ctx.arc(bx, topY, r + (sprite ? 20 : 6), 0, Math.PI * 2);
       ctx.stroke();
     }
     // 狂暴光環
@@ -122,7 +141,7 @@ export function createRenderer(canvas) {
       ctx.strokeStyle = 'rgba(255,70,70,0.8)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(bx, topY, r + 10, 0, Math.PI * 2);
+      ctx.arc(bx, topY, r + (sprite ? 24 : 10), 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
@@ -270,6 +289,18 @@ export function createRenderer(canvas) {
   }
 
   return { render, ctx };
+
+  function getSprite(src) {
+    if (!src) return null;
+    let img = spriteCache.get(src);
+    if (!img) {
+      img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+      spriteCache.set(src, img);
+    }
+    return img.complete && img.naturalWidth > 0 ? img : null;
+  }
 }
 
 // ---- 顏色工具 ----
