@@ -23,3 +23,12 @@ export const CANVAS_W = 1280;
 export const CANVAS_H = 760;
 export const FLOOR_TOP = 120;         // 競技場地板上緣在畫布上的 y
 export const FLOOR_LEFT = (CANVAS_W - ARENA.width) / 2;
+
+// ---- 渲染特效可調參數 (僅 renderer 使用) ----
+export const PARTICLE_MAX = 900;      // 本地粒子上限 (不進 snapshot)
+export const SHAKE_DECAY = 9;         // 畫面震動衰減 (越大停得越快)
+export const SHAKE_MAX = 26;          // 震動最大位移 (px)
+export const FLASH_DECAY = 6;         // 全畫面閃光衰減
+export const BOB_AMP = 5.5;           // 走路上下彈跳幅度 (px)
+export const BOB_FREQ = 11;           // 走路彈跳頻率
+export const WALK_THRESHOLD = 12;     // 視為移動的速度門檻 (px/s)

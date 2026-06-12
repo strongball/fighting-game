@@ -83,6 +83,7 @@ export function makeZone(owner, x, y, opt) {
 }
 
 export function addFx(state, fx) {
+  fx.id = uid();
   fx.life = fx.life ?? 0.25;
   fx.maxLife = fx.life;
   state.fx.push(fx);
