@@ -45,7 +45,8 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
       const group = createCharacterModel(p.charId);
       group.position.set(sceneX(p.x), 0, sceneZ(p.y));
       scene.add(group);
-      e = { group, charId: p.charId, skinReq: false };
+      // rx/ry：渲染端平滑後的世界座標 (邏輯 30Hz、畫面 60Hz 之間插值)；spd：平滑速度
+      e = { group, charId: p.charId, skinReq: false, rx: p.x, ry: p.y, spd: 0, wasHidden: false };
       models.set(p.id, e);
     }
     // 嘗試載入 GLB 皮膚 (只試一次)；成功則覆蓋程序化外觀，無檔/失敗維持程序化
@@ -90,16 +91,31 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
     for (const p of Object.values(state.players)) {
       seen.add(p.id);
       const e = ensureModel(p);
-      if (!p.alive) { e.group.visible = false; continue; }
+      if (!p.alive) { e.group.visible = false; e.wasHidden = true; continue; }
+      // 從隱藏(死亡/重生)轉可見：位置直接對齊，避免從舊位置滑入
+      if (e.wasHidden) { e.rx = p.x; e.ry = p.y; e.spd = 0; e.wasHidden = false; }
       e.group.visible = true;
-      e.group.position.x = sceneX(p.x);
-      e.group.position.z = sceneZ(p.y);
 
-      // 速度 (世界座標位移 / dt)
+      // ---- 渲染端位置插值 ----
+      // 邏輯/網路 30Hz 更新 p.x/p.y，但畫面以 ~60fps 繪製；直接設位置會出現 30Hz 階梯抖動。
+      // 用指數平滑朝目標逼近，讓移動在每幀之間補間。
+      // 位移過大 (瞬移/衝刺/重生) 直接對齊，不滑行。
+      if (Math.hypot(p.x - e.rx, p.y - e.ry) > 80) { e.rx = p.x; e.ry = p.y; }
+      const prevRx = e.rx, prevRy = e.ry;
+      const lerpK = 1 - Math.exp(-22 * dt);
+      e.rx += (p.x - e.rx) * lerpK;
+      e.ry += (p.y - e.ry) * lerpK;
+      e.group.position.x = sceneX(e.rx);
+      e.group.position.z = sceneZ(e.ry);
+
+      // 速度：由平滑後的實際位移推導，再低通平滑 (穩定的 walk/idle 判定，避免動畫抖動)
+      const instSpeed = dt > 0 ? Math.hypot(e.rx - prevRx, e.ry - prevRy) / dt : 0;
+      e.spd += (instSpeed - e.spd) * Math.min(1, dt * 10);
+      const speed = e.spd;
+
+      // prev：保留 hp/cd 以偵測出手/受擊 (位置/速度已改由 e.rx/e.spd 處理)
       let pr = prev.get(p.id);
-      if (!pr) { pr = { x: p.x, y: p.y, hp: p.hp, cd: { ...(p.cd || {}) } }; prev.set(p.id, pr); }
-      let speed = 0;
-      if (dt > 0) speed = Math.hypot(p.x - pr.x, p.y - pr.y) / dt;
+      if (!pr) { pr = { hp: p.hp, cd: { ...(p.cd || {}) } }; prev.set(p.id, pr); }
 
       // 出手偵測：任一冷卻槽「上跳」= 剛開招；依動作類型分揮砍/施法
       let attackKind = null;
@@ -117,7 +133,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
       // 受擊偵測：hp 下降
       const hurt = p.hp < pr.hp - 0.5;
 
-      pr.x = p.x; pr.y = p.y; pr.hp = p.hp;
+      pr.hp = p.hp;
       if (p.cd) { if (!pr.cd) pr.cd = {}; for (const slot of CD_SLOTS) pr.cd[slot] = p.cd[slot] || 0; }
 
       animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt });

@@ -8,14 +8,19 @@
 //      - Mixamo      https://mixamo.com       （自動綁骨 + 動畫，匯出 glTF Binary）
 // 2. 匯出成 .glb，放到：public/assets/characters/models/<名稱>.glb
 //    對應檔名見下方 CHAR_FILES（warrior.glb / mage.glb / ... / fighter.glb）。
-// 3. 若模型大小/朝向不對，調整下方 OVERRIDES 的 scale / yOffset / rotationY。
-//    模型最終需「面向 +X」、雙腳踩在 y=0；程序化模型約 55 單位高，scale 預設讓 ~1.8m 模型對齊。
+// 3. 皮膚會自動依 bounding box 縮放對齊碰撞大小並貼地；若朝向不對調整 OVERRIDES 的 rotationY
+//    (需要時也可加 scaleMul 微調視覺大小 / yOffset 微調高度)。
 //
 // 沒有放任何 .glb 時，本管線的 prepareSkin() 會因 404 回傳 null，遊戲照常使用程序化模型。
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { PLAYER_RADIUS } from '../constants.js';
+
+// 皮膚自動縮放：俯視 footprint (長/寬取大者) 對齊到碰撞直徑的倍率。
+// 1.0 = 完全貼合碰撞圈；>1 = 視覺略大於碰撞 (較有體積感)。
+const FOOTPRINT_FILL = 3;
 
 const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`;
 const modelUrl = (file) => asset(`gltf_source/${file}`);
@@ -56,19 +61,13 @@ const DEFAULT_CLIPS = {
   hit: ['Hit', 'hit', 'HitRecieve', 'HitReceive', 'HitReact', 'Damage', 'Death', 'CharacterArmature|Hit'],
 };
 
-// 每角色覆寫（預設值適用大多數人形模型；依實際模型微調）。
-const DEFAULT_CFG = { scale: 30, yOffset: 0, rotationY: -Math.PI / 2 };
+// 每角色覆寫：皮膚會依 bounding box 自動縮放對齊碰撞大小並貼地，
+// 因此這裡通常只需設 rotationY (朝向)；如需再微調可加 scaleMul / yOffset。
+const DEFAULT_CFG = { scaleMul: 1, yOffset: 0, rotationY: Math.PI / 2 };
 const OVERRIDES = {
-  0: { scale: 22, rotationY: Math.PI / 2 },  // warrior (Bull)
-  1: { scale: 28, rotationY: Math.PI / 2 },  // mage (Fox)
-  2: { scale: 26, rotationY: Math.PI / 2 },  // assassin (Wolf)
-  3: { scale: 26, rotationY: Math.PI / 2 },  // tank (Horse)
-  4: { scale: 28, rotationY: Math.PI / 2 },  // archer (Deer)
-  5: { scale: 30, rotationY: Math.PI / 2 },  // healer (Alpaca)
-  6: { scale: 25, rotationY: Math.PI / 2 },  // berserker (Stag)
-  7: { scale: 28, rotationY: Math.PI / 2 },  // ninja (Husky)
-  8: { scale: 26, rotationY: Math.PI / 2 },  // elementalist (Horse_White)
-  9: { scale: 32, rotationY: Math.PI / 2 },  // fighter (ShibaInu)
+  // 例：3: { scaleMul: 1.1 },           // 坦克視覺再放大一點
+  // 例：1: { rotationY: -Math.PI / 2 },  // 朝向相反時翻轉
+  // 例：3: { yOffset: 1 },              // 略微抬高避免陥地
 };
 
 export function getSkinConfig(charId) {
@@ -117,9 +116,24 @@ export function instantiateSkin(template) {
   if (!template) return null;
   const cfg = template.cfg;
   const root = cloneSkinned(template.scene);
-  root.scale.setScalar(cfg.scale);
-  root.position.y = cfg.yOffset || 0;
   root.rotation.y = cfg.rotationY || 0;
+
+  // ---- 自動縮放：量測 bounding box，把俯視 footprint 對齊碰撞直徑 ----
+  // 換任何皮膚都會自動對齊碰撞大小 (PLAYER_RADIUS)，不需每角色手調 scale。
+  // 於 bind-pose 量測 (動畫未播放)，尺寸穩定。
+  root.scale.setScalar(1);
+  root.updateMatrixWorld(true);
+  const size = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
+  const footprint = Math.max(size.x, size.z) || 1;       // 俯視佔地 (長/寬取大者)
+  const target = PLAYER_RADIUS * 2 * FOOTPRINT_FILL;     // 目標直徑
+  root.scale.setScalar((target / footprint) * (cfg.scaleMul || 1));
+
+  // ---- 自動貼地：縮放後重新量測，把模型最低點對齊地面 (y = yOffset，預設 0) ----
+  root.position.y = 0;
+  root.updateMatrixWorld(true);
+  const minY = new THREE.Box3().setFromObject(root).min.y;
+  root.position.y = (cfg.yOffset || 0) - minY;
+
   // 逐實例 clone 材質（避免隱身淡出影響到共用同模型的其他玩家）
   root.traverse((o) => {
     if (!o.isMesh) return;

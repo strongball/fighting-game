@@ -411,7 +411,10 @@ function driveSkin(ud, dt, info) {
     s.oneShotT -= dt;
     if (s.oneShotT <= 0) s.oneShot = null;
   } else {
-    const want = ud.move > 0.5 ? 'walk' : 'idle';
+    // walk/idle 用遲滯雙門檻：跨過 0.6 才走、跌破 0.35 才停，避免在門檻附近反覆 crossfade 抖動
+    if (s.moving && ud.move < 0.35) s.moving = false;
+    else if (!s.moving && ud.move > 0.6) s.moving = true;
+    const want = s.moving ? 'walk' : 'idle';
     if (s.actions[want]) skinFadeTo(s, want, 0.2);
   }
   if (!s.cur) {
@@ -436,7 +439,7 @@ export function attachSkin(group, skin) {
     const ms = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of ms) { m.transparent = true; glbMats.push(m); }
   });
-  ud.skin = { mixer: skin.mixer, actions: skin.actions, cfg: skin.cfg, root: skin.root, cur: null, oneShot: null, oneShotT: 0, glbMats };
+  ud.skin = { mixer: skin.mixer, actions: skin.actions, cfg: skin.cfg, root: skin.root, cur: null, oneShot: null, oneShotT: 0, moving: false, glbMats };
   group.add(skin.root);
 }
 
