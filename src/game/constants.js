@@ -10,18 +10,18 @@ export const INPUT_INTERVAL = 1 / 30; // 加入者送出輸入頻率 (Hz)
 export const MAX_PLAYERS = 8;
 
 export const PLAYER_RADIUS = 18;
-export const MANA_REGEN = 9;          // 每秒回魔
+export const MANA_REGEN = 2;          // 每秒回魔
 export const KNOCKBACK_FRICTION = 7;  // 擊退衰減 (越大停得越快)
 
 // ---- 終極能量槽 (大絕招) ----
 export const ULT_MAX = 100;           // 滿槽即可施放
-export const ULT_REGEN = 100;         // 每秒被動充能 (約 45 秒滿)
+export const ULT_REGEN = 5;         // 每秒被動充能 (約 45 秒滿)
 export const ULT_GAIN_DEAL = 0.35;    // 造成傷害的充能係數 (× 傷害)
 export const ULT_GAIN_TAKE = 0.6;     // 承受傷害的充能係數 (逆境快充)
 export const ULT_LOCKOUT = 1;         // 施放後的防連發冷卻 (秒)
 
 // ---- 全局技能冷卻乘數 ----
-export const COOLDOWN_MULTIPLIER = 1; // 技能冷卻時間乘數 (< 1 = 冷卻減少 / > 1 = 冷卻增加)
+export const COOLDOWN_MULTIPLIER = 0.8; // 技能冷卻時間乘數 (< 1 = 冷卻減少 / > 1 = 冷卻增加)
                                         // 例：0.5 = 所有技能冷卻時間減半、1.5 = 冷卻時間延長 50%
 
 // 渲染：稍微傾斜的俯視

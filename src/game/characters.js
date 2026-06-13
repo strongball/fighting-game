@@ -83,9 +83,9 @@ export const CHARACTERS = [
     desc: '吸取轉化的續航法師。汲取鏈偷血、聖光環跟身灼敵，大招抽乾全場。',
     talent: { id: 'lifebloom', name: '生生不息', desc: '持續自動回復生命。', regen: 7 },
     basic: { name: '聖光彈', type: 'projectile', dmg: 13, speed: 420, radius: 8, lifetime: 1.2, knockback: 60, cd: 0.6, color: '#f1c40f', vfx: 'healer_holybolt' },
-    skill1: { name: '生命汲取', type: 'channel', duration: 3, tick: 0.4, range: 320, dmg: 24, heal: 26, manaCost: 30, cd: 6, color: '#2ecc71', vfx: 'healer_cleanse' },
-    skill2: { name: '神聖光環', type: 'zone', range: 0, radius: 150, dmg: 18, lifetime: 6, tick: 0.5, follow: true, drainHeal: 12, effect: { kind: 'burn', duration: 2, tick: 0.5, dmg: 8 }, manaCost: 35, cd: 10, color: '#55efc4', vfx: 'healer_aura', self: { effect: { kind: 'haste', duration: 6, factor: 1.2 } } },
-    ultimate: { name: '生命匯流', type: 'zone', range: 0, radius: 280, dmg: 45, lifetime: 1.6, tick: 0.4, drainHeal: 120, knockback: 90, cd: 1, color: '#aaffcc', vfx: 'healer_ultimate', self: { heal: 300, shield: 300, cleanse: true, duration: 8, effect: { kind: 'haste', duration: 8, factor: 1.5 } } },
+    skill1: { name: '生命汲取', type: 'channel', duration: 3, tick: 0.4, range: 320, dmg: 5, heal: 26, manaCost: 100, cd: 6, color: '#2ecc71', vfx: 'healer_cleanse' },
+    skill2: { name: '神聖光環', type: 'zone', range: 0, radius: 150, dmg: 8, lifetime: 6, tick: 0.5, follow: true, drainHeal: 12, effect: { kind: 'burn', duration: 2, tick: 0.5, dmg: 8 }, manaCost: 35, cd: 10, color: '#55efc4', vfx: 'healer_aura', self: { effect: { kind: 'haste', duration: 6, factor: 1.2 } } },
+    ultimate: { name: '生命匯流', type: 'zone', range: 0, radius: 280, dmg: 30, lifetime: 1.6, tick: 0.4, drainHeal: 120, knockback: 90, cd: 1, color: '#aaffcc', vfx: 'healer_ultimate', self: { heal: 300, shield: 300, cleanse: true, duration: 8, effect: { kind: 'haste', duration: 8, factor: 1.5 } } },
   },
   {
     id: 6, name: '狂戰士', color: '#922b21', shape: 'square', sprite: publicAsset('assets/characters/berserker.svg'),

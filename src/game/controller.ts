@@ -194,7 +194,7 @@ function createController(): GameController {
   function logicTick() {
     if (!running) return;
     const now = performance.now();
-    let dt = (now - lastLogic) / 1000;
+    let dt = (now - lastLogic) / 1200;
     lastLogic = now;
     if (dt > 0.25) dt = 0.25; // 限制追趕，避免長時間背景後一次爆衝
 
