@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CHARACTERS as RAW_CHARACTERS, getCharacter as rawGetCharacter } from '../game/characters.js';
-import type { CharacterMeta, ControlScheme, LobbyView } from '../types';
+import type { CharacterMeta, ControlScheme, GameFlags, LobbyView } from '../types';
 
 const CHARACTERS = RAW_CHARACTERS as unknown as CharacterMeta[];
 const getCharacter = rawGetCharacter as (id: number) => CharacterMeta;
@@ -28,12 +28,13 @@ interface LobbyScreenProps {
   selectedControlScheme: ControlScheme;
   onSelectChar: (id: number) => void;
   onSelectControlScheme: (scheme: ControlScheme) => void;
+  onSelectGameFlags: (flags: GameFlags) => void;
   onStart: () => void;
   onLeave: () => void;
 }
 
-export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme, onSelectChar, onSelectControlScheme, onStart, onLeave }: LobbyScreenProps) {
-  const { players, selfId, isHost, roomCode } = lobby;
+export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme, onSelectChar, onSelectControlScheme, onSelectGameFlags, onStart, onLeave }: LobbyScreenProps) {
+  const { players, selfId, isHost, roomCode, gameFlags } = lobby;
   const [copied, setCopied] = useState(false);
   const skillDisplay = getSkillDisplay(selectedControlScheme);
 
@@ -72,6 +73,37 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
             onClick={() => onSelectControlScheme('arrows-asdf')}
           >
             ↑↓←→ 移動 + ASDF 技能
+          </button>
+        </div>
+
+        <h3>遊戲模式{!isHost && <span className="dim">（由房主設定）</span>}</h3>
+        <div className="game-modes-grid">
+          <button
+            className={'btn mode-btn' + (gameFlags.freeMana ? ' active' : '')}
+            onClick={() => isHost && onSelectGameFlags({ ...gameFlags, freeMana: !gameFlags.freeMana })}
+            disabled={!isHost}
+          >
+            <div className="mode-icon">💧</div>
+            <div className="mode-name">無限魔力</div>
+            <div className="mode-desc">MP 與大招能量始終滿格，技能無限施放</div>
+          </button>
+          <button
+            className={'btn mode-btn' + (gameFlags.noCooldown ? ' active' : '')}
+            onClick={() => isHost && onSelectGameFlags({ ...gameFlags, noCooldown: !gameFlags.noCooldown })}
+            disabled={!isHost}
+          >
+            <div className="mode-icon">⚡</div>
+            <div className="mode-name">無冷卻</div>
+            <div className="mode-desc">所有技能冷卻時間清零，可連續施放</div>
+          </button>
+          <button
+            className={'btn mode-btn' + (gameFlags.noDamage ? ' active' : '')}
+            onClick={() => isHost && onSelectGameFlags({ ...gameFlags, noDamage: !gameFlags.noDamage })}
+            disabled={!isHost}
+          >
+            <div className="mode-icon">🛡️</div>
+            <div className="mode-name">無敵模式</div>
+            <div className="mode-desc">所有玩家受到攻擊時 HP 不下降</div>
           </button>
         </div>
 

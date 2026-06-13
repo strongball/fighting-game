@@ -15,6 +15,7 @@ import type {
   ControllerEvents,
   ControlScheme,
   GameController,
+  GameFlags,
   GameOverView,
   LobbyEntry,
   LobbyView,
@@ -49,6 +50,7 @@ function createController(): GameController {
   let roomCode = '';
   let selectedChar = 0;
   let selectedControlScheme: ControlScheme = 'wasd-jkl';
+  let gameFlags: GameFlags = { freeMana: false, noCooldown: false, noDamage: false };
   let lobby: LobbyEntry[] = [];
 
   let gameState: any = null;       // 房主權威狀態
@@ -74,11 +76,11 @@ function createController(): GameController {
   }
   function removeFromLobby(id: string) { lobby = lobby.filter((p) => p.id !== id); }
   function renderLobby() {
-    const view: LobbyView = { players: lobby, selfId, isHost: role === 'host', roomCode };
+    const view: LobbyView = { players: lobby, selfId, isHost: role === 'host', roomCode, gameFlags };
     emit('lobby', view);
   }
   function broadcastLobby() {
-    net.broadcast({ t: 'lobby', players: lobby });
+    net.broadcast({ t: 'lobby', players: lobby, gameFlags });
     renderLobby();
   }
 
@@ -121,7 +123,7 @@ function createController(): GameController {
       emit('lobbyStatus', '已連上房主，等待開始…');
     });
     net.on('onData', (_from: string, data: any) => {
-      if (data.t === 'lobby') { lobby = data.players; renderLobby(); }
+      if (data.t === 'lobby') { lobby = data.players; if (data.gameFlags) gameFlags = data.gameFlags; renderLobby(); }
       else if (data.t === 'start') { lobby = data.lobby; startFromSnapshot(data.state); }
       else if (data.t === 'state') { receiveSnapshot(data.snapshot); }
       else if (data.t === 'gameover') { joinerGameover(data); }
@@ -138,7 +140,7 @@ function createController(): GameController {
   // ---------- 開始遊戲 ----------
   function hostStart() {
     const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId }));
-    gameState = createInitialState(arr);
+    gameState = createInitialState(arr, gameFlags);
     for (const id of Object.keys(gameState.players)) inputs[id] = { ...EMPTY_INPUT };
     net.broadcast({ t: 'start', state: gameState, lobby });
     beginLoop();
@@ -353,6 +355,11 @@ function createController(): GameController {
     }
   }
 
+  function selectGameFlags(flags: GameFlags) {
+    gameFlags = { ...flags };
+    if (role === 'host') broadcastLobby();
+  }
+
   function startGame() {
     if (role === 'host') hostStart();
   }
@@ -435,6 +442,7 @@ function createController(): GameController {
     joinRoom,
     selectChar,
     selectControlScheme,
+    selectGameFlags,
     startGame,
     devStartGame,
     returnToLobby,

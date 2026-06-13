@@ -49,7 +49,7 @@ export function spawnPoints(n) {
   return pts;
 }
 
-export function createInitialState(playersArr) {
+export function createInitialState(playersArr, flags = {}) {
   const pts = spawnPoints(playersArr.length);
   const players = {};
   const cx = ARENA.width / 2, cy = ARENA.height / 2;
@@ -67,6 +67,7 @@ export function createInitialState(playersArr) {
     time: 0,
     winner: null,
     startCount: playersArr.length,
+    flags: { freeMana: false, noCooldown: false, noDamage: false, ...flags },
   };
 }
 
@@ -142,6 +143,9 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
   const attacker = state.players[attackerId];
   const hostile = attacker && attacker.id !== target.id && attacker.alive;
   if (hostile) attacker.ult = Math.min(ULT_MAX, (attacker.ult || 0) + amount * ULT_GAIN_DEAL);
+
+  // 不扣血模式：能量充能仍生效，但不造成實際傷害
+  if (state.flags && state.flags.noDamage) return;
 
   let dmg = amount;
   if (!opts.noTalent && hostile) dmg = talentDamageMods(attacker, target, dmg);

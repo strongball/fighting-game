@@ -243,9 +243,10 @@ function tryAction(state, p, slot) {
   const c = getCharacter(p.charId);
   const a = c[slot];
   if (!a || p.cd[slot] > 0) return;
-  if (a.manaCost && p.mana < a.manaCost) return;
+  const freeMana = state.flags && state.flags.freeMana;
+  if (!freeMana && a.manaCost && p.mana < a.manaCost) return;
   if (a.hpCost && p.hp <= a.hpCost) return;
-  if (a.manaCost) p.mana -= a.manaCost;
+  if (!freeMana && a.manaCost) p.mana -= a.manaCost;
   if (a.hpCost) p.hp -= a.hpCost;
   p.cd[slot] = a.cd;
   executeAction(state, p, a);
@@ -257,8 +258,9 @@ function tryUltimate(state, p) {
   const a = c.ultimate;
   if (!a) return;
   if (p.cd.ultimate > 0) return;
-  if ((p.ult || 0) < ULT_MAX) return;
-  p.ult = 0;
+  const freeMana = state.flags && state.flags.freeMana;
+  if (!freeMana && (p.ult || 0) < ULT_MAX) return;
+  if (!freeMana) p.ult = 0;
   p.cd.ultimate = a.cd || ULT_LOCKOUT;
   executeAction(state, p, a, { silent: true });
   // 單一大招施放特效 (螢幕級華麗表現由 vfx onCast 處理)
@@ -529,6 +531,7 @@ export function step(state, inputs, dt) {
     // 應用全局冷卻乘數 (COOLDOWN_MULTIPLIER)
     cdRate /= COOLDOWN_MULTIPLIER;
     for (const k of ['basic', 'skill1', 'skill2', 'ultimate']) p.cd[k] = Math.max(0, p.cd[k] - dt * cdRate);
+    if (state.flags && state.flags.noCooldown) { for (const k of ['basic', 'skill1', 'skill2', 'ultimate']) p.cd[k] = 0; }
 
     for (const kind of Object.keys(p.effects)) {
       const e = p.effects[kind];
@@ -554,6 +557,7 @@ export function step(state, inputs, dt) {
 
     p.mana = Math.min(p.maxMana, p.mana + MANA_REGEN * dt);
     p.ult = Math.min(ULT_MAX, (p.ult || 0) + ULT_REGEN * dt); // 被動充能
+    if (state.flags && state.flags.freeMana) { p.mana = p.maxMana; p.ult = ULT_MAX; }
 
     processChannel(state, p, dt); // 汲取鏈 (不限制移動)
 

@@ -7,9 +7,9 @@ import { MenuScreen } from './components/MenuScreen';
 import { LobbyScreen } from './components/LobbyScreen';
 import { GameScreen } from './components/GameScreen';
 import { GameOverScreen } from './components/GameOverScreen';
-import type { AppPhase, ControlScheme, GameOverView, LobbyView } from './types';
+import type { AppPhase, ControlScheme, GameFlags, GameOverView, LobbyView } from './types';
 
-const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '' };
+const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '', gameFlags: { freeMana: false, noCooldown: false, noDamage: false } };
 
 export function App() {
   const controller = getController();
@@ -56,6 +56,10 @@ export function App() {
     controller.selectControlScheme(scheme);
   }
 
+  function handleSelectGameFlags(flags: GameFlags) {
+    controller.selectGameFlags(flags);
+  }
+
   switch (phase) {
     case 'menu':
       return (
@@ -74,6 +78,7 @@ export function App() {
           selectedControlScheme={selectedControlScheme}
           onSelectChar={handleSelectChar}
           onSelectControlScheme={handleSelectControlScheme}
+          onSelectGameFlags={handleSelectGameFlags}
           onStart={() => controller.startGame()}
           onLeave={() => controller.leave()}
         />

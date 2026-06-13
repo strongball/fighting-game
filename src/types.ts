@@ -4,6 +4,12 @@
 export type AppPhase = 'menu' | 'lobby' | 'game' | 'gameover';
 export type ControlScheme = 'wasd-jkl' | 'arrows-asdf';
 
+export interface GameFlags {
+  freeMana: boolean;
+  noCooldown: boolean;
+  noDamage: boolean;
+}
+
 export interface LobbyEntry {
   id: string;
   name: string;
@@ -17,6 +23,7 @@ export interface LobbyView {
   selfId: string | null;
   isHost: boolean;
   roomCode: string;
+  gameFlags: GameFlags;
 }
 
 export interface GameOverPlayer {
@@ -73,6 +80,7 @@ export interface GameController {
   joinRoom(name: string, code: string): void;
   selectChar(charId: number): void;
   selectControlScheme(scheme: ControlScheme): void;
+  selectGameFlags(flags: GameFlags): void;
   startGame(): void;
   devStartGame(charId?: number): void;
   returnToLobby(): void;
