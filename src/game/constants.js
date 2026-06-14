@@ -18,13 +18,13 @@ export const KNOCKBACK_FRICTION = 7;  // 擊退衰減 (越大停得越快)
 //   (1) 慢速被動充能 (2) 低戰鬥充能係數 (3) 各大招自帶長 cd (characters.js)。
 // 大招本身大範圍者傷害壓低、單體者傷害高，避免一鍵清場。
 export const ULT_MAX = 100;           // 滿槽即可施放
-export const ULT_REGEN = 1.0;         // 每秒被動充能 (純發呆約 100 秒滿)
+export const ULT_REGEN = 8;         // 每秒被動充能 (純發呆約 100 秒滿)
 export const ULT_GAIN_DEAL = 0.02;    // 造成傷害的充能係數 (× 傷害)
 export const ULT_GAIN_TAKE = 0.04;    // 承受傷害的充能係數 (逆境略快，給翻盤機會)
 export const ULT_LOCKOUT = 8;         // 施放後的防連發冷卻 (秒)；各大招另以 ult.cd 覆蓋
 
 // ---- 全局技能冷卻乘數 ----
-export const COOLDOWN_MULTIPLIER = 1.0; // 技能冷卻時間乘數 (< 1 = 冷卻減少 / > 1 = 冷卻增加)
+export const COOLDOWN_MULTIPLIER = 0.7; // 技能冷卻時間乘數 (< 1 = 冷卻減少 / > 1 = 冷卻增加)
                                         // 1.0 = 採用 characters.js 中的誠實冷卻值 (平衡基準)
                                         // 例：0.5 = 所有技能冷卻時間減半、1.5 = 冷卻時間延長 50%
 

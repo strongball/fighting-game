@@ -170,7 +170,9 @@ function reviveTick(state, dt) {
     if (helper) {
       p.reviveProg = (p.reviveProg || 0) + dt;
       if (p.reviveProg >= REVIVE_TIME) {
-        p.alive = true; p.hp = Math.round(p.maxHp * REVIVE_HP); p.effects = {}; p.shield = 0;
+        // 復活：狀態全滿 (HP + mana 100% + 清空 debuff + cd)
+        p.alive = true; p.hp = p.maxHp; p.mana = p.maxMana; p.effects = {}; p.shield = 0;
+        p.cd = { basic: 0, skill1: 0, skill2: 0, ultimate: 0 };
         p.reviveProg = 0; p.kvx = 0; p.kvy = 0;
         addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#7CFC00', life: 0.6, radius: 70 });
       }

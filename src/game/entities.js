@@ -24,6 +24,7 @@ export function makePlayer(id, name, charId, x, y, team = 0) {
     hp: c.maxHp, maxHp: c.maxHp,
     mana: c.maxMana, maxMana: c.maxMana,
     alive: true,
+    hitR: PLAYER_RADIUS, // 身體命中半徑 (魔王依體積放大，讓可攻擊範圍貼合視覺)
     shield: 0, shieldTime: 0,
     kills: 0,
     ult: 0, // 終極能量 (0..ULT_MAX)
@@ -56,6 +57,17 @@ export function makeBoss(id, charId, x, y, team, opts = {}) {
   e.partId = opts.partId || null;
   e.bossRound = opts.round || 0;
   e.scale = opts.scale || 1;        // 模型放大倍率 (渲染用)
+  // 命中半徑：魔王依模型體積放大 (torso 半寬 × scale)，使「可攻擊範圍」貼合視覺體積；
+  // 部位用水晶體積；其餘 (小怪/镜像/分身) 等比 PLAYER_RADIUS。
+  if (opts.isPart) {
+    e.hitR = Math.round(24 * (e.scale || 1));
+  } else if (opts.isBoss) {
+    const md = getCharacter(charId).model || {};
+    const bulk = md.bulk || 2.2;
+    e.hitR = Math.round(11 * bulk * (e.scale || md.scale || 1) * 0.9);
+  } else {
+    e.hitR = Math.round(PLAYER_RADIUS * (e.scale || 1));
+  }
   e.aiState = {};                   // 每王腳本暫存 (不需序列化關鍵邏輯，但會隨 snapshot 帶過去)
   e.facing = opts.facing != null ? opts.facing : e.facing;
   return e;

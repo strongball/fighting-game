@@ -60,6 +60,9 @@ function outMult(p, a) {
   return m;
 }
 
+// 目標身體命中半徑 (魔王大模型有大 hitR，使攻擊可命中整個視覺體積，而非僅中心點)
+function bodyR(o) { return o.hitR || PLAYER_RADIUS; }
+
 function meleeHit(state, p, a, silent) {
   const m = outMult(p, a);
   const full = a.arc >= 6;
@@ -67,7 +70,7 @@ function meleeHit(state, p, a, silent) {
     if (!isEnemy(state, p.id, o)) continue;
     const dx = o.x - p.x, dy = o.y - p.y;
     const d = Math.hypot(dx, dy);
-    if (d > a.range + PLAYER_RADIUS) continue;
+    if (d > a.range + bodyR(o)) continue;
     if (!full) {
       const ang = Math.atan2(dy, dx);
       if (Math.abs(angleDiff(ang, p.facing)) > a.arc / 2) continue;
@@ -470,17 +473,22 @@ function tryUltimate(state, p) {
 
 function resolveCollisions(state) {
   const arr = Object.values(state.players).filter((p) => p.alive);
-  const minD = PLAYER_RADIUS * 2;
   for (let i = 0; i < arr.length; i++) {
     for (let j = i + 1; j < arr.length; j++) {
       const a = arr[i], b = arr[j];
       const dx = b.x - a.x, dy = b.y - a.y;
       let d = Math.hypot(dx, dy);
-      if (d > 0 && d < minD) {
-        const push = (minD - d) / 2;
-        const nx = dx / d, ny = dy / d;
-        a.x -= nx * push; a.y -= ny * push;
-        b.x += nx * push; b.y += ny * push;
+      const minD = bodyR(a) + bodyR(b);
+      if (d < minD) {
+        // 完全重疊 (d≈0) 時給一個預設分離方向，避免除以零卡死在中心
+        const nx = d > 0.0001 ? dx / d : 1, ny = d > 0.0001 ? dy / d : 0;
+        const overlap = minD - d;
+        // 魔王/部位為重型 (不被推開，位置由腳本控制)；只把輕量一方推出體外
+        const aHeavy = a.isBoss || a.isPart, bHeavy = b.isBoss || b.isPart;
+        if (aHeavy && bHeavy) continue;
+        if (aHeavy) { b.x += nx * overlap; b.y += ny * overlap; }
+        else if (bHeavy) { a.x -= nx * overlap; a.y -= ny * overlap; }
+        else { const push = overlap / 2; a.x -= nx * push; a.y -= ny * push; b.x += nx * push; b.y += ny * push; }
       }
     }
   }
@@ -540,7 +548,7 @@ function updateProjectiles(state, dt) {
     let dead = false;
     for (const o of Object.values(state.players)) {
       if (!isEnemy(state, pr.owner, o) || pr.hit[o.id]) continue;
-      if (dist(pr.x, pr.y, o.x, o.y) <= pr.radius + PLAYER_RADIUS) {
+      if (dist(pr.x, pr.y, o.x, o.y) <= pr.radius + bodyR(o)) {
         // 凍結加成：目標處於封凍狀態(stun)時傷害提升 (烎燃溶冰組合)
         const hitDmg = (pr.freezeBonus && o.effects && o.effects.stun) ? pr.dmg * pr.freezeBonus : pr.dmg;
         dealDamage(state, o, hitDmg, pr.owner);
@@ -598,7 +606,7 @@ function updateZones(state, dt) {
       for (const o of Object.values(state.players)) {
         if (!isEnemy(state, z.owner, o)) continue;
         const dx = z.x - o.x, dy = z.y - o.y, d = Math.hypot(dx, dy);
-        if (d > 4 && d <= z.radius + PLAYER_RADIUS) {
+        if (d > 4 && d <= z.radius + bodyR(o)) {
           const f = Math.min(d, z.pull * dt);
           o.x = clamp(o.x + dx / d * f, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
           o.y = clamp(o.y + dy / d * f, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
@@ -612,7 +620,7 @@ function updateZones(state, dt) {
       let hits = 0;
       for (const o of Object.values(state.players)) {
         if (!o.alive) continue;
-        if (dist(z.x, z.y, o.x, o.y) > z.radius + PLAYER_RADIUS) continue;
+        if (dist(z.x, z.y, o.x, o.y) > z.radius + bodyR(o)) continue;
         if (isEnemy(state, z.owner, o)) {
           if (z.dmg) dealDamage(state, o, z.dmg, z.owner);
           if (z.effect) applyEffectFrom(state, o, z.effect, z.owner);
@@ -665,7 +673,7 @@ function processScripted(state, p, dt) {
     let hitSomeone = false;
     for (const o of Object.values(state.players)) {
       if (!isEnemy(state, p.id, o) || c.hit[o.id]) continue;
-      if (dist(p.x, p.y, o.x, o.y) <= c.hitRadius + PLAYER_RADIUS) {
+      if (dist(p.x, p.y, o.x, o.y) <= c.hitRadius + bodyR(o)) {
         if (c.dmg) dealDamage(state, o, c.dmg, p.id);
         if (c.knockback) { const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy) || 1; o.kvx += dx / d * c.knockback; o.kvy += dy / d * c.knockback; }
         if (c.effect) applyEffectFrom(state, o, c.effect, p.id);

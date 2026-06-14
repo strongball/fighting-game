@@ -96,7 +96,10 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
     for (const p of Object.values(state.players)) {
       seen.add(p.id);
       const e = ensureModel(p);
-      if (!p.alive) { e.group.visible = false; e.wasHidden = true; continue; }
+      // 倒地 (闖關模式)：team1 真人玩家死亡時不消失，留在原地呈現「倒地」狀態供隊友靠近復活。
+      // 其餘 (FFA 淘汰 / 魔王陣營 / 召喚物) 死亡即隱藏。
+      const downed = state.mode === 'boss' && !p.alive && p.team === 1 && !p.aiId;
+      if (!p.alive && !downed) { e.group.visible = false; e.wasHidden = true; continue; }
       // 從隱藏(死亡/重生)轉可見：位置直接對齊，避免從舊位置滑入
       if (e.wasHidden) { e.rx = p.x; e.ry = p.y; e.spd = 0; e.wasHidden = false; }
       e.group.visible = true;
@@ -149,7 +152,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
       pr.hp = p.hp;
       if (p.cd) { if (!pr.cd) pr.cd = {}; for (const slot of CD_SLOTS) pr.cd[slot] = p.cd[slot] || 0; }
 
-      animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt });
+      animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt, downed });
 
       // ---- 音效 (renderer-side 本地偵測；host+joiner 各自播放；缺檔靜音不報錯) ----
       // 出手音：每角色 vfx id 優先，缺檔回退泛型 (swing/cast/dash/blink/ultimate)

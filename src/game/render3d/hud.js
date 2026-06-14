@@ -72,6 +72,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
 
   // 頭頂名牌
   const plates = new Map(); // pid -> { obj, name, hp, mp, root }
+  const hpTrack = new Map(); // pid -> { hp, hitAt } 供「隱身被打到才短暫顯示血條」用
 
   function ensurePlate(pid) {
     let pl = plates.get(pid);
@@ -91,6 +92,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
 
   function update(state, selfId) {
     const players = Object.values(state.players);
+    const now = performance.now();
     // 頭頂名牌
     const me0 = state.players[selfId];
     const selfTeam = me0 ? (me0.team || 0) : 0;
@@ -102,19 +104,36 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
     const seen = new Set();
     for (const p of players) {
       const r = rel(p);
-      const invisHidden = p.effects && p.effects.invis && r === 'enemy'; // 友方/自己隱身仍可見
-      if (!p.alive || invisHidden) continue;
+      const invis = p.effects && p.effects.invis;
+      // 受傷追蹤：隱身敵人「被打到」後短暫顯示名牌(血條)，修正「帳面不扣血卻暴斃」的錯覺。
+      let tr = hpTrack.get(p.id);
+      if (!tr) { tr = { hp: p.hp, hitAt: -1e9 }; hpTrack.set(p.id, tr); }
+      if (p.hp < tr.hp - 0.5) tr.hitAt = now;
+      tr.hp = p.hp;
+      const recentlyHit = now - tr.hitAt < 1500;
+      const invisHidden = invis && r === 'enemy' && !recentlyHit; // 友方/自己隱身仍可見；被打到的敵人短暫現形
+      // 倒地 (闖關復活)：team1 真人死亡不隱藏名牌，顯示復活進度供隊友辨識
+      const downed = state.mode === 'boss' && !p.alive && p.team === 1 && !p.aiId;
+      if ((!p.alive && !downed) || invisHidden) continue;
       seen.add(p.id);
       const pl = ensurePlate(p.id);
-      pl.obj.position.set(sceneX(p.x), HEAD_Y, sceneZ(p.y));
-      pl.name.textContent = p.name;
-      // 名牌依敵我上色；solo 模式(selfTeam=0) 敵人不標紅、維持中性白
-      pl.name.style.color = r === 'self' ? '#ffd54a' : r === 'ally' ? '#6ee7a8' : (selfTeam > 0 ? '#ff8a80' : '#ffffff');
+      const headY = HEAD_Y * (p.scale && p.scale > 1 ? p.scale : 1); // 巨大魔王名牌抬高到頭頂
+      pl.obj.position.set(sceneX(p.x), headY, sceneZ(p.y));
+      if (downed) {
+        const prog = Math.floor(Math.min(1, (p.reviveProg || 0) / 3) * 100);
+        pl.name.textContent = `${p.name}　倒地 ${prog}%`;
+        pl.name.style.color = '#ff9a3c';
+      } else {
+        pl.name.textContent = p.name;
+        // 名牌依敵我上色；solo 模式(selfTeam=0) 敵人不標紅、維持中性白
+        pl.name.style.color = r === 'self' ? '#ffd54a' : r === 'ally' ? '#6ee7a8' : (selfTeam > 0 ? '#ff8a80' : '#ffffff');
+      }
       pl.hp.style.width = pct(p.hp / p.maxHp);
       pl.mp.style.width = pct(p.mana / p.maxMana);
       pl.root.style.display = '';
     }
     for (const [pid, pl] of plates) if (!seen.has(pid)) pl.root.style.display = 'none';
+    for (const pid of hpTrack.keys()) if (!state.players[pid]) hpTrack.delete(pid); // 清理離場實體
 
     // 自身面板
     const me = state.players[selfId];

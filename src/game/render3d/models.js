@@ -665,8 +665,16 @@ export function animateModel(group, dt, info) {
   }
 
   // 隱身：淡化所有皮膚材質 (敵人更透明、自己半透明)
+  // 倒地 (闖關復活機制)：灰化半透明 + 前傾倒地姿態，讓隊友看得到、找得到去復活。
+  if (info.downed) {
+    group.position.y = (ud.baseY || 0) + 2;
+    group.rotation.x = Math.PI * 0.42;
+  } else if (group.rotation.x) {
+    group.rotation.x += (0 - group.rotation.x) * Math.min(1, dt * 12); // 復活後回正
+    if (Math.abs(group.rotation.x) < 0.01) group.rotation.x = 0;
+  }
   const invis = p && p.effects && p.effects.invis;
-  let targetOp = 1;
+  let targetOp = info.downed ? 0.5 : 1;
   if (invis) targetOp = info.isSelf ? 0.42 : 0.12;
   for (const m of ud.skinMats) {
     m.opacity += (targetOp - m.opacity) * Math.min(1, dt * 10);
