@@ -4,9 +4,11 @@
 import * as THREE from 'three';
 import { setVecFromWorld, PROJECTILE_Y } from './coords.js';
 import { getVfx } from './vfx/index.js';
+import { getSfxManager } from '../../utils/sfxManager';
 
 export function createFxBus({ scene, particles, sceneMgr }) {
   let seen = new Set();
+  const sfx = getSfxManager();
   const transients = []; // { mesh, age, maxLife, update }
   const _v = new THREE.Vector3();
 
@@ -100,6 +102,10 @@ export function createFxBus({ scene, particles, sceneMgr }) {
     const h = f.type === 'melee' ? 18 : (f.type === 'buff' || f.type === 'ultimate') ? 4 : PROJECTILE_Y;
     setVecFromWorld(_v, f.x, f.y, h);
     const c = { x: _v.x, y: _v.y, z: _v.z };
+
+    // 音效：命中 / 死亡 (撞擊感)；出手/施法/大招音由 renderer syncPlayers 觸發，避免雙重發聲
+    if (f.type === 'hit') sfx.play('hit', { x: f.x, y: f.y });
+    else if (f.type === 'death') sfx.play('death', { x: f.x, y: f.y });
 
     switch (f.type) {
       case 'melee': {

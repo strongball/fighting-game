@@ -15,6 +15,8 @@ import { createCharacterModel, animateModel, attachSkin } from './render3d/model
 import { sceneX, sceneZ } from './render3d/coords.js';
 import { getCharacter } from './characters.js';
 import { prepareSkin, instantiateSkin } from './render3d/skins.js';
+import { WALK_THRESHOLD } from './constants.js';
+import { getSfxManager } from '../utils/sfxManager';
 
 // cd 槽位 + 動作類型 → 出手姿勢 (swing 揮砍/出拳 | cast 施法/舉手)
 const CD_SLOTS = ['basic', 'skill1', 'skill2', 'ultimate'];
@@ -29,6 +31,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
   const fxbus = createFxBus({ scene, particles, sceneMgr });
   const entities = createEntityLayer(scene, particles, { addTransient: fxbus.addTransient, sceneMgr });
   const hud = createHud({ stage: sceneMgr.stage, scene, camera, controlScheme });
+  const sfx = getSfxManager();
 
   // 本地視覺狀態 (不進 snapshot)
   let lastT = 0;
@@ -46,7 +49,8 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
       group.position.set(sceneX(p.x), 0, sceneZ(p.y));
       scene.add(group);
       // rx/ry：渲染端平滑後的世界座標 (邏輯 30Hz、畫面 60Hz 之間插值)；spd：平滑速度
-      e = { group, charId: p.charId, skinReq: false, rx: p.x, ry: p.y, spd: 0, wasHidden: false };
+      // lastFootIdx/wasMoving：腳步聲節奏偵測 (走路相位跨越 + 起步保底)
+      e = { group, charId: p.charId, skinReq: false, rx: p.x, ry: p.y, spd: 0, wasHidden: false, lastFootIdx: 0, wasMoving: false };
       models.set(p.id, e);
     }
     // 嘗試載入 GLB 皮膚 (只試一次)；成功則覆蓋程序化外觀，無檔/失敗維持程序化
@@ -88,6 +92,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
 
   function syncPlayers(state, selfId, dt) {
     const seen = new Set();
+    let selfX = null, selfY = null; // 本地玩家位置 → 音效聆聽者基準
     for (const p of Object.values(state.players)) {
       seen.add(p.id);
       const e = ensureModel(p);
@@ -117,15 +122,23 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
       let pr = prev.get(p.id);
       if (!pr) { pr = { hp: p.hp, cd: { ...(p.cd || {}) } }; prev.set(p.id, pr); }
 
-      // 出手偵測：任一冷卻槽「上跳」= 剛開招；依動作類型分揮砍/施法
+      // 出手偵測：任一冷卻槽「上跳」= 剛開招；依動作類型分揮砍/施法 + 對應音效名
       let attackKind = null;
+      let sfxName = null, sfxVfx = null;
       if (p.cd) {
         const ch = getCharacter(p.charId);
         for (const slot of CD_SLOTS) {
           const cur = p.cd[slot] || 0, was = (pr.cd && pr.cd[slot]) || 0;
           if (cur > was + 0.12) {
             const a = ch && ch[slot];
-            attackKind = a && SWING_TYPES.has(a.type) ? 'swing' : 'cast';
+            const isSwing = a && SWING_TYPES.has(a.type);
+            attackKind = isSwing ? 'swing' : 'cast';
+            // 音效名：大招槽→ultimate；位移技→dash/blink；近戰系→swing；其餘(投射/區域/增益)→cast
+            sfxName = slot === 'ultimate' ? 'ultimate'
+              : (a && a.type === 'dash') ? 'dash'
+              : (a && a.type === 'blink') ? 'blink'
+              : isSwing ? 'swing' : 'cast';
+            sfxVfx = a && a.vfx; // 每角色專屬覆寫名 (缺檔回退泛型)
             break;
           }
         }
@@ -137,7 +150,31 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
       if (p.cd) { if (!pr.cd) pr.cd = {}; for (const slot of CD_SLOTS) pr.cd[slot] = p.cd[slot] || 0; }
 
       animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt });
+
+      // ---- 音效 (renderer-side 本地偵測；host+joiner 各自播放；缺檔靜音不報錯) ----
+      // 出手音：每角色 vfx id 優先，缺檔回退泛型 (swing/cast/dash/blink/ultimate)
+      if (sfxName) {
+        const primary = sfxVfx || sfxName;
+        sfx.play(primary, { x: e.rx, y: e.ry, fallback: primary !== sfxName ? sfxName : undefined });
+      }
+      // 受傷音
+      if (hurt) sfx.play('hurt', { x: e.rx, y: e.ry });
+      // 腳步音：依走路相位 (models.js ud.phase 每跨 π 為一步) + 起步保底 → 按一下=一聲、按住=連續
+      const ud = e.group.userData;
+      if (ud) {
+        const moving = speed > WALK_THRESHOLD;
+        const footIdx = Math.floor(ud.phase / Math.PI);
+        if (moving && (!e.wasMoving || footIdx > e.lastFootIdx)) {
+          sfx.playFootstep({ x: e.rx, y: e.ry, throttleKey: 'foot' + p.id, minInterval: 0.13 });
+        }
+        e.lastFootIdx = footIdx;
+        e.wasMoving = moving;
+      }
+
+      // 聆聽者 = 本地玩家位置
+      if (p.id === selfId) { selfX = e.rx; selfY = e.ry; }
     }
+    if (selfX !== null) sfx.setListener(selfX, selfY);
     // 離開房間的玩家才釋放模型
     for (const [pid, e] of models) {
       if (!seen.has(pid)) { disposeModel(e); models.delete(pid); prev.delete(pid); }

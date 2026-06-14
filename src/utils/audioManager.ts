@@ -42,7 +42,7 @@ export function getAudioManager(): AudioManager {
         if (!this.audio) {
           this.audio = new Audio();
           this.audio.loop = true; // 循环播放
-          this.audio.volume = 0.5; // 默认音量 50%
+          this.audio.volume = 0.2; // 默认音量 50%
         }
 
         // 切换音乐源并播放
