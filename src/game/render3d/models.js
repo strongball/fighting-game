@@ -13,16 +13,16 @@ import { WALK_THRESHOLD } from '../constants.js';
 
 // 原型設定：bulk(體型) / weapon(武器) / 顏色由角色資料 color 決定
 const ARCHE = {
-  0: { bulk: 1.18, weapon: 'sword' },     // 戰士
-  1: { bulk: 0.92, weapon: 'staff', robe: true },   // 法師
-  2: { bulk: 0.82, weapon: 'daggers' },   // 刺客
-  3: { bulk: 1.5, weapon: 'shield' },     // 坦克
-  4: { bulk: 0.96, weapon: 'bow' },       // 弓箭手
-  5: { bulk: 0.98, weapon: 'orb', robe: true },     // 治療師
-  6: { bulk: 1.3, weapon: 'axes' },       // 狂戰士
-  7: { bulk: 0.82, weapon: 'kunai' },     // 忍者
-  8: { bulk: 1.0, weapon: 'elements', robe: true }, // 元素使
-  9: { bulk: 1.05, weapon: 'gloves' },    // 格鬥家
+  0: { bulk: 2.36, weapon: 'sword' },     // 戰士
+  1: { bulk: 1.84, weapon: 'staff', robe: true },   // 法師
+  2: { bulk: 1.64, weapon: 'daggers' },   // 刺客
+  3: { bulk: 3.0, weapon: 'shield' },     // 坦克
+  4: { bulk: 1.92, weapon: 'bow' },       // 弓箭手
+  5: { bulk: 1.96, weapon: 'orb', robe: true },     // 治療師
+  6: { bulk: 2.6, weapon: 'axes' },       // 狂戰士
+  7: { bulk: 1.64, weapon: 'kunai' },     // 忍者
+  8: { bulk: 2.0, weapon: 'elements', robe: true }, // 元素使
+  9: { bulk: 2.1, weapon: 'gloves' },    // 格鬥家
 };
 
 function shade(hex, f) {

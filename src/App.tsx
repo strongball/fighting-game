@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { getController } from './game/controller';
+import { getAudioManager } from './utils/audioManager';
 import { MenuScreen } from './components/MenuScreen';
 import { LobbyScreen } from './components/LobbyScreen';
 import { GameScreen } from './components/GameScreen';
@@ -46,6 +47,18 @@ export function App() {
       setTimeout(() => controller.devStartGame(charId), 100);
     }
   }, [controller]);
+
+  // 根據遊戲階段切換背景音樂
+  useEffect(() => {
+    const audioManager = getAudioManager();
+    if (phase === 'lobby') {
+      audioManager.playMusic('lobby');
+    } else if (phase === 'game') {
+      audioManager.playMusic('game');
+    } else {
+      audioManager.stopMusic();
+    }
+  }, [phase]);
 
   function handleSelectChar(charId: number) {
     setSelectedChar(charId);

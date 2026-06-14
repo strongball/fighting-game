@@ -20,7 +20,7 @@ import { PLAYER_RADIUS } from '../constants.js';
 
 // 皮膚自動縮放：俯視 footprint (長/寬取大者) 對齊到碰撞直徑的倍率。
 // 1.0 = 完全貼合碰撞圈；>1 = 視覺略大於碰撞 (較有體積感)。
-const FOOTPRINT_FILL = 3;
+const FOOTPRINT_FILL = 6;
 
 const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`;
 const modelUrl = (file) => asset(`gltf_source/${file}`);
