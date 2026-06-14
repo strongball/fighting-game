@@ -88,7 +88,8 @@ const cache = new Map(); // charId -> Promise<Template|null>
 // 載入並快取 gltf 模板（共用 geometry，逐實例再 clone 骨架）。無檔/失敗回 null。
 export function prepareSkin(charId) {
   if (cache.has(charId)) return cache.get(charId);
-  const cfg = getSkinConfig(charId);
+  // const cfg = getSkinConfig(charId);
+  const cfg = undefined;
   if (!cfg) { const p = Promise.resolve(null); cache.set(charId, p); return p; }
   const p = loader.loadAsync(cfg.url)
     .then((gltf) => ({ scene: gltf.scene, animations: gltf.animations || [], cfg }))
