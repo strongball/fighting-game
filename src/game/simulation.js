@@ -206,7 +206,7 @@ function executeAction(state, p, a, opts = {}) {
       p.x = clamp(p.x + cos * a.range, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
       p.y = clamp(p.y + sin * a.range, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
       if (a.dmg) meleeHit(state, p, { dmg: a.dmg, range: a.hitRadius || 90, arc: 7, knockback: a.knockback || 0, effect: a.effect, detonate: a.detonate }, true); // 落點全方位爆發 (位置已是傳送後，teleport range 與命中半徑分開)
-      if (!silent) addFx(state, { type: 'blink', x: p.x, y: p.y, color: a.color, life: 0.3, radius: a.hitRadius || PLAYER_RADIUS * 1.6, vfx: a.vfx });
+      if (!silent) addFx(state, { type: 'blink', x: p.x, y: p.y, facing: p.facing, range: a.range, color: a.color, life: 0.3, radius: a.hitRadius || PLAYER_RADIUS * 1.6, vfx: a.vfx });
       break;
     }
     case 'multiblink': {
