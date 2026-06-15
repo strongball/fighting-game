@@ -826,7 +826,7 @@ function dotLifesteal(state, srcId, dmg) {
   const src = state.players[srcId];
   if (!src || !src.alive) return;
   const t = getCharacter(src.charId).talent;
-  if (t && t.id === 'undeath') src.hp = Math.min(src.maxHp, src.hp + dmg * (t.factor || 0.4));
+  if (t && t.id === 'undeath') src.hp = Math.min(src.maxHp, src.hp + dmg * (t.factor || 0.15));
 }
 
 // 一個固定步的權威模擬
