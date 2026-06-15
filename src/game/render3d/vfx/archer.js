@@ -3,19 +3,125 @@ import * as THREE from 'three';
 import { registerVfx } from './registry.js';
 import { ring, burst, cone } from './lib.js';
 
-// 大絕招 — 萬箭齊發：箭雨自天而降 + 地面環
+// 大絕招 — 萬箭齊發：神意·千羽風暴與神梭傾瀉
 registerVfx('archer_ultimate', {
   onCast(ctx, f, c) {
-    const R = f.radius || 230;
-    ring(ctx, c, { color: '#7bed9f', from: 20, to: R, life: 0.62, y: 4, ease: true });
-    ring(ctx, c, { color: '#d8ffe6', from: 12, to: R * 0.7, life: 0.5, y: 6, alpha: 0.7 });
-    ctx.sceneMgr.addShake(10);
-    ctx.sceneMgr.addFlash(0.16, '#7bed9f');
-    for (let i = 0; i < 130; i++) {
-      const a = Math.random() * Math.PI * 2, rr = Math.sqrt(Math.random()) * R;
-      ctx.particles.spawn({ x: c.x + Math.cos(a) * rr, y: 320 + Math.random() * 240, z: c.z + Math.sin(a) * rr, vx: 0, vy: -560, vz: 0, drag: 0, gravity: 0, life: 0.8, size: 5, color: Math.random() < 0.5 ? '#7bed9f' : '#d8ffe6', fade: false });
-    }
+    const THREE = ctx.THREE;
+    ctx.sceneMgr.addShake(8);
+    ctx.sceneMgr.addFlash(0.2, '#7bed9f');
+
+    // 施法起手：精靈之風法陣
+    ring(ctx, c, { color: '#7bed9f', from: 10, to: 80, life: 0.5, y: 4, ease: true });
+    
+    // 召喚背後的「翠綠光之雙翼」
+    const wingGroup = new THREE.Group();
+    wingGroup.position.set(c.x, c.y + 14, c.z);
+    wingGroup.rotation.y = -f.facing;
+
+    const wingMat = new THREE.MeshBasicMaterial({
+      color: 0x2ecc71,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+    });
+
+    const leftWingGeo = new THREE.ConeGeometry(5, 34, 3);
+    const leftWing = new THREE.Mesh(leftWingGeo, wingMat);
+    leftWing.position.set(-8, 4, -6);
+    leftWing.rotation.set(0.4, 0, 0.7);
+    
+    const rightWingGeo = new THREE.ConeGeometry(5, 34, 3);
+    const rightWing = new THREE.Mesh(rightWingGeo, wingMat);
+    rightWing.position.set(8, 4, -6);
+    rightWing.rotation.set(0.4, 0, -0.7);
+
+    wingGroup.add(leftWing, rightWing);
+
+    ctx.addTransient(wingGroup, 0.65, (mesh, t) => {
+      const scale = 0.5 + 0.5 * Math.sin(t * Math.PI);
+      mesh.scale.set(scale, scale, scale);
+      leftWing.rotation.z = 0.7 + Math.sin(t * Math.PI * 4) * 0.25;
+      rightWing.rotation.z = -0.7 - Math.sin(t * Math.PI * 4) * 0.25;
+      wingMat.opacity = (1 - t) * 0.85;
+    });
+
+    wingGroup.userData.geo = { dispose: () => { leftWingGeo.dispose(); rightWingGeo.dispose(); } };
+    wingGroup.userData.mat = wingMat;
+
+    cone(ctx, c, f.facing, { color: ['#7bed9f', '#ffffff'], count: 26, speed: 320, spread: 0.6, up: 30, life: 0.4 });
   },
+
+  projectile(ctx, pr) {
+    const THREE = ctx.THREE;
+    const g = new THREE.Group();
+    const col = new THREE.Color('#2ecc71');
+    const white = new THREE.Color('#ffffff');
+
+    // 1. 中心發光光梭
+    const shaftGeo = new THREE.CylinderGeometry(pr.radius * 0.38, pr.radius * 0.38, pr.radius * 8, 6);
+    const shaftMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: col,
+      emissiveIntensity: 3.2,
+      roughness: 0.2
+    });
+    const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+    shaft.rotation.z = Math.PI / 2;
+    g.add(shaft);
+
+    // 2. 風暴螺旋外圈
+    const torusGeo = new THREE.TorusGeometry(pr.radius * 1.5, pr.radius * 0.24, 6, 16);
+    const torusMat = new THREE.MeshBasicMaterial({
+      color: white,
+      transparent: true,
+      opacity: 0.65,
+      blending: THREE.AdditiveBlending
+    });
+    const torus = new THREE.Mesh(torusGeo, torusMat);
+    torus.rotation.y = Math.PI / 2;
+    g.add(torus);
+
+    return {
+      object3D: g,
+      update(dt) {
+        torus.rotation.x += dt * 18;
+        
+        ctx.particles.spawn({
+          x: g.position.x, y: g.position.y, z: g.position.z,
+          vx: (Math.random() - 0.5) * 16, vy: (Math.random() - 0.5) * 16, vz: (Math.random() - 0.5) * 16,
+          drag: 3, life: 0.24, size: pr.radius * 1.2,
+          color: Math.random() < 0.5 ? '#7bed9f' : '#ffffff', fade: true
+        });
+      }
+    };
+  },
+
+  onHit(ctx, f, c) {
+    const THREE = ctx.THREE;
+    // 命中時的「旋轉風暴氣旋」Mesh
+    const geo = new THREE.TorusGeometry(1, 0.28, 6, 24);
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: 0x7bed9f,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+    }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(c.x, 8, c.z);
+    
+    ctx.addTransient(m, 0.42, (mesh, t) => {
+      mesh.scale.setScalar((f.radius || 14) * 3.5 * t);
+      mesh.rotation.z += 0.12;
+      mesh.material.opacity = (1 - t) * 0.9;
+    });
+    m.userData.geo = geo;
+    m.userData.mat = m.material;
+
+    // 噴射翠綠羽毛/風刃粒子
+    burst(ctx, c, { color: ['#7bed9f', '#d8ffe6', '#ffffff'], count: 18, speed: 220, up: 40, life: 0.45, size: 3.5 });
+  }
 });
 
 function makeArrow(ctx, pr, tint) {

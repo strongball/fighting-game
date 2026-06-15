@@ -3,22 +3,79 @@ import * as THREE from 'three';
 import { registerVfx } from './registry.js';
 import { slashBlade, ring, pillar, column, burst, cone, addShake, addFlash, ultimateBurst } from './lib.js';
 
-// 大絕招 — 血之狂亂：血焰柱 + 多重旋轉刃環
+// 大絕招 — 血祭處決：狂魔降世與血契處決斬
 registerVfx('berserker_ultimate', {
   onCast(ctx, f, c) {
-    const R = f.range || 145;
-    ultimateBurst(ctx, c, { color: '#ff3b2f', radius: R, pillarH: 185, pillarR: 32, shake: 22, flash: 0.4 });
-    for (let k = 0; k < 6; k++) {
-      const geo = new THREE.RingGeometry(0.55, 1, 48);
-      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff3b2f'), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-      m.rotation.x = -Math.PI / 2; m.position.set(c.x, 10 + k * 6, c.z);
-      const baseR = R * (0.6 + k * 0.13);
-      ctx.addTransient(m, 0.5, (mesh, t) => { mesh.scale.setScalar(baseR * (0.6 + 0.5 * t)); mesh.rotation.z = t * Math.PI * 4 + k; mesh.material.opacity = (1 - t) * 0.8; });
-      m.userData.mat = m.material; m.userData.geo = geo;
-    }
-    column(ctx, c, { color: ['#ff3b2f', '#922b21'], count: 30, radius: R * 0.4, speed: 220, life: 0.7, size: 5 });
-    burst(ctx, c, { color: ['#ff3b2f', '#922b21', '#ffffff'], count: 44, speed: 320, up: 30, flat: true, life: 0.6, size: 5 });
-    addFlash(ctx, 0.28, '#ff1a0f');
+    const THREE = ctx.THREE;
+    const dist = f.range || 200;
+    const dx = Math.cos(f.facing);
+    const dy = Math.sin(f.facing);
+    const R = 150;
+
+    // 1. 起步點腳下的血紅環
+    ring(ctx, c, { color: '#ff3b2f', from: 8, to: 80, life: 0.38, y: 3, ease: true });
+
+    // 2. 建立血狼影 Mesh (圓錐)
+    const wolfGeo = new THREE.ConeGeometry(14, 42, 4);
+    const wolfMat = new THREE.MeshStandardMaterial({
+      color: 0x922b21,
+      emissive: 0xff1a0f,
+      emissiveIntensity: 3.8,
+      transparent: true,
+      opacity: 0.9
+    });
+    
+    // 圓錐預設 +Y 朝上，需要旋轉躺平指向面向的方向
+    const wolf = new THREE.Mesh(wolfGeo, wolfMat);
+    wolf.rotation.x = Math.PI / 2;
+    wolf.rotation.z = -f.facing;
+    wolf.position.set(c.x, c.y + 12, c.z);
+
+    ctx.addTransient(wolf, 0.72, (mesh, t) => {
+      if (t < 0.32) {
+        // 快速衝鋒滑行
+        const progress = t / 0.32;
+        mesh.position.set(c.x + dx * dist * progress, c.y + 12, c.z + dy * dist * progress);
+        mesh.scale.set(1 + progress * 0.2, 1 + progress * 0.4, 1);
+      } else {
+        // 衝到終點，碎裂消散 (使用 clamped 邊界位置以防出界)
+        const hitPointX = Math.max(-600, Math.min(600, c.x + dx * dist));
+        const hitPointZ = Math.max(-400, Math.min(400, c.z + dy * dist));
+        mesh.position.set(hitPointX, c.y + 12, hitPointZ);
+        mesh.scale.setScalar(Math.max(0.001, (1 - (t - 0.32) / 0.68) * 1.2));
+        wolfMat.opacity = Math.max(0, (1 - t) * 0.9);
+        
+        if (!mesh.userData.exploded) {
+          mesh.userData.exploded = true;
+          
+          // 終點落地大爆炸
+          const hitPoint = { x: hitPointX, y: c.y, z: hitPointZ };
+          ctx.sceneMgr.addShake(26);
+          ctx.sceneMgr.addFlash(0.42, '#ff1a0f');
+
+          // 雙重血色十字斬
+          slashBlade(ctx, hitPoint, f.facing + 0.65, { color: '#ffffff', len: R * 1.35, w: 26, swing: 2.2, life: 0.38 });
+          slashBlade(ctx, hitPoint, f.facing - 0.65, { color: '#ff3b2f', len: R * 1.25, w: 22, swing: 2.2, life: 0.38 });
+          
+          // 漫天地表血焰環
+          ring(ctx, hitPoint, { color: '#922b21', from: 20, to: R * 1.3, life: 0.58, y: 3, alpha: 0.9, ease: true });
+
+          // 噴泉般的深紅血液粒子
+          for (let i = 0; i < 54; i++) {
+            const a = Math.random() * Math.PI * 2, spd = 260 + Math.random() * 260;
+            ctx.particles.spawn({
+              x: hitPoint.x, y: 6, z: hitPoint.z,
+              vx: Math.cos(a) * spd, vy: 160 + Math.random() * 240, vz: Math.sin(a) * spd,
+              gravity: 420, drag: 1.15, life: 0.65 + Math.random() * 0.55,
+              size: 4.5 + Math.random() * 5, color: Math.random() < 0.6 ? '#ff3b2f' : '#922b21', fade: true
+            });
+          }
+        }
+      }
+    });
+
+    wolf.userData.geo = wolfGeo;
+    wolf.userData.mat = wolfMat;
   },
 });
 

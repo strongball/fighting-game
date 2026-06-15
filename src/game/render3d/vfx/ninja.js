@@ -3,19 +3,141 @@ import * as THREE from 'three';
 import { registerVfx } from './registry.js';
 import { ring, burst, column } from './lib.js';
 
-// 大絕招 — 影分身亂舞：濃煙湧現 + 環身殘影
+// 大絕招 — 煙影亂舞：忍秘傳·百刃煙嵐陣
 registerVfx('ninja_ultimate', {
   onCast(ctx, f, c) {
-    for (let i = 0; i < 64; i++) {
-      const a = Math.random() * Math.PI * 2, rr = Math.random() * 80;
-      ctx.particles.spawn({ x: c.x + Math.cos(a) * rr, y: Math.random() * 48, z: c.z + Math.sin(a) * rr, vx: Math.cos(a) * (50 + Math.random() * 70), vy: 20 + Math.random() * 50, vz: Math.sin(a) * (50 + Math.random() * 70), gravity: -8, drag: 1.4, life: 0.8 + Math.random() * 0.6, size: 9 + Math.random() * 9, color: Math.random() < 0.5 ? '#4b5358' : '#2c3e50', fade: false });
-    }
-    ring(ctx, c, { color: '#b0bec5', from: 12, to: 120, life: 0.5, y: 4, alpha: 0.85 });
-    ring(ctx, c, { color: '#eceff1', from: 8, to: 80, life: 0.4, y: 7, alpha: 0.6 });
-    burst(ctx, c, { color: ['#cfd8dc', '#90a4ae'], count: 28, speed: 280, up: 20, flat: true, life: 0.5, size: 4 });
+    const R = f.radius || 170;
     ctx.sceneMgr.addShake(12);
     ctx.sceneMgr.addFlash(0.18, '#cfd8dc');
+    
+    // 起手墨印爆發
+    ring(ctx, c, { color: '#b0bec5', from: 12, to: 120, life: 0.5, y: 4, alpha: 0.85 });
+    for (let i = 0; i < 48; i++) {
+      const a = Math.random() * Math.PI * 2, rr = Math.random() * 60;
+      ctx.particles.spawn({
+        x: c.x + Math.cos(a) * rr, y: Math.random() * 32, z: c.z + Math.sin(a) * rr,
+        vx: Math.cos(a) * (60 + Math.random() * 80), vy: 20 + Math.random() * 40, vz: Math.sin(a) * (60 + Math.random() * 80),
+        gravity: -6, drag: 1.4, life: 0.7 + Math.random() * 0.5,
+        size: 8 + Math.random() * 8, color: Math.random() < 0.5 ? '#4b5358' : '#2c3e50', fade: false
+      });
+    }
   },
+  zone(ctx, z) {
+    const THREE = ctx.THREE;
+    const g = new THREE.Group();
+    const R = z.radius || 170;
+
+    const geos = [];
+    const mats = [];
+
+    // 1. 手裏劍軌跡環
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x9b59b6,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+    });
+    mats.push(ringMat);
+
+    const ringGeos = [];
+    const ringMeshes = [];
+    for (let k = 0; k < 3; k++) {
+      const tg = new THREE.TorusGeometry(R * 0.45 + k * 18, 1.2, 4, 32);
+      const tm = new THREE.Mesh(tg, ringMat);
+      tm.rotation.set(
+        Math.PI / 2 + (k - 1) * 0.4,
+        (k - 1) * 0.2,
+        0
+      );
+      g.add(tm);
+      ringGeos.push(tg);
+      ringMeshes.push(tm);
+    }
+    geos.push(...ringGeos);
+
+    // 2. 飛旋的立體手裏劍
+    const bladeGeo = new THREE.BoxGeometry(R * 0.38, 0.4, 4);
+    const shurikenMat = new THREE.MeshStandardMaterial({
+      color: 0x2c3e50,
+      emissive: 0x9b59b6,
+      emissiveIntensity: 2.2,
+      metalness: 0.9,
+      roughness: 0.2
+    });
+    geos.push(bladeGeo);
+    mats.push(shurikenMat);
+
+    const shurikens = [];
+    for (let k = 0; k < 4; k++) {
+      const sGroup = new THREE.Group();
+      const b1 = new THREE.Mesh(bladeGeo, shurikenMat);
+      const b2 = new THREE.Mesh(bladeGeo, shurikenMat);
+      b2.rotation.y = Math.PI / 2;
+      sGroup.add(b1, b2);
+      
+      const angle = (k / 4) * Math.PI * 2;
+      sGroup.position.set(Math.cos(angle) * R * 0.65, 8 + (k % 2) * 8, Math.sin(angle) * R * 0.65);
+      g.add(sGroup);
+      shurikens.push({ group: sGroup, baseAngle: angle, y: 8 + (k % 2) * 8 });
+    }
+
+    g.userData.geo = { dispose: () => geos.forEach(geo => geo.dispose()) };
+    g.userData.mat = { dispose: () => mats.forEach(mat => mat.dispose()) };
+
+    let age = 0;
+    return {
+      object3D: g,
+      update(dt, zz) {
+        g.position.y = 2;
+        age += dt;
+
+        g.rotation.y -= dt * 1.5;
+
+        shurikens.forEach((s, idx) => {
+          s.group.rotation.y += dt * 25;
+          const orbitalAngle = s.baseAngle + age * 2.2;
+          const localX = Math.cos(orbitalAngle) * R * 0.65;
+          const localZ = Math.sin(orbitalAngle) * R * 0.65;
+          
+          const worldX = g.position.x + localX;
+          const worldZ = g.position.z + localZ;
+          
+          // 若出界則隱藏手裏劍，防止手裏劍在牆壁邊緣擠成一條線，轉回場內時才重新顯示
+          if (worldX < -595 || worldX > 595 || worldZ < -395 || worldZ > 395) {
+            s.group.visible = false;
+          } else {
+            s.group.visible = true;
+            s.group.position.set(localX, s.y + Math.sin(age * 6 + idx) * 3, localZ);
+          }
+        });
+
+        ringMeshes.forEach((rm, idx) => {
+          rm.rotation.z += dt * (4 + idx * 2);
+        });
+
+        const alpha = Math.max(0, 1 - age / z.lifetime);
+        ringMat.opacity = 0.6 * alpha;
+        shurikenMat.opacity = 0.9 * alpha;
+
+        if (Math.random() < 0.34) {
+          const pAngle = Math.random() * Math.PI * 2;
+          const pRadius = R * (0.3 + Math.random() * 0.5);
+          ctx.particles.spawn({
+            x: g.position.x + Math.cos(pAngle) * pRadius,
+            y: 4 + Math.random() * 26,
+            z: g.position.z + Math.sin(pAngle) * pRadius,
+            vx: Math.cos(pAngle) * (60 + Math.random() * 60),
+            vy: 10 + Math.random() * 30,
+            vz: Math.sin(pAngle) * (60 + Math.random() * 60),
+            gravity: -5, drag: 1.45, life: 0.65,
+            size: 6 + Math.random() * 6,
+            color: Math.random() < 0.5 ? '#1a252f' : '#4b5358', fade: true
+          });
+        }
+      }
+    };
+  }
 });
 
 registerVfx('ninja_shuriken', {

@@ -82,7 +82,10 @@ export function createParticleSystem(scene, opt = {}) {
   function spawn(p) {
     if (count >= CAP) return;
     const i = count++;
-    px[i] = p.x; py[i] = p.y; pz[i] = p.z;
+    // 限制粒子在競技場邊界內 (HALF_W=600, HALF_H=400)，允許 +4 單位的視覺溢出緩衝
+    px[i] = Math.max(-604, Math.min(604, p.x));
+    py[i] = p.y;
+    pz[i] = Math.max(-404, Math.min(404, p.z));
     vx[i] = p.vx || 0; vy[i] = p.vy || 0; vz[i] = p.vz || 0;
     life[i] = maxLife[i] = p.life || 0.5;
     baseSize[i] = p.size || 6;
