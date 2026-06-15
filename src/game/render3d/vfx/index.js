@@ -17,5 +17,6 @@ import './gunner.js';
 import './summoner.js';
 import './necromancer.js';
 import './chronomancer.js';
+import './boss.js';
 
 export { getVfx, hasVfx, registerVfx } from './registry.js';

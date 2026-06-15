@@ -6,6 +6,7 @@
 // 編排：場景(scene.js) + GPU 粒子(particles.js) + 投射物/區域(entities3d.js)
 //      + 特效匯流排(fxbus.js) + 角色模型(models.js) + 引擎內 HUD(hud.js)
 
+import * as THREE from 'three';
 import { createSceneManager } from './render3d/scene.js';
 import { createParticleSystem } from './render3d/particles.js';
 import { createEntityLayer } from './render3d/entities3d.js';
@@ -22,6 +23,22 @@ import { getSfxManager } from '../utils/sfxManager';
 const CD_SLOTS = ['basic', 'skill1', 'skill2', 'ultimate'];
 const SWING_TYPES = new Set(['melee', 'dash', 'charge', 'leap', 'grapple', 'multiblink', 'blink']);
 
+// 被獵殺標記 (R7 等「鎖血最少」王)：漂浮在目標頭頂、向下指的發光紅箭頭 (尖端在群組原點)
+function buildHuntMarker() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xff6a5a, emissive: 0xff2a1e, emissiveIntensity: 2.2, roughness: 0.3, metalness: 0.2, transparent: true, opacity: 0.96 });
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(10, 14, 4), mat); // 四角錐箭頭，尖端朝下
+  cone.rotation.x = Math.PI; cone.rotation.y = Math.PI / 4; cone.position.y = 7;
+  g.add(cone);
+  const shaft = new THREE.Mesh(new THREE.BoxGeometry(4.5, 11, 4.5), mat);
+  shaft.position.y = 18; g.add(shaft);
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(8, 12, 10), new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0.38, blending: THREE.AdditiveBlending, depthWrite: false }));
+  halo.position.y = 10; halo.scale.y = 1.6; g.add(halo);
+  g.scale.setScalar(1.85); // 放大整支箭頭，更明顯
+  g.userData = { mat };
+  return g;
+}
+
 export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
   const sceneMgr = createSceneManager(canvas);
   const { scene, camera } = sceneMgr;
@@ -37,6 +54,12 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
   let lastT = 0;
   const models = new Map();  // pid -> { group, charId }
   const prev = new Map();    // pid -> { x, y } 上一幀世界座標 (算速度)
+
+  // 被獵殺頭頂箭頭：單一可重用物件，每幀定位到目標頭頂 (R7 等)
+  let huntPhase = 0;
+  const huntMarker = buildHuntMarker();
+  huntMarker.visible = false;
+  scene.add(huntMarker);
 
   sceneMgr.resize();
   hud.resize();
@@ -154,7 +177,34 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
       pr.hp = p.hp;
       if (p.cd) { if (!pr.cd) pr.cd = {}; for (const slot of CD_SLOTS) pr.cd[slot] = p.cd[slot] || 0; }
 
-      animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt, downed });
+      // 弱點教學：算出本地玩家相對魔王是「在背後軟肋」還是「在正面重甲弧」(與 entities.js 傷害判定同公式)，傳給模型亮燈
+      let bossWeakSelf = false, bossFrontSelf = false, coreShielded = 0;
+      if (p.isBoss) {
+        const mech = getCharacter(p.charId).mechanic;
+        if (mech && (mech.backWeak || mech.frontArmor)) {
+          const me = state.players[selfId];
+          if (me && me.alive && me.id !== p.id) {
+            let rel = Math.atan2(me.y - p.y, me.x - p.x) - p.facing;
+            while (rel > Math.PI) rel -= Math.PI * 2;
+            while (rel < -Math.PI) rel += Math.PI * 2;
+            rel = Math.abs(rel);
+            bossWeakSelf = rel > Math.PI - 0.9;   // 背後軟肋 (R1 加傷 / R3 無甲)
+            if (mech.frontArmor) bossFrontSelf = rel < 0.9; // 正面重甲弧 (R3 減傷)
+          }
+        }
+        // 魔王護盾強度 0..1：R5 雙臂任一存活=1；R6 隨存活小怪數 (每隻 perMinion，封頂 max)
+        if (mech && mech.coreArmorUntilPartsDown) {
+          for (const o of Object.values(state.players)) {
+            if (o.isPart && o.ownerId === p.id && o.alive) { coreShielded = 1; break; }
+          }
+        } else if (mech && mech.minionShield) {
+          let nMin = 0;
+          for (const o of Object.values(state.players)) if (o.isMinion && o.ownerId === p.id && o.alive) nMin++;
+          const ms = mech.minionShield;
+          if (nMin > 0) coreShielded = Math.min(1, (nMin * (ms.perMinion || 0.18)) / (ms.max || 0.72));
+        }
+      }
+      animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt, downed, bossWeakSelf, bossFrontSelf, fake: !!p.isFake, coreShielded });
 
       // ---- 音效 (renderer-side 本地偵測；host+joiner 各自播放；缺檔靜音不報錯) ----
       // 出手音：每角色 vfx id 優先，缺檔回退泛型 (swing/cast/dash/blink/ultimate)
@@ -186,6 +236,28 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
     }
   }
 
+  // 每幀把箭頭定位到「被獵殺者」(血最少的存活我方) 頭頂；無則隱藏
+  function updateHuntMarker(state, dt) {
+    huntPhase += dt;
+    let huntedId = null;
+    if (state.mode === 'boss') {
+      let boss = null;
+      for (const p of Object.values(state.players)) if (p.isBoss && p.alive) { boss = p; break; }
+      const mech = boss && getCharacter(boss.charId).mechanic;
+      if (mech && mech.targetLowest) {
+        let lo = Infinity;
+        for (const p of Object.values(state.players)) if (p.team === 1 && p.alive && p.hp < lo) { lo = p.hp; huntedId = p.id; }
+      }
+    }
+    const e = huntedId && models.get(huntedId);
+    if (!e) { huntMarker.visible = false; return; }
+    huntMarker.visible = true;
+    const bob = Math.sin(huntPhase * 3) * 5;
+    huntMarker.position.set(sceneX(e.rx), 96 + bob, sceneZ(e.ry)); // 拉高到名牌上方，更顯眼
+    huntMarker.rotation.y += dt * 2;
+    huntMarker.userData.mat.emissiveIntensity = 2.4 + 1.0 * (0.5 + 0.5 * Math.sin(huntPhase * 6));
+  }
+
   function render(state, selfId) {
     const now = performance.now();
     let dt = lastT ? (now - lastT) / 1000 : 0;
@@ -196,6 +268,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
 
     fxbus.process(state);
     syncPlayers(state, selfId, dt);
+    updateHuntMarker(state, dt);
     entities.syncProjectiles(state.projectiles, dt);
     entities.syncZones(state.zones, dt);
     particles.update(dt);

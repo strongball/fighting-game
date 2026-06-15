@@ -43,6 +43,14 @@ export const BOSSES = [
     ai: 'golem',
     mechanic: { backWeak: 0.5, aggroSwap: 3.0 }, // 背後受傷 +50%；每 3 秒換仇恨目標
     talent: { id: 'boss_backweak', name: '遲鈍核心', desc: '背後受到的傷害提高 50%。', backWeak: 0.5 },
+    // 教學提示 (渲染端讀取)：hint=開場橫幅戰術一行；tags=血條旁常駐機制晶片
+    hint: '繞到背後攻擊，傷害 +50%！',
+    tags: [
+      { icon: '🪵', text: '背後弱點 +50%' },
+      { icon: '🎯', text: '仇恨每 3 秒跳' },
+    ],
+    hazardText: '⚠️ 快離開攻擊範圍！',
+    hazardColor: '#e6b352', // 中性琥珀：R1 招式無屬性，用中性警示色 (不用毒綠)
     basic: { name: '橫掃巨臂', type: 'melee', dmg: 45, range: 130, arc: 1.5, knockback: 240, cd: 1.6, windup: 0.8, telegraph: 'arc', color: '#8fbf3f', vfx: 'boss_golem_sweep' },
     skill1: { name: '巨力砸地', type: 'zone', range: 120, radius: 130, dmg: 70, lifetime: 0.4, tick: 0.4, delay: 1.0, knockback: 200, effect: STUN(0.5), cd: 7, windup: 1.0, telegraph: 'circle', color: '#7a5a2b', vfx: 'boss_golem_slam' },
     skill2: { name: '纏根束縛', type: 'zone', range: 0, radius: 200, dmg: 24, lifetime: 1.2, tick: 0.5, pull: 200, effect: ROOT(1.2), cd: 11, windup: 0.7, telegraph: 'circle', color: '#4e7a2f', vfx: 'boss_golem_roots' },
@@ -63,6 +71,15 @@ export const BOSSES = [
     model: { bulk: 3.5, weapon: 'daggers', scale: 1.8, head: 'triangle', emissiveCore: '#aaff55' },
     ai: 'lizard',
     mechanic: { poisonFloor: true }, // 招式在地面留毒池
+    // 教學提示 (渲染端讀取)：R2 機制是「地面毒沼」，重點在別久站、會中毒
+    hint: '別踩地上的綠色毒沼 —— 會持續中毒掉血！',
+    tags: [
+      { icon: '☠️', text: '地面毒沼別久站' },
+      { icon: '🧪', text: '攻擊附帶中毒' },
+      { icon: '🦎', text: '高機動·會飛撲' },
+    ],
+    hazardText: '☠️ 中毒中！快離開毒沼',
+    hazardColor: '#8ee03a', // 毒綠
     basic: { name: '毒爪', type: 'melee', dmg: 30, range: 80, arc: 1.1, knockback: 120, cd: 0.9, windup: 0.4, telegraph: 'arc', color: '#9acd32', effect: BURN(6, 2), vfx: 'boss_lizard_claw' },
     skill1: { name: '腐蝕毒吐', type: 'projectile', dmg: 22, speed: 460, radius: 16, lifetime: 1.1, count: 3, spread: 0.28, knockback: 40, cd: 6, windup: 0.6, telegraph: 'line', color: '#7fff00', effect: BURN(10, 3), leaveZone: { radius: 90, dmg: 16, lifetime: 4, tick: 0.5, effect: BURN(10, 2), color: '#5a8f2f', vfx: 'boss_lizard_pool' }, vfx: 'boss_lizard_spit' },
     skill2: { name: '毒沼飛撲', type: 'leap', range: 280, dur: 0.5, dmg: 60, radius: 120, knockback: 160, cd: 8, windup: 0.5, telegraph: 'circle', color: '#6a3d9a', effect: BURN(8, 2), leaveZone: { radius: 110, dmg: 18, lifetime: 5, tick: 0.5, effect: BURN(12, 2), color: '#4e7a2f', vfx: 'boss_lizard_pool' }, vfx: 'boss_lizard_pounce' },
@@ -84,6 +101,15 @@ export const BOSSES = [
     ai: 'juggernaut',
     mechanic: { frontArmor: 0.45, chargeWallStun: 2.2 }, // 正面前弧減傷 45%；衝鋒撞牆自暈 2.2s
     talent: { id: 'boss_frontarmor', name: '熔岩重甲', desc: '正面前方受到的傷害減免 45%，背後無防護。', frontArmor: 0.45, arc: 1.6 },
+    // 教學提示：R3 機制是正面重甲(要打背後) + 衝鋒撞牆會自暈
+    hint: '正面有厚甲擋傷 —— 繞到背後打！閃過衝鋒，牠撞牆會自己暈',
+    tags: [
+      { icon: '🛡️', text: '正面減傷·打背後' },
+      { icon: '💥', text: '衝鋒撞牆會自暈' },
+      { icon: '🔥', text: '攻擊附帶燃燒' },
+    ],
+    hazardText: '🔥 站在烈焰上！快離開',
+    hazardColor: '#ff5a2a', // 熔岩紅
     basic: { name: '熔岩劈斬', type: 'melee', dmg: 50, range: 120, arc: 1.2, knockback: 200, cd: 1.4, windup: 0.7, telegraph: 'arc', color: '#ff7043', effect: BURN(8, 2), vfx: 'boss_juggernaut_slash' },
     skill1: { name: '烈焰衝鋒', type: 'charge', speed: 900, range: 520, dmg: 80, hitRadius: 70, knockback: 320, stopOnHit: true, effect: STUN(1.0), cd: 8, windup: 0.9, telegraph: 'line', color: '#ff5a1f', wallStun: 2.2, vfx: 'boss_juggernaut_charge' },
     skill2: { name: '震地烈焰', type: 'zone', range: 90, radius: 150, dmg: 40, lifetime: 2.4, tick: 0.5, delay: 0.8, moving: 0, effect: BURN(12, 3), cd: 10, windup: 0.8, telegraph: 'circle', color: '#e74c3c', vfx: 'boss_juggernaut_quake' },
@@ -104,6 +130,15 @@ export const BOSSES = [
     model: { bulk: 2.5, weapon: 'daggers', scale: 1.5, head: 'triangle', emissiveCore: '#bfefff', translucent: true },
     ai: 'frost_assassin',
     mechanic: { clones: 3, swapTell: true }, // 召喚 3 個假身；真身可與分身換位 (有細微 tell)
+    // 教學提示：R4 機制是分身騙人 (要認真身) + 冰凍
+    hint: '牠會放分身騙你 —— 真身較「實」、分身半透明會閃，認準真身再打！',
+    tags: [
+      { icon: '👥', text: '會放 3 個假分身' },
+      { icon: '🗡️', text: '真身較實·分身半透明' },
+      { icon: '❄️', text: '攻擊會冰凍堆疊' },
+    ],
+    hazardText: '❄️ 站在冰域裡會被凍！快離開',
+    hazardColor: '#74e0ff', // 冰藍
     basic: { name: '寒霜疾刺', type: 'melee', dmg: 34, range: 70, arc: 0.9, knockback: 90, cd: 0.7, windup: 0.25, telegraph: 'arc', color: '#9fe8ff', effect: CHILL(1), vfx: 'boss_frost_slash' },
     skill1: { name: '霜影突襲', type: 'blink', range: 280, dmg: 55, hitRadius: 95, knockback: 120, effect: CHILL(2), cd: 5, windup: 0.4, telegraph: 'self', color: '#74e0ff', vfx: 'boss_frost_blink' },
     skill2: { name: '鏡花幻影', type: 'summon_clones', count: 3, cd: 13, windup: 0.6, telegraph: 'self', color: '#bfefff', vfx: 'boss_frost_clones' },
@@ -136,6 +171,15 @@ export const BOSSES = [
       ],
       coreArmorUntilPartsDown: 0.6, // 雙臂未破時核心減傷 60%
     },
+    // 教學提示：R5 機制是先破壞左右雙臂，核心才不再減傷
+    hint: '先打掉牠左右兩隻手臂！雙臂沒破時，本體會減傷 60%',
+    tags: [
+      { icon: '🦾', text: '先破壞左右雙臂' },
+      { icon: '🛡️', text: '雙臂未破·本體減傷 60%' },
+      { icon: '⚡', text: '破臂後可關掉牠的招' },
+    ],
+    hazardText: '⚠️ 站在攻擊範圍裡！快閃開',
+    hazardColor: '#ffa83a',
     basic: { name: '踏地震波', type: 'zone', range: 0, radius: 160, dmg: 36, lifetime: 0.4, tick: 0.4, knockback: 220, cd: 2.0, windup: 0.7, telegraph: 'circle', color: '#b0a99f', effect: STUN(0.4), vfx: 'boss_titan_stomp' },
     skill1: { name: '殲滅雷射', type: 'zone', range: 110, radius: 90, dmg: 50, lifetime: 1.6, tick: 0.3, delay: 1.0, moving: 200, requiresPart: 'arm_left', cd: 7, windup: 1.0, telegraph: 'line', color: '#49d0ff', vfx: 'boss_titan_laser' },
     skill2: { name: '旋轉巨鋸', type: 'zone', range: 100, radius: 150, dmg: 30, lifetime: 2.2, tick: 0.25, moving: 280, requiresPart: 'arm_right', cd: 8, windup: 0.8, telegraph: 'arc', color: '#ff7043', effect: BURN(6, 2), vfx: 'boss_titan_saw' },
@@ -156,6 +200,15 @@ export const BOSSES = [
     model: { bulk: 3.5, weapon: 'staff', robe: true, scale: 2.0, head: 'circle', float: true, emissiveCore: '#39ff88' },
     ai: 'necromancer',
     mechanic: { minionShield: { perMinion: 0.18, max: 0.72 } }, // 每隻存活小怪給魔王減傷，清空才露破綻
+    // 教學提示：R6 機制是召喚小怪給自己護盾，要先清小怪
+    hint: '牠會召喚小怪 —— 每隻活著的小怪都讓牠減傷，先清掉小怪再打本體！',
+    tags: [
+      { icon: '💀', text: '會召喚小怪' },
+      { icon: '🛡️', text: '每隻小怪給魔王減傷（最多 72%）' },
+      { icon: '🎯', text: '清光小怪才打得動本體' },
+    ],
+    hazardText: '☠️ 站在亡靈領域裡！快離開',
+    hazardColor: '#46f0a0', // 靈魂綠
     basic: { name: '靈魂彈', type: 'projectile', dmg: 26, speed: 480, radius: 12, lifetime: 1.6, count: 2, spread: 0.18, knockback: 40, cd: 1.0, windup: 0.4, telegraph: 'line', color: '#39ff88', vfx: 'boss_necro_bolt' },
     skill1: { name: '亡者召集', type: 'summon_minions', count: 3, minionHp: 240, minionCharId: 7, cd: 12, windup: 0.8, telegraph: 'self', color: '#7d5fff', vfx: 'boss_necro_summon' },
     skill2: { name: '亡靈護壁', type: 'buff', shield: 400, duration: 12, cd: 14, windup: 0.6, telegraph: 'self', color: '#b39dff', shieldPerMinion: 200, vfx: 'boss_necro_shield' },
@@ -176,6 +229,13 @@ export const BOSSES = [
     model: { bulk: 4.0, weapon: 'gloves', scale: 2.2, head: 'triangle', emissiveCore: '#aee3ff', beast: true },
     ai: 'storm_wolf',
     mechanic: { targetLowest: true, enrageBelow: 0.4, enrageHaste: 1.4 }, // 鎖最低血玩家；殘血暴怒加速
+    // 教學提示：R7 機制是鎖血最少的人猛撲(起手極短) + 殘血暴怒
+    hint: '牠專咬血最少的人 —— 被盯上就拉開距離！起手極短，看到撲擊馬上閃',
+    tags: [
+      { icon: '🎯', text: '鎖定血最少的隊友' },
+      { icon: '⚡', text: '起手極短·撲擊要快閃' },
+      { icon: '🔴', text: '殘血會暴怒加速' },
+    ],
     basic: { name: '雷爪連擊', type: 'melee', dmg: 28, range: 90, arc: 1.0, knockback: 100, cd: 0.5, windup: 0.2, telegraph: 'arc', color: '#aee3ff', vfx: 'boss_wolf_claw' },
     skill1: { name: '迅雷撲擊', type: 'leap', range: 360, dur: 0.35, dmg: 70, radius: 110, knockback: 200, effect: STUN(0.4), cd: 5, windup: 0.3, telegraph: 'line', color: '#7ec8ff', targetLowest: true, vfx: 'boss_wolf_pounce' },
     skill2: { name: '暴風咆哮', type: 'buff', duration: 6, effect: { kind: 'rage', duration: 6, speed: 1.5, dmg: 1.4 }, cd: 12, windup: 0.5, telegraph: 'self', color: '#cfe8ff', knockbackAura: 260, vfx: 'boss_wolf_howl' },
@@ -196,6 +256,15 @@ export const BOSSES = [
     model: { bulk: 3.0, weapon: 'orb', robe: true, scale: 1.8, head: 'circle', float: true, emissiveCore: '#c39bff' },
     ai: 'void_mage',
     mechanic: { rewind: true }, // 大招倒流玩家位置
+    // 教學提示：R8 機制是打亂操作的符咒 + 黑洞吸入 + 大招倒流位置
+    hint: '符咒會打亂你的移動、黑洞會把你吸進去、大招把你拉回幾秒前 —— 看到預警快閃開！',
+    tags: [
+      { icon: '🌀', text: '符咒會打亂你的操作' },
+      { icon: '🕳️', text: '黑洞會吸入·別靠近' },
+      { icon: '⏪', text: '大招會倒流你的位置' },
+    ],
+    hazardText: '🕳️ 被黑洞吸住了！快脫離',
+    hazardColor: '#a06cff',
     basic: { name: '虛空彈', type: 'projectile', dmg: 28, speed: 520, radius: 14, lifetime: 1.6, count: 3, spread: 0.4, knockback: 50, cd: 1.0, windup: 0.4, telegraph: 'line', color: '#c39bff', vfx: 'boss_void_bolt' },
     skill1: { name: '混沌符咒', type: 'apply_scramble', radius: 320, duration: 2.4, cd: 9, windup: 0.8, telegraph: 'circle', color: '#b14fd8', vfx: 'boss_void_scramble' },
     skill2: { name: '奇點黑洞', type: 'zone', range: 140, radius: 200, dmg: 30, lifetime: 2.4, tick: 0.4, delay: 0.6, pull: 360, effect: SLOW(1.0, 0.5), cd: 11, windup: 0.7, telegraph: 'circle', color: '#5b2c8e', swapHit: true, vfx: 'boss_void_blackhole' },
@@ -216,6 +285,15 @@ export const BOSSES = [
     model: { bulk: 5.0, weapon: 'sword', scale: 2.6, head: 'triangle', wings: true, emissiveCore: '#fff2b0' },
     ai: 'fallen_angel',
     mechanic: { soulBind: { count: 2, minGap: 200, dmg: 18, tick: 0.5 }, phases: 2 }, // 隨機綁定 2 人，過近雙扣
+    // 教學提示：R9 機制是用鎖鏈把兩人綁定(過近雙扣) + 兩階段
+    hint: '牠會用鎖鏈把兩名玩家綁在一起 —— 被綁就和隊友拉開距離，否則一起扣血！',
+    tags: [
+      { icon: '🔗', text: '會綁定兩名玩家' },
+      { icon: '↔️', text: '被綁要和隊友拉開' },
+      { icon: '⚔️', text: '第二階段更兇' },
+    ],
+    hazardText: '☀️ 站在審判光柱下！快離開',
+    hazardColor: '#ffd24a',
     basic: { name: '聖劍光弧', type: 'melee', dmg: 40, range: 140, arc: 1.4, knockback: 180, cd: 1.2, windup: 0.5, telegraph: 'arc', color: '#fff2b0', vfx: 'boss_angel_slash' },
     skill1: { name: '靈魂綁定', type: 'soul_bind', count: 2, minGap: 200, dmg: 18, duration: 6, cd: 13, windup: 0.9, telegraph: 'self', color: '#d8b3ff', vfx: 'boss_angel_bind' },
     skill2: { name: '審判光柱', type: 'zone', range: 150, radius: 110, dmg: 60, lifetime: 0.5, tick: 0.5, delay: 1.0, count: 3, scatter: 240, stagger: 0.2, cd: 10, windup: 1.0, telegraph: 'circle', color: '#fff7d6', vfx: 'boss_angel_judgment' },
@@ -236,6 +314,15 @@ export const BOSSES = [
     model: { bulk: 7.0, weapon: 'none', scale: 3.0, head: 'circle', emissiveCore: '#ffffff', phases: 3, voidBody: true },
     ai: 'doppelganger',
     mechanic: { mirrorPlayers: true, phases: 3 }, // 複製全體玩家成鏡像；多階段
+    // 教學提示：R10 機制是複製全體玩家 + 偷學大招 + 多階段
+    hint: '牠會複製全體玩家、還會偷學你們的大招 —— 牠出的招跟你們一樣，預判它！',
+    tags: [
+      { icon: '🪞', text: '複製全體玩家' },
+      { icon: '🎭', text: '會偷用你們的大招' },
+      { icon: '💠', text: '多階段·會變形' },
+    ],
+    hazardText: '💥 站在終焉領域裡！快離開',
+    hazardColor: '#c9c0ff',
     basic: { name: '虛空裂斬', type: 'melee', dmg: 44, range: 150, arc: 1.3, knockback: 200, cd: 1.0, windup: 0.4, telegraph: 'arc', color: '#ffffff', vfx: 'boss_doppel_slash' },
     skill1: { name: '鏡像複製', type: 'mirror_players', cd: 22, once: true, windup: 1.0, telegraph: 'self', color: '#cfcfff', vfx: 'boss_doppel_mirror' },
     skill2: { name: '竊取絕技', type: 'steal_ultimate', cd: 10, windup: 0.8, telegraph: 'self', color: '#b0b0ff', vfx: 'boss_doppel_steal' },

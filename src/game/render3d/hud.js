@@ -62,13 +62,24 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
   const bossFill = el('i', '', bossBarWrap);
   const bossTxt = el('span', '', bossBarWrap);
   const bossParts = el('div', 'hud-boss-parts', bossPanel);
+  const bossTags = el('div', 'hud-boss-tags', bossPanel);
   bossPanel.style.display = 'none';
 
   // 過場橫幅 (中央)
   const banner = el('div', 'hud-banner', layer);
   const bannerText = el('div', 'hud-banner-text', banner);
   const bannerSub = el('div', 'hud-banner-sub', banner);
+  const bannerHint = el('div', 'hud-banner-hint', banner);
   banner.style.display = 'none';
+
+  // 站進敵方地面危險區 (毒沼等) 的即時警示：全螢幕綠色暈邊 + 中央提示字
+  const hazardWarn = el('div', 'hud-hazard', layer);
+  const hazardText = el('div', 'hud-hazard-text', hazardWarn);
+  hazardWarn.style.display = 'none';
+
+  // 自身狀態警示 (R7 被獵殺 / R9 被靈魂綁定…)，文字動態設定
+  const huntWarn = el('div', 'hud-hunt', layer);
+  huntWarn.style.display = 'none';
 
   // 頭頂名牌
   const plates = new Map(); // pid -> { obj, name, hp, mp, root }
@@ -102,6 +113,23 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
       return 'enemy';
     };
     const seen = new Set();
+    // R7 類 (鎖血最少) 魔王：找出被獵殺的隊友 (血最少的存活我方)，名牌標 🎯、自己被鎖則跳警示
+    let huntedId = null;
+    if (state.mode === 'boss') {
+      let hb = null;
+      for (const p of players) if (p.isBoss && p.alive) { hb = p; break; }
+      const hm = hb && getCharacter(hb.charId).mechanic;
+      if (hm && hm.targetLowest) {
+        let lo = Infinity;
+        for (const p of players) if (p.team === 1 && p.alive && p.hp < lo) { lo = p.hp; huntedId = p.id; }
+      }
+    }
+    // 自身狀態警示：R7 被獵殺 / R9 被靈魂綁定 (鎖鏈連線本身由 bossMode 畫，這裡提醒被綁的人拉開)
+    let selfAlert = '';
+    if (huntedId && huntedId === selfId) selfAlert = '🐺 你被盯上了！快拉開距離';
+    else if (state.tethers && state.tethers.some((t) => t.a === selfId || t.b === selfId)) selfAlert = '🔗 你被靈魂綁定 — 與隊友拉開距離';
+    setStyle(huntWarn, 'display', selfAlert ? '' : 'none');
+    if (selfAlert) setText(huntWarn, selfAlert);
     for (const p of players) {
       const r = rel(p);
       const invis = p.effects && p.effects.invis;
@@ -124,9 +152,10 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
         setText(pl.name, `${p.name}　倒地 ${prog}%`);
         setStyle(pl.name, 'color', '#ff9a3c');
       } else {
+        const hunted = p.id === huntedId;
         setText(pl.name, p.name);
-        // 名牌依敵我上色；solo 模式(selfTeam=0) 敵人不標紅、維持中性白
-        setStyle(pl.name, 'color', r === 'self' ? '#ffd54a' : r === 'ally' ? '#6ee7a8' : (selfTeam > 0 ? '#ff8a80' : '#ffffff'));
+        // 名牌依敵我上色；被獵殺者名字標紅 (頭頂另有 3D 箭頭指示)；solo 模式敵人不標紅
+        setStyle(pl.name, 'color', hunted ? '#ff5a5a' : r === 'self' ? '#ffd54a' : r === 'ally' ? '#6ee7a8' : (selfTeam > 0 ? '#ff8a80' : '#ffffff'));
       }
       setStyle(pl.hp, 'width', pct(p.hp / p.maxHp));
       setStyle(pl.mp, 'width', pct(p.mana / p.maxMana));
@@ -212,6 +241,10 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
           }
           setHtml(bossParts, ph);
         } else setHtml(bossParts, '');
+        // 常駐機制晶片 (由 boss 資料的 tags 驅動)
+        if (bc.tags && bc.tags.length) {
+          setHtml(bossTags, bc.tags.map((t) => `<span class="btag">${esc(t.icon || '')} ${esc(t.text)}</span>`).join(''));
+        } else setHtml(bossTags, '');
       } else {
         setStyle(bossPanel, 'display', 'none');
       }
@@ -219,10 +252,39 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
         setStyle(banner, 'display', '');
         setText(bannerText, state.banner.text || '');
         setText(bannerSub, state.banner.sub || '');
+        // 開場橫幅戰術提示 (由當前魔王資料的 hint 驅動；intro 階段魔王存在)
+        const bh = boss ? (getCharacter(boss.charId).hint || '') : '';
+        setText(bannerHint, bh);
+        setStyle(bannerHint, 'display', bh ? '' : 'none');
       } else setStyle(banner, 'display', 'none');
     } else {
       setStyle(bossPanel, 'display', 'none');
       setStyle(banner, 'display', 'none');
+    }
+
+    // ---- 站進敵方地面危險區 (毒沼等) → 全螢幕警示 (通用：任何敵方造成的 zone) ----
+    let inHazard = false;
+    if (state.mode === 'boss') {
+      const meH = state.players[selfId];
+      if (meH && meH.alive && state.zones) {
+        for (const z of state.zones) {
+          if (z.delay && z.delay > 0) continue;            // 預警中、尚未生效
+          const owner = state.players[z.owner];
+          if (!owner || owner.team === meH.team) continue;  // 只警示敵方造成的區域
+          if (Math.hypot(z.x - meH.x, z.y - meH.y) <= (z.radius || 0)) { inHazard = true; break; }
+        }
+      }
+    }
+    setStyle(hazardWarn, 'display', inHazard ? '' : 'none');
+    if (inHazard) {
+      // 文字與顏色都依當前魔王的危險屬性 (毒綠 / 火紅 / 冰藍…)，不再一律綠色
+      let ht = '⚠️ 站在危險地面上 — 快離開！', hc = '#9ad13a';
+      for (const pp of players) { if (pp.isBoss) { const bcz = getCharacter(pp.charId); if (bcz.hazardText) ht = bcz.hazardText; if (bcz.hazardColor) hc = bcz.hazardColor; break; } }
+      setText(hazardText, ht);
+      // 字用「淡色 + 深色描邊 + 同色外光暈」(無底牌，與其他 HUD 一致)：在紅/綠/藍任何畫面都讀得清
+      setStyle(hazardText, 'color', lighten(hc, 0.55));
+      setStyle(hazardText, 'textShadow', `0 1px 3px #000, 0 2px 7px #000, 0 0 16px ${hexA(hc, 0.85)}`);
+      setStyle(hazardWarn, 'boxShadow', `inset 0 0 120px 34px ${hexA(hc, 0.5)}`);
     }
   }
 
@@ -325,4 +387,6 @@ function setStyle(e, k, v) { const p = '_st_' + k; if (e[p] !== v) { e[p] = v; e
 function setClass(e, v) { if (e._cls !== v) { e._cls = v; e.className = v; } }
 function setHtml(e, v) { if (e._html !== v) { e._html = v; e.innerHTML = v; } }
 function pct(r) { return `${Math.max(0, Math.min(1, r)) * 100}%`; }
+function hexA(hex, a) { const h = hex.replace('#', ''); const s = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; const n = parseInt(s, 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
+function lighten(hex, t) { const h = hex.replace('#', ''); const s = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; const n = parseInt(s, 16); const m = (c) => Math.round(c + (255 - c) * t); return `rgb(${m((n >> 16) & 255)},${m((n >> 8) & 255)},${m(n & 255)})`; }
 function esc(s) { return String(s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }

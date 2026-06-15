@@ -274,6 +274,16 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 .hud-banner { position: absolute; top: 38%; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; }
 .hud-banner-text { font-size: 44px; font-weight: 900; color: #fff; letter-spacing: 2px; text-shadow: 0 3px 12px #000, 0 0 24px rgba(255,209,102,0.6); }
 .hud-banner-sub { font-size: 18px; color: #ffd166; margin-top: 6px; text-shadow: 0 2px 6px #000; }
+.hud-banner-hint { margin-top: 10px; font-size: 16px; font-weight: 700; color: #ffe27a; text-shadow: 0 2px 6px #000, 0 0 14px rgba(255,200,60,0.5); }
+/* 闖關模式：魔王機制晶片 (血條下方常駐提示) */
+.hud-boss-tags { display: flex; gap: 6px; justify-content: center; margin-top: 5px; flex-wrap: wrap; }
+.hud-boss-tags .btag { font-size: 11px; font-weight: 700; color: #cdf08a; background: rgba(22,36,12,0.82); border: 1px solid rgba(122,160,46,0.7); border-radius: 11px; padding: 2px 9px; text-shadow: 0 1px 2px #000; }
+/* 站進敵方危險地面 (毒沼) 的全螢幕即時警示 */
+.hud-hazard { position: absolute; inset: 0; pointer-events: none; z-index: 7; box-shadow: inset 0 0 120px 34px rgba(120,210,40,0.5); animation: hazardPulse 0.85s ease-in-out infinite; }
+@keyframes hazardPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+.hud-hazard-text { position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%); white-space: nowrap; font-size: 22px; font-weight: 900; text-shadow: 0 1px 3px #000, 0 2px 7px #000; }
+/* 被「鎖血最少」魔王盯上 (R7 風暴巨狼) 的即時警示 */
+.hud-hunt { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); white-space: nowrap; pointer-events: none; z-index: 7; font-size: 22px; font-weight: 900; color: #ff8a6a; text-shadow: 0 1px 3px #000, 0 2px 7px #000, 0 0 16px rgba(255,90,40,0.8); animation: hazardPulse 0.85s ease-in-out infinite; }
 
 /* 大廳：闖關模式按鈕 */
 .btn.boss-start { margin-top: 10px; background: linear-gradient(135deg, #7d2b2b, #b23b3b); color: #fff; border: 1px solid rgba(255,180,120,0.4); }

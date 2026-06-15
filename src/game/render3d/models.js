@@ -481,6 +481,76 @@ export function createCharacterModel(charId) {
     core.position.set(torsoD * 0.5, hipY + torsoH * 0.6, 0);
     group.add(core);
     group.userData.bossCore = core;
+
+    // 魔王護盾殼：R5 巨兵＝機械線框力場(科技感)；R6 死靈＝旋轉符文環＋柔和靈光球(魔法感)。
+    // 強度由 renderer 算 coreShielded(0..1) 傳入；越強越濃，清光即消失 (見 animateModel)。
+    if (ch.mechanic && (ch.mechanic.coreArmorUntilPartsDown || ch.mechanic.minionShield)) {
+      const cy = hipY + torsoH * 0.6;
+      const shieldMats = [];
+      let shield;
+      if (ch.mechanic.minionShield) {
+        // R6 魔法結界：3 道不同傾角的符文環 + 柔和靈光球。用魔王體色(紫)系做神秘感，不用科技綠
+        shield = new THREE.Group();
+        shield.position.set(0, cy, 0);
+        const ringCols = [shade(base, 0.42), new THREE.Color(base), shade(base, 0.18)];
+        const tilts = [[0, 0, 0], [Math.PI / 2, 0, 0.5], [Math.PI / 2.4, 0.9, 0]];
+        for (let i = 0; i < 3; i++) {
+          const rm = new THREE.MeshBasicMaterial({ color: ringCols[i], transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false });
+          rm.userData.base = 0.6;
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(torsoW * (0.84 + i * 0.07), 1.3, 8, 44), rm);
+          ring.rotation.set(tilts[i][0], tilts[i][1], tilts[i][2]);
+          ring.userData.spin = 0.5 + i * 0.35;
+          shield.add(ring); shieldMats.push(rm);
+        }
+        const am = new THREE.MeshBasicMaterial({ color: shade(base, 0.25), transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false });
+        am.userData.base = 0.16;
+        shield.add(new THREE.Mesh(new THREE.SphereGeometry(torsoW * 0.9, 20, 16), am));
+        shieldMats.push(am);
+      } else {
+        // R5 機械力場：線框多面體 (翻滾)
+        const m = new THREE.MeshBasicMaterial({ color: coreCol, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, wireframe: true });
+        m.userData.base = 0.18;
+        shield = new THREE.Mesh(new THREE.IcosahedronGeometry(torsoW * 0.95, 1), m);
+        shield.position.set(0, cy, 0);
+        shield.userData.tumbleX = true;
+        shieldMats.push(m);
+      }
+      group.add(shield);
+      group.userData.coreShield = shield;
+      group.userData.coreShieldMats = shieldMats;
+    }
+
+    // 弱點教學視覺。模型面向 +X(前)、背在 -X。依機制畫不同提示：
+    //   backWeak (R1)  → 背側「緋紅軟肋」(站進去轉金，正向引導)
+    //   frontArmor(R3) → 背側緋紅軟肋(打這裡) + 正面「鋼藍重甲弧」(站正面轉橘警示)
+    const mech = ch.mechanic;
+    if (mech && (mech.backWeak || mech.frontArmor)) {
+      const wz = {};
+      // 背側軟肋 (兩種機制都適用：背後都是「該打」的地方)
+      const softCol = new THREE.Color('#ff5a6a'); // 緋紅 = 打這裡
+      const marker = new THREE.Mesh(
+        new THREE.OctahedronGeometry(torsoW * 0.13, 0),
+        new THREE.MeshStandardMaterial({ color: softCol, emissive: softCol, emissiveIntensity: 2.0, roughness: 0.25, metalness: 0.3, transparent: true, opacity: 0.92 })
+      );
+      marker.position.set(-(torsoD * 0.5 + torsoW * 0.06), hipY + torsoH * 0.62, 0);
+      group.add(marker);
+      const backArc = new THREE.Mesh(
+        new THREE.RingGeometry(torsoW * 1.45, torsoW * 1.72, 48, 1, Math.PI - 0.95, 1.9),
+        new THREE.MeshBasicMaterial({ color: softCol, transparent: true, opacity: 0.1, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+      );
+      backArc.rotation.x = -Math.PI / 2; backArc.position.y = 1.4; group.add(backArc);
+      wz.back = { marker, arc: backArc };
+      // 正面重甲弧 (僅 frontArmor 王，如 R3)：鋼藍、平時低調；自己站正面時轉橘警示「擋下/減傷」
+      if (mech.frontArmor) {
+        const frontArc = new THREE.Mesh(
+          new THREE.RingGeometry(torsoW * 1.4, torsoW * 1.68, 48, 1, -0.9, 1.8),
+          new THREE.MeshBasicMaterial({ color: new THREE.Color('#8fa9c8'), transparent: true, opacity: 0.12, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        frontArc.rotation.x = -Math.PI / 2; frontArc.position.y = 1.32; group.add(frontArc);
+        wz.front = { arc: frontArc };
+      }
+      group.userData.weakZone = wz;
+    }
   }
   return group;
 }
@@ -1398,6 +1468,42 @@ export function animateModel(group, dt, info) {
     parts.frozenRingHigh.material.emissiveIntensity = glow * 0.85;
   }
 
+  // ---- 弱點教學：背側軟肋(緋紅→自己在背後轉金)；正面重甲弧(自己在正面轉橘警示) ----
+  if (ud.weakZone) {
+    const wz = ud.weakZone;
+    const wpulse = 0.5 + 0.5 * Math.sin(ud.breathe * 2.4);
+    const behind = !!info.bossWeakSelf;
+    const inFront = !!info.bossFrontSelf;
+    if (wz.back) {
+      wz.back.marker.rotation.y += dt * 1.4;
+      wz.back.marker.material.emissiveIntensity = (behind ? 2.8 : 1.3) + 1.0 * wpulse;
+      wz.back.marker.material.color.set(behind ? '#ffd54a' : '#ff5a6a');
+      wz.back.marker.material.emissive.set(behind ? '#ffc24a' : '#ff5a6a');
+      wz.back.arc.material.color.set(behind ? '#ffd54a' : '#ff5a6a');
+      wz.back.arc.material.opacity = (behind ? 0.32 : 0.085) + (behind ? 0.1 : 0.035) * wpulse;
+      wz.back.arc.scale.setScalar(behind ? 1.0 + 0.03 * wpulse : 1.0);
+    }
+    if (wz.front) {
+      wz.front.arc.material.color.set(inFront ? '#ff7a52' : '#8fa9c8');
+      wz.front.arc.material.opacity = (inFront ? 0.3 : 0.1) + (inFront ? 0.1 : 0.03) * wpulse;
+    }
+  }
+
+  // 魔王護盾殼：強度 s(0..1) 控制濃淡/顯隱；魔法環各自旋轉、科技殼整體翻滾；清光即消失
+  if (ud.coreShield) {
+    const s = info.coreShielded || 0; // R5 雙臂在=1；R6 隨存活小怪數 → 越多越濃
+    ud.coreShield.visible = s > 0.02;
+    if (s > 0.02) {
+      ud.coreShield.rotation.y += dt * 0.45;
+      if (ud.coreShield.userData.tumbleX) ud.coreShield.rotation.x += dt * 0.3;
+      for (const c of ud.coreShield.children) {
+        if (c.userData && c.userData.spin) c.rotation.z += dt * c.userData.spin;
+      }
+      const pulse = 0.7 + 0.3 * Math.sin(ud.breathe * 3);
+      for (const m of (ud.coreShieldMats || [])) m.opacity = (m.userData.base || 0.3) * s * pulse;
+    }
+  }
+
   // ---- 臉部表情：中性 / 專注(出手) / 痛苦(受擊)；hurt 優先 ----
   if (parts.face && !ud.skin) {
     const f = parts.face;
@@ -1435,6 +1541,11 @@ export function animateModel(group, dt, info) {
   const invis = p && p.effects && p.effects.invis;
   let targetOp = info.downed ? 0.5 : 1;
   if (invis) targetOp = info.isSelf ? 0.42 : 0.12;
+  // 假分身 (R4 霜雪刺客)：半透明 + 閃爍，與「實心」真身做對比，教玩家認真身
+  if (info.fake) {
+    const flick = 0.5 + 0.5 * Math.sin(ud.breathe * 5 + ud.phase);
+    targetOp = Math.min(targetOp, 0.32 + 0.22 * flick);
+  }
   for (const m of ud.skinMats) {
     m.opacity += (targetOp - m.opacity) * Math.min(1, dt * 10);
   }
@@ -1442,5 +1553,12 @@ export function animateModel(group, dt, info) {
     for (const m of ud.skin.glbMats) {
       m.opacity += (targetOp - m.opacity) * Math.min(1, dt * 10);
     }
+  }
+  // 魔王能量核心：真身明亮自轉、假分身黯淡半透明 (進一步區分真假)
+  if (ud.bossCore) {
+    ud.bossCore.rotation.y += dt * 1.0;
+    const cm = ud.bossCore.material;
+    cm.emissiveIntensity += ((info.fake ? 0.35 : 2.2) - cm.emissiveIntensity) * Math.min(1, dt * 6);
+    cm.opacity += ((info.fake ? targetOp : 0.95) - cm.opacity) * Math.min(1, dt * 10);
   }
 }
