@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import { clamp, dist } from '../entities/math.ts';
@@ -11,6 +10,7 @@ import { BOSS_TEAM } from '../bossMode.js';
 import { executeBossAction } from '../bosses/actions.ts';
 import { createActionContext, runPostActionEffects } from './context.ts';
 import { ACTION_HANDLERS } from './handlers/index.ts';
+import type { GameState, Player, ActionDef, ActionOpts } from '../types';
 
 function bossActionHelpers() {
   return {
@@ -29,7 +29,7 @@ function bossActionHelpers() {
   };
 }
 
-export function executeAction(state, caster, action, opts = {}) {
+export function executeAction(state: GameState, caster: Player, action: ActionDef, opts: ActionOpts = {}) {
   const ctx = createActionContext(state, caster, action, opts, executeAction);
   const handler = ACTION_HANDLERS.get(action.type);
   if (handler) handler(ctx);

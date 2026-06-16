@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { PLAYER_RADIUS } from '../../../constants.js';
 import { addFx } from '../../../entities/fx.ts';
+import type { ActionContext } from '../../../types';
 
-export function channel(ctx) {
+export function channel(ctx: ActionContext) {
   const { state, caster, action, silent } = ctx;
   caster.channel = {
     kind: 'drain',

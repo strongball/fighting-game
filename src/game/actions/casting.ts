@@ -1,17 +1,17 @@
-// @ts-nocheck
 import { ULT_MAX, ULT_LOCKOUT } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import { applyEffect } from '../entities/effects.ts';
 import { addFx } from '../entities/fx.ts';
 import { recordSkillUse } from '../entities/stats.ts';
 import { executeAction } from './executor.ts';
+import type { GameState, Player, Input } from '../types';
 
-function tryStartCharge(p, action, slot) {
+function tryStartCharge(p: Player, action: any, slot: string) {
   if (p.chargeState) return;
   p.chargeState = { slot, time: 0 };
 }
 
-function executeChargedAction(state, p, slot) {
+function executeChargedAction(state: GameState, p: Player, slot: string) {
   const character = getCharacter(p.charId);
   const action = character[slot];
   if (!action || !action.chargeMax) return;
@@ -27,7 +27,7 @@ function executeChargedAction(state, p, slot) {
   p.chargeState = null;
 }
 
-export function tickChargeState(state, p, input, dt) {
+export function tickChargeState(state: GameState, p: Player, input: Input, dt: number) {
   if (!p.chargeState) return;
   if (input[p.chargeState.slot]) {
     const action = getCharacter(p.charId)[p.chargeState.slot];
@@ -47,7 +47,7 @@ export function tickChargeState(state, p, input, dt) {
   }
 }
 
-export function tryAction(state, p, slot) {
+export function tryAction(state: GameState, p: Player, slot: string) {
   const character = getCharacter(p.charId);
   const action = character[slot];
   if (!action || p.cd[slot] > 0) return;
@@ -77,7 +77,7 @@ export function tryAction(state, p, slot) {
   if (talent && talent.id === 'timeprism' && slot !== 'basic') applyEffect(p, 'haste', { duration: talent.duration || 1.5, factor: talent.factor || 1.25 });
 }
 
-export function tryUltimate(state, p) {
+export function tryUltimate(state: GameState, p: Player) {
   const character = getCharacter(p.charId);
   const action = character.ultimate;
   if (!action) return;
@@ -117,7 +117,7 @@ export function tryUltimate(state, p) {
 const BUFFER_WINDOW = 0.22; // 連招輸入緩衝 (秒) — CD 還沒到也可預按
 
 // 偵測 rising edge (這幀按下、上一幀未按)；把按鍵塞進 buffer，CD 到時自動施放
-function detectAndBuffer(p, input) {
+function detectAndBuffer(p: Player, input: Input) {
   if (!p._lastInput) p._lastInput = {};
   if (!p._buffer) p._buffer = {}; // slot -> remaining time
   const slots = ['basic', 'skill1', 'skill2', 'ultimate', 'evade'];
@@ -129,7 +129,7 @@ function detectAndBuffer(p, input) {
   }
 }
 
-function tickBuffer(state, p, dt) {
+function tickBuffer(state: GameState, p: Player, dt: number) {
   if (!p._buffer) return;
   for (const slot of Object.keys(p._buffer)) {
     p._buffer[slot] -= dt;
@@ -144,7 +144,7 @@ function tickBuffer(state, p, dt) {
   }
 }
 
-export function castInputActions(state, p, input, dt) {
+export function castInputActions(state: GameState, p: Player, input: Input, dt: number) {
   tickChargeState(state, p, input, dt);
   if (p.effects.stun) { p._buffer = null; return; }
   detectAndBuffer(p, input);

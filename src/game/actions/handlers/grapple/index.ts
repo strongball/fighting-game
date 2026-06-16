@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { PLAYER_RADIUS } from '../../../constants.js';
 import { makeProjectile } from '../../../entities/factories.ts';
 import { addFx } from '../../../entities/fx.ts';
+import type { ActionContext } from '../../../types';
 
-export function grapple(ctx) {
+export function grapple(ctx: ActionContext) {
   const { state, caster, action, cos, sin, silent } = ctx;
   state.projectiles.push(makeProjectile(caster.id, caster.x + cos * PLAYER_RADIUS, caster.y + sin * PLAYER_RADIUS, cos * (action.speed || 760), sin * (action.speed || 760), {
     dmg: action.dmg || 0,

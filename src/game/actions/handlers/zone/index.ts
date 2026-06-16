@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../../../constants.js';
 import { clamp } from '../../../entities/math.ts';
 import { makeZone } from '../../../entities/factories.ts';
+import type { ActionContext } from '../../../types';
 
-export function zone(ctx) {
+export function zone(ctx: ActionContext) {
   const { state, caster, action, cos, sin } = ctx;
   const baseX = clamp(caster.x + cos * (action.range || 0), PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
   const baseY = clamp(caster.y + sin * (action.range || 0), PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);

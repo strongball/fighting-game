@@ -1,12 +1,12 @@
-// @ts-nocheck
 import { PLAYER_RADIUS, MANA_REGEN, ULT_MAX, ULT_REGEN, COOLDOWN_MULTIPLIER } from '../constants.js';
 import { missingHp } from '../entities/math.ts';
 import { applyHeal } from '../entities/heal.ts';
 import { addFx } from '../entities/fx.ts';
+import type { GameState, Player } from '../types';
 
 const COOLDOWN_SLOTS = ['basic', 'skill1', 'skill2', 'ultimate', 'evade'];
 
-export function tickSummonLife(state, p, dt) {
+export function tickSummonLife(state: GameState, p: Player, dt: number): boolean {
   if (!(p.summonLife > 0)) return false;
   p.summonLife -= dt;
   if (p.summonLife > 0) return false;
@@ -15,7 +15,7 @@ export function tickSummonLife(state, p, dt) {
   return true;
 }
 
-export function tickCharacterTimers(p, character, talent, dt) {
+export function tickCharacterTimers(p: Player, character: any, talent: any, dt: number) {
   if (character.ultimate && character.ultimate.rewindSelf) {
     if (!p._chronoHist) p._chronoHist = [];
     p._chronoHist.push({ x: p.x, y: p.y, hp: p.hp });
@@ -24,7 +24,7 @@ export function tickCharacterTimers(p, character, talent, dt) {
   if (talent && talent.id === 'iaido') p.iaiTimer = (p.iaiTimer || 0) + dt;
 }
 
-export function tickCooldowns(state, p, talent, dt) {
+export function tickCooldowns(state: GameState, p: Player, talent: any, dt: number) {
   let cdRate = 1;
   if (talent && talent.id === 'bloodlust') cdRate = 1 + (talent.haste || 0.6) * missingHp(p);
   cdRate /= COOLDOWN_MULTIPLIER;
@@ -40,7 +40,7 @@ export function tickCooldowns(state, p, talent, dt) {
   }
 }
 
-export function tickPassiveRecovery(state, p, talent, dt) {
+export function tickPassiveRecovery(state: GameState, p: Player, talent: any, dt: number) {
   if (p.comboTimer > 0) {
     p.comboTimer -= dt;
     if (p.comboTimer <= 0) p.combo = 0;

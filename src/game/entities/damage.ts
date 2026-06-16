@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { PLAYER_RADIUS, ULT_MAX, ULT_GAIN_DEAL, ULT_GAIN_TAKE } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import { applyBossDamageModifiers } from '../bosses/damage.ts';
@@ -8,8 +7,24 @@ import { applyHeal } from './heal.ts';
 import { applyEffect } from './effects.ts';
 import { recordDamage, recordKill, recordDeath } from './stats.ts';
 import { isAlly, isEnemy } from './team.ts';
+import type { GameState, Player, EntityId } from '../types';
 
-function warsongFor(state, attacker) {
+// ── 天賦（被動）系統導覽 ────────────────────────────────────────────
+// 天賦「資料」定義於各角色 characters/classes/<slug>/index.ts 的 talent:{id,...}。
+// 天賦「邏輯」基於效能與決定性，刻意內聯於 hot-path（非事件匯流排），分布於：
+//   • entities/damage.ts   傷害輸出/承受修正、命中副作用（多數天賦集中於此）
+//       - talentDamageMods(): deadeye / lethal / momentum / shadowstrike / suppress / summonbond
+//       - warsongFor(): warsong
+//       - dealDamage 尾段: arcane_flow / bloodlust / momentum / suppress / summonbond / retribution
+//       - spreadCurse(): plague（死亡傳染 weaken）
+//   • systems/playerState.ts  bloodlust(攻速) / lifebloom(持續回血) / iaido(計時累積)
+//   • systems/effects.ts      undeath(DoT 汲取回血，見 dotLifesteal)
+//   • actions/combat.ts       pyromancy(強化 burn，applyEffectFrom) / iaido(outMult 加成)
+//   • actions/casting.ts      iaido(居合就緒判定) / timeprism(施法後自我 haste)
+// 註：unbreakable / bulwark 目前僅有資料定義，未見對應減傷邏輯（疑為待補；本次純重構不更動行為）。
+// ──────────────────────────────────────────────────────────────────
+
+function warsongFor(state: GameState, attacker: Player): number {
   let best = 0;
   for (const bard of Object.values(state.players)) {
     if (!bard.alive) continue;
@@ -29,8 +44,8 @@ function warsongFor(state, attacker) {
   return best;
 }
 
-function spreadCurse(state, corpse) {
-  let hexer = null;
+function spreadCurse(state: GameState, corpse: Player) {
+  let hexer: Player | null = null;
   for (const other of Object.values(state.players)) {
     if (!other.alive) continue;
     const talent = getCharacter(other.charId).talent;
@@ -38,6 +53,7 @@ function spreadCurse(state, corpse) {
   }
   if (!hexer) return;
   const weaken = corpse.effects.weaken;
+  if (!weaken) return;
   const radius = (getCharacter(hexer.charId).talent.radius) || 200;
   for (const other of Object.values(state.players)) {
     if (other.id === corpse.id || !isEnemy(state, hexer.id, other)) continue;
@@ -46,7 +62,7 @@ function spreadCurse(state, corpse) {
   addFx(state, { type: 'buff', x: corpse.x, y: corpse.y, color: '#bb6bd9', life: 0.4, radius, vfx: 'hexer_field' });
 }
 
-function talentDamageMods(state, attacker, target, amount) {
+function talentDamageMods(state: GameState, attacker: Player, target: Player, amount: number): number {
   let dmg = amount;
   if (target && target.alive) {
     const dt = getCharacter(target.charId).talent;
@@ -84,7 +100,13 @@ function talentDamageMods(state, attacker, target, amount) {
   return dmg;
 }
 
-export function dealDamage(state, target, amount, attackerId, opts = {}) {
+export function dealDamage(
+  state: GameState,
+  target: Player,
+  amount: number,
+  attackerId: EntityId,
+  opts: { noTalent?: boolean; noReflect?: boolean; meleeHit?: boolean } = {},
+) {
   if (!target.alive || amount <= 0) return;
   if (target.effects && target.effects.evading) return;
   // 闖關登場動畫期間：全場無敵
@@ -107,9 +129,11 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
     if (owner && !owner.isBoss) dmg *= 0.55;
   }
   if (!opts.noTalent && hostile) dmg = talentDamageMods(state, attacker, target, dmg);
-  // Boss 階段傷害倍率 (含部位攻擊歸屬 Boss 本體時)
-  if (hostile && attacker && (attacker.isBoss || (attacker.isPart && attacker.ownerId)) && (attacker.phaseDmgMult || (state.players[attacker.ownerId] && state.players[attacker.ownerId].phaseDmgMult))) {
-    const mult = attacker.isBoss ? (attacker.phaseDmgMult || 1) : (state.players[attacker.ownerId].phaseDmgMult || 1);
+  // Boss 階段傷害倍率 (含部位攻擊歸屬 Boss 本體時)。
+  // ownerId 可能為 null，先安全取出 phaseOwner（行為等價於原本的內聯 state.players[ownerId]）。
+  const phaseOwner = attacker && attacker.ownerId != null ? state.players[attacker.ownerId] : null;
+  if (hostile && attacker && (attacker.isBoss || (attacker.isPart && attacker.ownerId)) && (attacker.phaseDmgMult || (phaseOwner && phaseOwner.phaseDmgMult))) {
+    const mult = attacker.isBoss ? (attacker.phaseDmgMult || 1) : (phaseOwner?.phaseDmgMult || 1);
     dmg *= mult;
   }
   if (hostile && attacker.effects && attacker.effects.dmg_reduce) dmg *= 1 - (attacker.effects.dmg_reduce.factor || 0);

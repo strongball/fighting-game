@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../../../constants.js';
 import { clamp } from '../../../entities/math.ts';
 import { addFx } from '../../../entities/fx.ts';
+import type { ActionContext } from '../../../types';
 
-export function leap(ctx) {
+export function leap(ctx: ActionContext) {
   const { state, caster, action, cos, sin, silent } = ctx;
   const tx = clamp(caster.x + cos * (action.range || 240), PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
   const ty = clamp(caster.y + sin * (action.range || 240), PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);

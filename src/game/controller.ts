@@ -4,6 +4,22 @@
 // 重要：渲染器（three.js）延後到 React 把 canvas 掛上後（attachCanvas）才建立。
 // 邏輯/網路維持 setInterval(30Hz) 驅動，渲染用 requestAnimationFrame，
 // 並保留「rAF 超過 60ms 未跑就後備 draw()」的機制（勿用 document.hidden 包住渲染）。
+//
+// ── 架構 ───────────────────────────────────────────────────────────
+// 單例（getController）。內部以閉包變數持有可變狀態（role/gameState/inputs/view…）：
+// 刻意不拆成多檔，因狀態高度互相纏繞、且只有一個實例；分區以下列段落註解標示。
+//   事件匯流排 / 大廳 / 連線回呼(host+joiner) / 開始遊戲 / 遊戲迴圈 / 預測插值 / 結算 / 開發者模式
+//
+// host-authoritative P2P 星狀拓撲。線路訊息以 `t` 判別（型別見 game/types/network.ts）：
+//   hello   加入者→房主：自我介紹(name/charId/team)
+//   select  大廳：選角/隊伍/操作方式
+//   lobby   房主→全體：大廳名單
+//   start   房主→全體：開始(初始 state + lobby)
+//   input   加入者→房主：每幀輸入
+//   state   房主→全體：權威狀態快照(供 joiner 插值/預測)
+//   gameover/tolobby/full  結算 / 返回大廳 / 房間已滿
+// 房主跑 step() 權威模擬並廣播 snapshot；加入者送 input、收 snapshot 做插值，自身用 applyMovement 預測。
+// ──────────────────────────────────────────────────────────────────
 
 import { createRenderer } from './renderer.js';
 import { createNetwork, makeRoomCode } from './network.js';
@@ -11,7 +27,7 @@ import { createInput, EMPTY_INPUT } from './input.js';
 import { createInitialState } from './entities.js';
 import { CHARACTERS } from './characters.js';
 import { startBossRound, retryBossRound, quitBossRun } from './bossMode.js';
-import { step, applyMovement } from './simulation.js';
+import { step, applyMovement } from './simulation.ts';
 import { DT, SNAPSHOT_INTERVAL, INPUT_INTERVAL, MAX_PLAYERS } from './constants.js';
 import type {
   ControllerEvents,
@@ -304,8 +320,9 @@ function createController(): GameController {
     if (localSelf) {
       const me = snap.players[selfId as string];
       if (me && me.alive) {
+        // tmp 為「移動預測代理」：只含 applyMovement 需要的欄位（其餘 undefined→falsy 不影響）。
         const tmp = { charId: localSelf.charId, x: localSelf.x, y: localSelf.y, vx: 0, vy: 0, kvx: localSelf.kvx, kvy: localSelf.kvy, facing: localSelf.facing, effects: me.effects };
-        applyMovement(tmp, inp, dt);
+        applyMovement(tmp as any, inp, dt);
         localSelf.x = tmp.x; localSelf.y = tmp.y; localSelf.facing = tmp.facing;
         localSelf.kvx = tmp.kvx; localSelf.kvy = tmp.kvy;
       } else if (me) {

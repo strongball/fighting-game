@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { PLAYER_RADIUS } from '../../../constants.js';
 import { addFx } from '../../../entities/fx.ts';
+import type { ActionContext } from '../../../types';
 
-export function charge(ctx) {
+export function charge(ctx: ActionContext) {
   const { state, caster, action, cos, sin, silent } = ctx;
   caster.charge = {
     dx: cos,

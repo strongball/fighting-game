@@ -1,9 +1,10 @@
-// @ts-nocheck
 import { addFx } from '../../../entities/fx.ts';
 import { meleeHit } from '../../combat.ts';
+import type { ActionContext, DashAction } from '../../../types';
 
-export function dash(ctx) {
-  const { state, caster, action, cos, sin, silent } = ctx;
+export function dash(ctx: ActionContext) {
+  const { state, caster, cos, sin, silent } = ctx;
+  const action = ctx.action as DashAction;
   // 反方向逃：若玩家正在移動，dash 跟著「移動方向」(可往後跳)；否則沿 facing
   let dx = cos, dy = sin;
   const mvLen = Math.hypot(caster.vx || 0, caster.vy || 0);

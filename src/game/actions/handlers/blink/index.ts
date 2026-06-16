@@ -1,12 +1,13 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../../../constants.js';
 import { clamp } from '../../../entities/math.ts';
 import { makeZone } from '../../../entities/factories.ts';
 import { addFx } from '../../../entities/fx.ts';
 import { meleeHit } from '../../combat.ts';
+import type { ActionContext, BlinkAction } from '../../../types';
 
-export function blink(ctx) {
-  const { state, caster, action, cos, sin, silent } = ctx;
+export function blink(ctx: ActionContext) {
+  const { state, caster, cos, sin, silent } = ctx;
+  const action = ctx.action as BlinkAction;
   // 反方向逃：若玩家正在移動，blink 朝「移動方向」 (可往後跳)；否則沿 facing
   let dx = cos, dy = sin;
   const mvLen = Math.hypot(caster.vx || 0, caster.vy || 0);

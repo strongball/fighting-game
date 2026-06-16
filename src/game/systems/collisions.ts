@@ -1,7 +1,8 @@
-// @ts-nocheck
 import { bodyR } from '../actions/combat.ts';
+import type { GameState } from '../types';
 
-export function resolveCollisions(state) {
+// 逐對實體碰撞分離。Boss/部位為「重型」(不被推開，只推開輕量方)。
+export function resolveCollisions(state: GameState) {
   const arr = Object.values(state.players).filter((p) => p.alive);
   for (let i = 0; i < arr.length; i++) {
     for (let j = i + 1; j < arr.length; j++) {

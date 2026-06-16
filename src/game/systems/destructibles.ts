@@ -1,4 +1,3 @@
-// @ts-nocheck
 // 環境互動：可破壞物 (石柱 / 火盆) — Boss 闖關專用
 //
 // 行為：
@@ -11,10 +10,11 @@ import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { uid } from '../entities/math.ts';
 import { addFx } from '../entities/fx.ts';
 import { applyEffect } from '../entities/effects.ts';
+import type { GameState, Destructible, Projectile } from '../types';
 
 const STUN_ON_CRASH = 0.6;
 
-export function spawnDestructibles(state, configs) {
+export function spawnDestructibles(state: GameState, configs: any[]) {
   if (!state.destructibles) state.destructibles = [];
   for (const cfg of configs || []) {
     const id = uid();
@@ -31,7 +31,7 @@ export function spawnDestructibles(state, configs) {
 }
 
 // 隨機在場上撒 n 個石柱 (避開玩家與中央區域)
-export function scatterPillars(state, n, opts = {}) {
+export function scatterPillars(state: GameState, n: number, opts: any = {}) {
   const cfgs = [];
   for (let i = 0; i < n; i++) {
     const margin = 140;
@@ -46,7 +46,7 @@ export function scatterPillars(state, n, opts = {}) {
 }
 
 // 傷害一個物件 (來自任意傷害源)
-export function damageDestructible(state, obj, dmg, opts = {}) {
+export function damageDestructible(state: GameState, obj: Destructible, dmg: number, opts: any = {}) {
   if (!obj || obj.hp <= 0) return;
   obj.hp -= dmg;
   addFx(state, { type: 'hit', x: obj.x, y: obj.y, color: opts.color || obj.color, life: 0.18, radius: 16 });
@@ -57,7 +57,7 @@ export function damageDestructible(state, obj, dmg, opts = {}) {
 }
 
 // 每 tick：清除已死亡物件、處理玩家/Boss 衝鋒撞擊 → 自我擊破 + 撞者暈眩
-export function tickDestructibles(state, dt) {
+export function tickDestructibles(state: GameState, dt: number) {
   if (!state.destructibles || !state.destructibles.length) return;
 
   // 偵測衝鋒實體 (有 charge / leap 的 player) 是否與物件重疊
@@ -84,7 +84,7 @@ export function tickDestructibles(state, dt) {
 }
 
 // 物件作為投射物碰撞目標：projectiles 系統呼叫此函式檢查命中
-export function checkProjectileHit(state, pr) {
+export function checkProjectileHit(state: GameState, pr: Projectile): Destructible | null {
   if (!state.destructibles || !state.destructibles.length) return null;
   for (const obj of state.destructibles) {
     if (obj.hp <= 0) continue;

@@ -10,10 +10,13 @@ export const CHARACTERS: any[] = Object.values(modules)
   .filter(Boolean)
   .sort((a: any, b: any) => a.id - b.id);
 
-// 為所有角色注入 Space 閃避技能 (瞬移或翻滾)
+// 為所有角色注入 Space 閃避技能 (瞬移或翻滾)。
+// 閃避型別可由角色資料的 `evadeType: 'blink' | 'dash'` 指定（新增角色時建議直接寫在資料裡）；
+// 未指定者沿用下列預設「瞬移組」清單作為後備（既有角色行為不變）。
+const DEFAULT_BLINK_IDS = new Set([1, 2, 7, 8, 11, 15, 16, 17]);
+// 瞬移組: Mage(1)/Assassin(2)/Ninja(7)/Elementalist(8)/Hexer(11)/Summoner(15)/Necromancer(16)/Chronomancer(17)
 CHARACTERS.forEach((c) => {
-  // 瞬移組 IDs: Mage(1), Assassin(2), Ninja(7), Elementalist(8), Hexer(11), Summoner(15), Necromancer(16), Chronomancer(17)
-  const isBlink = [1, 2, 7, 8, 11, 15, 16, 17].includes(c.id);
+  const isBlink = c.evadeType ? c.evadeType === 'blink' : DEFAULT_BLINK_IDS.has(c.id);
   if (isBlink) {
     c.evade = {
       name: '瞬移閃避',

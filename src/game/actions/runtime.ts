@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { clamp, dist } from '../entities/math.ts';
 import { makeZone } from '../entities/factories.ts';
@@ -8,8 +7,10 @@ import { applyHeal } from '../entities/heal.ts';
 import { addFx } from '../entities/fx.ts';
 import { isEnemy } from '../entities/team.ts';
 import { applyEffectFrom, bodyR, meleeHit } from './combat.ts';
+import type { GameState, Player } from '../types';
 
-export function processScripted(state, p, dt) {
+// 腳本化移動（衝鑂/躍擊）：進行中接管移動。回傳 true 表示本幀已接管。
+export function processScripted(state: GameState, p: Player, dt: number): boolean {
   if (p.charge) {
     const c = p.charge;
     const advance = c.speed * dt;
@@ -73,15 +74,15 @@ export function processScripted(state, p, dt) {
   return false;
 }
 
-export function processChannel(state, p, dt) {
+export function processChannel(state: GameState, p: Player, dt: number) {
   const ch = p.channel;
   if (!ch) return;
   ch.remaining -= dt;
   ch.tickTimer -= dt;
 
-  let target = state.players[ch.targetId];
+  let target: Player | null = state.players[ch.targetId];
   if (!target || !target.alive || dist(p.x, p.y, target.x, target.y) > ch.range || !isEnemy(state, p.id, target)) {
-    let best = null;
+    let best: Player | null = null;
     let bd = Infinity;
     for (const o of Object.values(state.players)) {
       if (!isEnemy(state, p.id, o) || !o.alive) continue;
@@ -112,7 +113,7 @@ export function processChannel(state, p, dt) {
   if (ch.remaining <= 0) p.channel = null;
 }
 
-export function processTrail(state, p, dt) {
+export function processTrail(state: GameState, p: Player, dt: number) {
   const tr = p.trail;
   if (!tr) return;
   tr.remaining -= dt;

@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { PLAYER_RADIUS } from '../../../constants.js';
 import { applyEffect } from '../../../entities/effects.ts';
 import { applyHeal } from '../../../entities/heal.ts';
 import { addFx } from '../../../entities/fx.ts';
 import { isEnemy } from '../../../entities/team.ts';
+import type { ActionContext } from '../../../types';
 
-export function buff(ctx) {
+export function buff(ctx: ActionContext) {
   const { state, caster, action, silent } = ctx;
   if (action.cleanse) applyEffect(caster, 'cleanse');
   if (action.heal) applyHeal(state, caster, action.heal, { burst: true });

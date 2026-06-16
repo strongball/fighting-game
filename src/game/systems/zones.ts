@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { clamp, dist } from '../entities/math.ts';
 import { dealDamage } from '../entities/damage.ts';
@@ -7,9 +6,10 @@ import { applyHeal } from '../entities/heal.ts';
 import { addFx } from '../entities/fx.ts';
 import { isEnemy, isAlly } from '../entities/team.ts';
 import { applyEffectFrom, bodyR } from '../actions/combat.ts';
+import type { GameState, Zone } from '../types';
 
-export function updateZones(state, dt) {
-  const keep = [];
+export function updateZones(state: GameState, dt: number) {
+  const keep: Zone[] = [];
   for (const zone of state.zones) {
     if (zone.follow != null) {
       const owner = state.players[zone.follow];

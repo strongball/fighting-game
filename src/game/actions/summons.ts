@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { clamp } from '../entities/math.ts';
 import { makeBoss, makeZone } from '../entities/factories.ts';
@@ -6,10 +5,11 @@ import { dealDamage } from '../entities/damage.ts';
 import { addFx } from '../entities/fx.ts';
 import { isEnemy } from '../entities/team.ts';
 import { bodyR, applyEffectFrom } from './combat.ts';
+import type { GameState, Player, EntityId, ActionDef } from '../types';
 
 let summonSeq = 1;
 
-function aoeAt(state, ownerId, x, y, opt) {
+function aoeAt(state: GameState, ownerId: EntityId, x: number, y: number, opt: any) {
   for (const o of Object.values(state.players)) {
     if (!isEnemy(state, ownerId, o)) continue;
     const dx = o.x - x, dy = o.y - y, d = Math.hypot(dx, dy);
@@ -20,7 +20,7 @@ function aoeAt(state, ownerId, x, y, opt) {
   }
 }
 
-export function summonMinions(state, summoner, action) {
+export function summonMinions(state: GameState, summoner: Player, action: ActionDef) {
   if (action.detonate) { detonateMinions(state, summoner, action); return; }
   const cap = action.cap || 3;
   let alive = 0;
@@ -48,7 +48,7 @@ export function summonMinions(state, summoner, action) {
   if (action.zone) state.zones.push(makeZone(summoner.id, summoner.x, summoner.y, action.zone));
 }
 
-function detonateMinions(state, summoner, action) {
+function detonateMinions(state: GameState, summoner: Player, action: ActionDef) {
   for (const o of Object.values(state.players)) {
     if (!o.isSummon || o.ownerId !== summoner.id || !o.alive) continue;
     aoeAt(state, summoner.id, o.x, o.y, { radius: action.radius || 120, dmg: action.dmg || 60, knockback: action.knockback || 120, effect: action.effect });

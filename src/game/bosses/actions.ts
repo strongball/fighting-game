@@ -8,7 +8,7 @@ export type BossActionHelpers = {
   addFx: (state: any, fx: any) => void;
   isEnemy: (state: any, a: string, b: any) => boolean;
   applyEffect: (target: any, kind: string, opt?: any, srcId?: string) => void;
-  dealDamage: (state: any, target: any, amount: number, srcId?: string) => void;
+  dealDamage: (state: any, target: any, amount: number, attackerId: any, opts?: any) => void;
   getCharacter: (id: number) => any;
   executeAction: (state: any, caster: any, action: any, opts?: any) => void;
 };

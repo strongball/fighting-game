@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { clamp, dist, angleDiff } from '../entities/math.ts';
 import { makeProjectile, makeZone } from '../entities/factories.ts';
@@ -7,8 +6,9 @@ import { addFx } from '../entities/fx.ts';
 import { isEnemy } from '../entities/team.ts';
 import { applyEffectFrom, bodyR } from '../actions/combat.ts';
 import { checkProjectileHit, damageDestructible } from './destructibles.ts';
+import type { GameState, Projectile, Player } from '../types';
 
-function splitProjectile(state, projectile, out) {
+function splitProjectile(state: GameState, projectile: Projectile, out: Projectile[]) {
   const s = projectile.split;
   const n = Math.max(2, s.count || 6);
   const base = Math.atan2(projectile.vy, projectile.vx);
@@ -34,12 +34,12 @@ function splitProjectile(state, projectile, out) {
   addFx(state, { type: 'hit', x: projectile.x, y: projectile.y, color: s.color || projectile.color, life: 0.22, radius: (projectile.radius || 8) * 2.4, vfx: projectile.vfx });
 }
 
-export function updateProjectiles(state, dt) {
-  const keep = [];
-  const spawned = [];
+export function updateProjectiles(state: GameState, dt: number) {
+  const keep: Projectile[] = [];
+  const spawned: Projectile[] = [];
   for (const projectile of state.projectiles) {
     if (projectile.homing) {
-      let best = null;
+      let best: Player | null = null;
       let bd = Infinity;
       for (const o of Object.values(state.players)) {
         if (!isEnemy(state, projectile.owner, o)) continue;

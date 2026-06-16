@@ -1,12 +1,18 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { clamp, dist } from '../entities/math.ts';
 import { applyEffect } from '../entities/effects.ts';
 import { applyHeal } from '../entities/heal.ts';
 import { addFx } from '../entities/fx.ts';
 import { isAlly } from '../entities/team.ts';
+import type { GameState, Player, ActionDef, ActionOpts, ActionContext, ExecuteAction } from '../types';
 
-export function createActionContext(state, caster, action, opts, executeAction) {
+export function createActionContext(
+  state: GameState,
+  caster: Player,
+  action: ActionDef,
+  opts: ActionOpts,
+  executeAction: ExecuteAction,
+): ActionContext {
   return {
     state,
     caster,
@@ -21,7 +27,7 @@ export function createActionContext(state, caster, action, opts, executeAction) 
   };
 }
 
-export function applySelfBuff(caster, self, state) {
+export function applySelfBuff(caster: Player, self: any, state?: GameState) {
   if (!self) return;
   if (self.cleanse) applyEffect(caster, 'cleanse');
   if (self.heal) { if (state) applyHeal(state, caster, self.heal, { burst: true }); else applyEffect(caster, 'heal', { amount: self.heal }); }
@@ -30,7 +36,7 @@ export function applySelfBuff(caster, self, state) {
   if (self.effects) for (const effect of self.effects) applyEffect(caster, effect.kind, effect, caster.id);
 }
 
-export function applyAllyBuff(state, caster, ally) {
+export function applyAllyBuff(state: GameState, caster: Player, ally: any) {
   if (!ally) return;
   const radius = ally.radius || 1e9;
   for (const target of Object.values(state.players)) {
@@ -56,7 +62,7 @@ export function applyAllyBuff(state, caster, ally) {
   }
 }
 
-export function chronoRewindSelf(state, caster, action) {
+export function chronoRewindSelf(state: GameState, caster: Player, action: any) {
   const back = Math.round(((action.rewindSelf && action.rewindSelf.seconds) || 3) * 30);
   const history = caster._chronoHist;
   if (!history || !history.length) return;
@@ -67,7 +73,7 @@ export function chronoRewindSelf(state, caster, action) {
   addFx(state, { type: 'blink', x: caster.x, y: caster.y, color: action.color, life: 0.45, radius: 80, vfx: action.vfx });
 }
 
-export function runPostActionEffects(ctx) {
+export function runPostActionEffects(ctx: ActionContext) {
   const { state, caster, action } = ctx;
   if (action.rewindSelf) chronoRewindSelf(state, caster, action);
   if (action.self) applySelfBuff(caster, action.self, state);

@@ -1,10 +1,10 @@
-// @ts-nocheck
 import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import { getBossEntityHitRadius } from '../bosses/hitbox.ts';
 import { uid } from './math.ts';
+import type { GameState, Player, Projectile, Zone, GameMode, EntityId } from '../types';
 
-export function makePlayer(id, name, charId, x, y, team = 0) {
+export function makePlayer(id: EntityId, name: string, charId: number, x: number, y: number, team = 0): Player {
   const c = getCharacter(charId);
   return {
     id, name, charId,
@@ -33,7 +33,7 @@ export function makePlayer(id, name, charId, x, y, team = 0) {
   };
 }
 
-export function makeBoss(id, charId, x, y, team, opts = {}) {
+export function makeBoss(id: EntityId, charId: number, x: number, y: number, team: number, opts: Record<string, any> = {}): Player {
   // \u540d\u7a31\uff1a\u512a\u5148\u7528 opts.name\uff1b\u5176\u6b21\u9b54\u738b\u7528 'Boss'\u3001\u5176\u9918 (\u5c0f\u5175/\u5206\u8eab/\u90e8\u4f4d/\u93e1\u50cf) \u7528\u6a21\u677f\u540d\u7a31\u3002
   const fallbackName = opts.isBoss ? 'Boss' : (getCharacter(charId).name || 'Boss');
   const e = makePlayer(id, opts.name || fallbackName, charId, x, y, team);
@@ -48,14 +48,15 @@ export function makeBoss(id, charId, x, y, team, opts = {}) {
   e.aiId = opts.aiId || null;
   e.partId = opts.partId || null;
   e.bossRound = opts.round || 0;
-  e.scale = opts.scale || 1;
-  e.hitR = getBossEntityHitRadius(charId, e.scale, opts);
+  const scale = opts.scale || 1;
+  e.scale = scale;
+  e.hitR = getBossEntityHitRadius(charId, scale, opts);
   e.aiState = {};
   e.facing = opts.facing != null ? opts.facing : e.facing;
   return e;
 }
 
-export function spawnPoints(n) {
+export function spawnPoints(n: number): Array<{ x: number; y: number }> {
   const cx = ARENA.width / 2, cy = ARENA.height / 2;
   const r = Math.min(ARENA.width, ARENA.height) * 0.38;
   const pts = [];
@@ -66,9 +67,13 @@ export function spawnPoints(n) {
   return pts;
 }
 
-export function createInitialState(playersArr, flags = {}, opts = {}) {
+export function createInitialState(
+  playersArr: Array<{ id: EntityId; name: string; charId: number; team?: number }>,
+  flags: { freeMana?: boolean; noCooldown?: boolean; noDamage?: boolean } = {},
+  opts: { mode?: GameMode; round?: number } = {},
+): GameState {
   const pts = spawnPoints(playersArr.length);
-  const players = {};
+  const players: Record<string, Player> = {};
   const cx = ARENA.width / 2, cy = ARENA.height / 2;
   playersArr.forEach((p, i) => {
     const pl = makePlayer(p.id, p.name, p.charId, pts[i].x, pts[i].y, p.team || 0);
@@ -99,7 +104,7 @@ export function createInitialState(playersArr, flags = {}, opts = {}) {
   };
 }
 
-export function makeProjectile(owner, x, y, vx, vy, opt) {
+export function makeProjectile(owner: EntityId, x: number, y: number, vx: number, vy: number, opt: Record<string, any>): Projectile {
   return {
     id: uid(), owner, x, y, vx, vy,
     dmg: opt.dmg, radius: opt.radius, lifetime: opt.lifetime,
@@ -115,7 +120,7 @@ export function makeProjectile(owner, x, y, vx, vy, opt) {
   };
 }
 
-export function makeZone(owner, x, y, opt) {
+export function makeZone(owner: EntityId, x: number, y: number, opt: Record<string, any>): Zone {
   return {
     id: uid(), owner, x, y,
     radius: opt.radius, dmg: opt.dmg,

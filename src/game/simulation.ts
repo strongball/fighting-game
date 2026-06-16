@@ -15,11 +15,12 @@ import { updateProjectiles } from './systems/projectiles.ts';
 import { checkWin } from './systems/win.ts';
 import { updateZones } from './systems/zones.ts';
 import { tickDestructibles } from './systems/destructibles.ts';
+import type { GameState, Input } from './types';
 
 export { applyMovement, speedOf };
 
 // 一個固定步的權威模擬
-export function step(state, inputs, dt) {
+export function step(state: GameState, inputs: Record<string, Input>, dt: number) {
   if (state.phase !== 'playing') return;
   // 慢動作：擊破 Boss 時觸發，dt 縮放但 remaining 用實際 dt 倒數。
   const tf = state.timeFreeze;

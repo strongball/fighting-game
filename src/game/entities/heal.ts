@@ -1,10 +1,11 @@
-// @ts-nocheck
 import { addFx } from './fx.ts';
 import { recordHeal } from './stats.ts';
+import type { GameState, Player } from '../types';
 
 const POPUP_THRESHOLD = 4;
 
-export function applyHeal(state, p, amount, opts = {}) {
+// 回血並批次顯示飄字（小額累積到門檻才顯示，避免治療飄字洗版）。回傳實際回血量。
+export function applyHeal(state: GameState, p: Player, amount: number, opts: { burst?: boolean } = {}): number {
   if (!p || !p.alive || amount <= 0 || p.hp >= p.maxHp) return 0;
   const before = p.hp;
   p.hp = Math.min(p.maxHp, p.hp + amount);

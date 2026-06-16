@@ -1,12 +1,12 @@
-// @ts-nocheck
 // 闖關模式統計：累計於 state.stats，跟著 snapshot 同步。
 // 只在 mode === 'boss' 啟用；其他模式呼叫皆為 no-op。
+import type { GameState, Player, EntityId } from '../types';
 
-export function isBossRun(state) {
+export function isBossRun(state: GameState) {
   return state && state.mode === 'boss';
 }
 
-export function initRunStats(state) {
+export function initRunStats(state: GameState) {
   if (!isBossRun(state)) return;
   state.stats = {
     runStart: state.time || 0,
@@ -18,7 +18,7 @@ export function initRunStats(state) {
   ensureAllPlayerStats(state);
 }
 
-export function ensureAllPlayerStats(state) {
+export function ensureAllPlayerStats(state: GameState) {
   if (!state.stats) return;
   for (const p of Object.values(state.players)) {
     if (p.team !== 1 || p.ownerId) continue; // 只統計真人玩家
@@ -26,7 +26,7 @@ export function ensureAllPlayerStats(state) {
   }
 }
 
-function ensurePlayerStats(state, p) {
+function ensurePlayerStats(state: GameState, p: Player) {
   if (!state.stats || !p || p.team !== 1 || p.ownerId) return null;
   let s = state.stats.perPlayer[p.id];
   if (!s) {
@@ -43,13 +43,13 @@ function ensurePlayerStats(state, p) {
   return s;
 }
 
-export function recordRoundStart(state) {
+export function recordRoundStart(state: GameState) {
   if (!state.stats) return;
   state.stats.roundStart = state.time || 0;
   state.stats.currentRound = state.round || 1;
 }
 
-export function recordRoundEnd(state, opts = {}) {
+export function recordRoundEnd(state: GameState, opts: { bossName?: string; defeated?: boolean; retries?: number } = {}) {
   if (!state.stats) return;
   const duration = (state.time || 0) - (state.stats.roundStart || 0);
   state.stats.perRound.push({
@@ -61,12 +61,12 @@ export function recordRoundEnd(state, opts = {}) {
   });
 }
 
-export function recordRetry(state) {
+export function recordRetry(state: GameState) {
   if (!state.stats) return;
   state.stats._retryCount = (state.stats._retryCount || 0) + 1;
 }
 
-export function recordDamage(state, attackerId, target, amount, opts = {}) {
+export function recordDamage(state: GameState, attackerId: EntityId, target: Player, amount: number, opts: { isCrit?: boolean } = {}) {
   if (!state.stats || amount <= 0) return;
   const attacker = state.players[attackerId];
   if (attacker) {
@@ -88,13 +88,13 @@ export function recordDamage(state, attackerId, target, amount, opts = {}) {
   }
 }
 
-export function recordHeal(state, p, amount) {
+export function recordHeal(state: GameState, p: Player, amount: number) {
   if (!state.stats || amount <= 0 || !p) return;
   const s = ensurePlayerStats(state, p);
   if (s) s.healing += amount;
 }
 
-export function recordKill(state, killerId, target) {
+export function recordKill(state: GameState, killerId: EntityId, target: Player) {
   if (!state.stats) return;
   // 只計擊殺 Boss 側 (含部位、小怪)
   if (!target || target.team !== 2) return;
@@ -107,13 +107,13 @@ export function recordKill(state, killerId, target) {
   if (s) s.kills += 1;
 }
 
-export function recordDeath(state, p) {
+export function recordDeath(state: GameState, p: Player) {
   if (!state.stats || !p || p.team !== 1 || p.ownerId) return;
   const s = ensurePlayerStats(state, p);
   if (s) s.deaths += 1;
 }
 
-export function recordRevive(state, helperId) {
+export function recordRevive(state: GameState, helperId: EntityId) {
   if (!state.stats) return;
   const helper = state.players[helperId];
   if (!helper || helper.team !== 1 || helper.ownerId) return;
@@ -121,7 +121,7 @@ export function recordRevive(state, helperId) {
   if (s) s.revives += 1;
 }
 
-export function recordSkillUse(state, p, slot) {
+export function recordSkillUse(state: GameState, p: Player, slot: string) {
   if (!state.stats || !p || p.team !== 1 || p.ownerId) return;
   const s = ensurePlayerStats(state, p);
   if (!s) return;
@@ -129,7 +129,7 @@ export function recordSkillUse(state, p, slot) {
   s.skillUses[slot] += 1;
 }
 
-export function recordCcApplied(state, casterId) {
+export function recordCcApplied(state: GameState, casterId: EntityId) {
   if (!state.stats) return;
   const caster = state.players[casterId];
   if (!caster) return;

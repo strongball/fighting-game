@@ -3,76 +3,28 @@
 // 每個角色 = 人形基底(頭/軀幹/雙臂/雙腿，肢體有樞紐可擺動) + 依原型的武器 + 頭頂發光識別徽記。
 // 模型一律「面向 +X」建立；renderer 以 group.rotation.y = -facing 轉向。
 //
-// 對外：
+// 對外（renderer.js 使用）：
 //   createCharacterModel(charId) -> THREE.Group (含 userData 動畫資料)
-//   animateModel(group, dt, { speed, facing, p, isSelf }) 每幀更新
+//   animateModel(group, dt, { speed, facing, p, isSelf }) 每幀更新姿勢/表情/效果環
+//   attachSkin(group, skin, charId) 把載入的 GLB 皮膚掛上、隱藏程序化身體
+//
+// 檔案分區（由上而下）：
+//   buildAccents()           肩甲 / 頭部配件（帽/盔/兜帽/角/髮帶）
+//   createCharacterModel()   組裝人形 + 武器 + 徽記（最大宗）
+//   swingArmZ/castArmZ/...    出手動畫的手臂擺動曲線
+//   skinFadeTo/PlayOnce/driveSkin  GLB 皮膚動畫驅動
+//   attachSkin()             GLB 皮膚掛載 + 骨骼重綁
+//   animateModel()           每幀：走路 bob、出手、受擊、表情狀態機、效果環
+// 材質/canvas 貼圖工具已拆至 ./materials.js（shade / mat / panelTexture / createHumanoidTexture）。
 
 import * as THREE from 'three';
 import { getCharacter } from '../characters.js';
 import { WALK_THRESHOLD } from '../constants.js';
 
 import { buildDefault } from './classes/default.ts';
-import { getCharacterModelDef, getCharacterTexturePainter, getWeaponBuilder } from '../characters/render3d.ts';
+import { getCharacterModelDef, getWeaponBuilder } from '../characters/render3d.ts';
 import { attachBossModelVisuals, updateBossModelVisuals } from '../bosses/render3d.ts';
-
-function shade(hex, f) {
-  const c = new THREE.Color(hex);
-  if (f >= 0) c.lerp(new THREE.Color(0xffffff), f);
-  else c.lerp(new THREE.Color(0x000000), -f);
-  return c;
-}
-
-function mat(color, opt = {}) {
-  return new THREE.MeshStandardMaterial({
-    color, roughness: opt.rough ?? 0.6, metalness: opt.metal ?? 0.15,
-    emissive: opt.emissive ?? 0x000000, emissiveIntensity: opt.ei ?? 1,
-    envMapIntensity: opt.env ?? 0.9,
-    map: opt.map ?? null,
-    transparent: true, opacity: 1,
-  });
-}
-
-// ---- 程序化後備皮膚：質感 (布/金屬/皮革/肌膚) 與頭部配件 ----
-// 以 canvas 程序生成表面貼圖 (依識別色 + 質感樣式)，快取避免重複建立。
-const _texCache = new Map();
-function panelTexture(baseHex, kind) {
-  const key = `${kind}:${baseHex}`;
-  if (_texCache.has(key)) return _texCache.get(key);
-  const S = 128;
-  const cv = document.createElement('canvas'); cv.width = cv.height = S;
-  const x = cv.getContext('2d');
-  const col = new THREE.Color(baseHex);
-  const hex = (c) => `#${c.getHexString()}`;
-  x.fillStyle = hex(col); x.fillRect(0, 0, S, S);
-  const darker = col.clone().multiplyScalar(0.7);
-  if (kind === 'metal') {
-    for (let i = 0; i < 90; i++) {
-      x.strokeStyle = `rgba(255,255,255,${0.02 + Math.random() * 0.05})`;
-      const px = Math.random() * S;
-      x.beginPath(); x.moveTo(px, 0); x.lineTo(px + (Math.random() - 0.5) * 6, S); x.stroke();
-    }
-    x.fillStyle = hex(darker);
-    for (const [rx, ry] of [[18, 18], [110, 18], [18, 110], [110, 110], [64, 64]]) { x.beginPath(); x.arc(rx, ry, 4, 0, 7); x.fill(); }
-  } else if (kind === 'cloth') {
-    x.strokeStyle = 'rgba(0,0,0,0.10)';
-    for (let i = 0; i < S; i += 6) { x.beginPath(); x.moveTo(0, i); x.lineTo(S, i); x.stroke(); x.beginPath(); x.moveTo(i, 0); x.lineTo(i, S); x.stroke(); }
-    x.fillStyle = 'rgba(255,255,255,0.05)';
-    for (let i = 0; i < 60; i++) x.fillRect(Math.random() * S, Math.random() * S, 2, 2);
-  } else if (kind === 'leather') {
-    x.fillStyle = hex(darker);
-    for (let i = 0; i < 200; i++) { x.globalAlpha = 0.05 + Math.random() * 0.08; x.beginPath(); x.arc(Math.random() * S, Math.random() * S, 1 + Math.random() * 2, 0, 7); x.fill(); }
-    x.globalAlpha = 1;
-    x.strokeStyle = 'rgba(255,255,255,0.10)'; x.setLineDash([4, 4]);
-    x.strokeRect(10, 10, S - 20, S - 20); x.setLineDash([]);
-  } else { // skin
-    for (let i = 0; i < 120; i++) { x.fillStyle = `rgba(255,255,255,${0.02 + Math.random() * 0.04})`; x.fillRect(Math.random() * S, Math.random() * S, 2, 2); }
-  }
-  const tex = new THREE.CanvasTexture(cv);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 4;
-  _texCache.set(key, tex);
-  return tex;
-}
+import { shade, mat, panelTexture, createHumanoidTexture } from './materials.js';
 
 // 依原型加上肩甲與頭部配件 (回傳配件陣列，供 GLB 皮膚覆蓋時隱藏)。
 function buildAccents(group, reg, o) {
@@ -492,36 +444,6 @@ function driveSkin(ud, dt, info) {
     if (init) skinFadeTo(s, init, 0);
   }
   s.mixer.update(dt);
-}
-
-// 動態繪製具有職業特色的 Canvas 材質貼圖
-function createHumanoidTexture(charId, baseHex) {
-  const key = `humanoid:${charId}:${baseHex}`;
-  if (_texCache.has(key)) return _texCache.get(key);
-
-  const S = 512;
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = S;
-  const x = cv.getContext('2d');
-  const col = new THREE.Color(baseHex);
-  const hex = (c) => `#${c.getHexString()}`;
-
-  const grad = x.createLinearGradient(0, 0, 0, S);
-  grad.addColorStop(0, hex(col.clone().lerp(new THREE.Color(0xffffff), 0.25)));
-  grad.addColorStop(0.5, hex(col));
-  grad.addColorStop(1, hex(col.clone().multiplyScalar(0.4)));
-  x.fillStyle = grad;
-  x.fillRect(0, 0, S, S);
-
-  x.lineWidth = 4;
-  const paint = getCharacterTexturePainter(charId);
-  if (paint) paint(x, S);
-
-  const tex = new THREE.CanvasTexture(cv);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 4;
-  _texCache.set(key, tex);
-  return tex;
 }
 
 // 將載入的 GLB 皮膚掛上現有角色群組：隱藏程序化身體，替換材質，並將武器/防具重新綁定至人形骨骼

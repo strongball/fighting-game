@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { PLAYER_RADIUS } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import { angleDiff, dist } from '../entities/math.ts';
@@ -6,12 +5,15 @@ import { dealDamage } from '../entities/damage.ts';
 import { applyEffect } from '../entities/effects.ts';
 import { addFx } from '../entities/fx.ts';
 import { isEnemy } from '../entities/team.ts';
+import type { GameState, Player, EntityId } from '../types';
 
-export function bodyR(o) {
+// 被命中半徑：魔王/部位依模型放大，其餘 = PLAYER_RADIUS。
+export function bodyR(o: { hitR?: number }): number {
   return o.hitR || PLAYER_RADIUS;
 }
 
-export function outMult(p, a) {
+// 輸出傷害倍率：殘血加成 / 血怒 / 過載 / 居合就緒。a 為動作物件（可能是合成 action）。
+export function outMult(p: Player, a: any): number {
   let m = 1;
   if (a.lowHpBonus) m *= 1 + (1 - p.hp / p.maxHp);
   if (p.effects.rage) m *= p.effects.rage.dmg;
@@ -23,7 +25,7 @@ export function outMult(p, a) {
   return m;
 }
 
-export function applyEffectFrom(state, target, effect, srcId) {
+export function applyEffectFrom(state: GameState, target: Player, effect: any, srcId: EntityId) {
   let e = effect;
   const src = state.players[srcId];
   if (src && effect.kind === 'burn') {
@@ -39,7 +41,8 @@ export function applyEffectFrom(state, target, effect, srcId) {
   applyEffect(target, e.kind, e, srcId);
 }
 
-export function meleeHit(state, p, a, silent) {
+// 近戰揮击：扱弧內所有敵人（full arc 不限角）。a 可為合成動作物件（leap/blink 內部套用）。
+export function meleeHit(state: GameState, p: Player, a: any, silent?: boolean) {
   const m = outMult(p, a);
   const full = a.arc >= 6;
   for (const o of Object.values(state.players)) {
