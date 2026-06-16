@@ -15,7 +15,7 @@ const data = {
     talent: { id: 'deadeye', name: '致命瞄準', desc: '對越遠的敵人傷害越高（最遠 +50%）。', bonus: 0.5, range: 520 },
     basic: { name: '射箭', type: 'projectile', dmg: 22, speed: 620, radius: 14, lifetime: 1.4, knockback: 70, cd: 0.5, color: '#2ecc71', vfx: 'archer_arrow' },
     skill1: { name: '貫穿箭', type: 'projectile', dmg: 60, speed: 920, radius: 14, lifetime: 0.9, pierce: true, knockback: 90, manaCost: 25, cd: 6, chargeMax: 5, color: '#7bed9f', vfx: 'archer_arrow_charged' },
-    skill2: { name: '寄生箭', type: 'projectile', dmg: 26, speed: 560, radius: 8, lifetime: 2.0, knockback: 40, manaCost: 30, cd: 9, color: '#1abc9c', effect: { kind: 'bleed', duration: 4, tick: 0.5, dmg: 11, moveMult: 2.2 }, vfx: 'archer_parasite' },
+    skill2: { name: '寄生箭', type: 'projectile', dmg: 26, speed: 560, radius: 8, lifetime: 2.0, knockback: 40, manaCost: 30, cd: 9, color: '#1abc9c', effect: { kind: 'bleed', duration: 4, tick: 0.5, dmg: 8, moveMult: 1.5 }, vfx: 'archer_parasite' },
     ultimate: { name: '萬箭齊發', type: 'projectile', dmg: 22, speed: 700, radius: 14, lifetime: 1.0, count: 8, spread: 0.12, knockback: 40, cd: 9, color: '#7bed9f', vfx: 'archer_ultimate' },
   };
 

@@ -1,5 +1,5 @@
 import { ARENA } from '../constants.js';
-import { makeBoss } from '../entities.js';
+import { makeBoss } from '../entities/factories.ts';
 import { getBossForRound } from '../bosses.js';
 
 export const BOSS_TEAM = 2;

@@ -14,7 +14,7 @@ const data = {
     talent: { id: 'suppress', name: '火力壓制', desc: '連續命中同一目標，每次命中 +8% 傷害（最多 5 層），切換目標重置。', perStack: 0.08, maxStacks: 5 },
     basic: { name: '雙槍射擊', type: 'projectile', dmg: 11, speed: 720, radius: 9, lifetime: 1.0, count: 2, spread: 0.1, knockback: 20, cd: 0.45, color: '#f6c544', vfx: 'gunner_shot' },
     skill1: { name: '翻滾閃避', type: 'blink', range: 180, knockback: 0, manaCost: 20, cd: 5, color: '#ffd76a', vfx: 'gunner_roll', self: { effect: { kind: 'rage', duration: 1.2, speed: 1.2, dmg: 1.4 } } },
-    skill2: { name: '燃燒彈', type: 'projectile', dmg: 55, speed: 640, radius: 13, lifetime: 1.0, knockback: 80, manaCost: 30, cd: 8, color: '#ff7a18', effect: { kind: 'burn', duration: 3, tick: 0.5, dmg: 12 }, leaveZone: { radius: 90, dmg: 14, lifetime: 1.6, tick: 0.5, effect: { kind: 'burn', duration: 2, tick: 0.5, dmg: 8 }, color: '#ff6a1a', vfx: 'gunner_incendiary' }, vfx: 'gunner_incendiary' },
+    skill2: { name: '燃燒彈', type: 'projectile', dmg: 55, speed: 640, radius: 13, lifetime: 1.0, knockback: 80, manaCost: 30, cd: 8, color: '#ff7a18', effect: { kind: 'burn', duration: 3, tick: 0.5, dmg: 8 }, leaveZone: { radius: 90, dmg: 14, lifetime: 1.6, tick: 0.5, effect: { kind: 'burn', duration: 2, tick: 0.5, dmg: 5 }, color: '#ff6a1a', vfx: 'gunner_incendiary' }, vfx: 'gunner_incendiary' },
     ultimate: { name: '彈幕風暴', type: 'projectile', dmg: 26, speed: 760, radius: 11, lifetime: 0.8, count: 12, spread: 0.7, knockback: 70, cd: 10, color: '#ffd76a', vfx: 'gunner_ultimate' },
   };
 

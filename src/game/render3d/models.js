@@ -870,8 +870,10 @@ export function animateModel(group, dt, info) {
     if (Math.abs(group.rotation.x) < 0.01) group.rotation.x = 0;
   }
   const invis = p && p.effects && p.effects.invis;
+  const evading = p && p.effects && p.effects.evading;
   let targetOp = info.downed ? 0.5 : 1;
   if (invis) targetOp = info.isSelf ? 0.42 : 0.12;
+  else if (evading) targetOp = 0.55;
   // 假分身 (R4 霜雪刺客)：半透明 + 閃爍，與「實心」真身做對比，教玩家認真身
   if (info.fake) {
     const flick = 0.5 + 0.5 * Math.sin(ud.breathe * 5 + ud.phase);

@@ -15,7 +15,7 @@ const data = {
     talent: { id: 'lifebloom', name: '生生不息', desc: '持續自動回復生命。', regen: 7 },
     basic: { name: '聖光彈', type: 'projectile', dmg: 14, speed: 420, radius: 12, lifetime: 1.2, knockback: 60, cd: 0.6, color: '#f1c40f', vfx: 'healer_holybolt' },
     skill1: { name: '治癒之觸', type: 'buff', manaCost: 45, cd: 7, color: '#2ecc71', vfx: 'healer_cleanse', ally: { radius: 400, heal: 220, cleanse: true } },
-    skill2: { name: '神聖光環', type: 'zone', range: 0, radius: 150, dmg: 8, lifetime: 6, tick: 0.5, follow: true, allyHeal: 14, effect: { kind: 'burn', duration: 2, tick: 0.5, dmg: 8 }, manaCost: 40, cd: 11, color: '#55efc4', vfx: 'healer_aura', self: { effect: { kind: 'haste', duration: 6, factor: 1.2 } } },
+    skill2: { name: '神聖光環', type: 'zone', range: 0, radius: 150, dmg: 8, lifetime: 6, tick: 0.5, follow: true, allyHeal: 14, effect: { kind: 'burn', duration: 2, tick: 0.5, dmg: 5 }, manaCost: 40, cd: 11, color: '#55efc4', vfx: 'healer_aura', self: { effect: { kind: 'haste', duration: 6, factor: 1.2 } } },
     ultimate: { name: '生命匯流', type: 'zone', range: 0, radius: 280, dmg: 30, lifetime: 1.6, tick: 0.4, knockback: 90, cd: 12, color: '#aaffcc', vfx: 'healer_ultimate', ally: { radius: 280, heal: 250, shield: 250, cleanse: true, effect: { kind: 'haste', duration: 6, factor: 1.3 } } },
   };
 

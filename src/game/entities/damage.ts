@@ -1,0 +1,163 @@
+// @ts-nocheck
+import { PLAYER_RADIUS, ULT_MAX, ULT_GAIN_DEAL, ULT_GAIN_TAKE } from '../constants.js';
+import { getCharacter } from '../characters.js';
+import { applyBossDamageModifiers } from '../bosses/damage.ts';
+import { angleDiff, missingHp } from './math.ts';
+import { addFx } from './fx.ts';
+import { applyEffect } from './effects.ts';
+import { isAlly, isEnemy } from './team.ts';
+
+function warsongFor(state, attacker) {
+  let best = 0;
+  for (const bard of Object.values(state.players)) {
+    if (!bard.alive) continue;
+    const talent = getCharacter(bard.charId).talent;
+    if (!talent || talent.id !== 'warsong') continue;
+    if (!(bard.id === attacker.id || isAlly(state, bard.id, attacker))) continue;
+    const radius = talent.radius || 250;
+    if (Math.hypot(bard.x - attacker.x, bard.y - attacker.y) > radius) continue;
+    let allies = 0;
+    for (const other of Object.values(state.players)) {
+      if (!other.alive) continue;
+      if (!(other.id === bard.id || isAlly(state, bard.id, other))) continue;
+      if (Math.hypot(bard.x - other.x, bard.y - other.y) <= radius) allies++;
+    }
+    best = Math.max(best, Math.min(talent.maxAllies || 3, Math.max(0, allies - 1)) * (talent.perAlly || 0.05));
+  }
+  return best;
+}
+
+function spreadCurse(state, corpse) {
+  let hexer = null;
+  for (const other of Object.values(state.players)) {
+    if (!other.alive) continue;
+    const talent = getCharacter(other.charId).talent;
+    if (talent && talent.id === 'plague') { hexer = other; break; }
+  }
+  if (!hexer) return;
+  const weaken = corpse.effects.weaken;
+  const radius = (getCharacter(hexer.charId).talent.radius) || 200;
+  for (const other of Object.values(state.players)) {
+    if (other.id === corpse.id || !isEnemy(state, hexer.id, other)) continue;
+    if (Math.hypot(other.x - corpse.x, other.y - corpse.y) <= radius) applyEffect(other, 'weaken', { duration: weaken.remaining, factor: weaken.factor });
+  }
+  addFx(state, { type: 'buff', x: corpse.x, y: corpse.y, color: '#bb6bd9', life: 0.4, radius, vfx: 'hexer_field' });
+}
+
+function talentDamageMods(state, attacker, target, amount) {
+  let dmg = amount;
+  if (target && target.alive) {
+    const dt = getCharacter(target.charId).talent;
+    if (dt && dt.id === 'summonbond') {
+      let n = 0;
+      for (const other of Object.values(state.players)) if (other.isMinion && other.ownerId === target.id && other.alive) n++;
+      if (n > 0) dmg *= 1 - Math.min(dt.maxStacks || 3, n) * (dt.dr || 0.1);
+    }
+  }
+  if (attacker && attacker.alive) {
+    const at = getCharacter(attacker.charId).talent;
+    if (at) {
+      if (at.id === 'deadeye') {
+        const d = Math.hypot(target.x - attacker.x, target.y - attacker.y);
+        dmg *= 1 + (at.bonus || 0.5) * Math.min(1, d / (at.range || 520));
+      } else if (at.id === 'lethal') {
+        const behind = Math.abs(angleDiff(Math.atan2(attacker.y - target.y, attacker.x - target.x), target.facing)) > Math.PI - (at.arc || 1.2);
+        if ((attacker.effects && attacker.effects.invis) || behind) dmg *= 1 + (at.bonus || 0.6);
+      } else if (at.id === 'momentum') {
+        const stacks = Math.min(at.maxStacks || 5, attacker.combo || 0);
+        if (stacks > 0) dmg *= 1 + stacks * (at.perStack || 0.1);
+      } else if (at.id === 'shadowstrike') {
+        const effects = target.effects || {};
+        if (effects.stun || effects.root || effects.slow || effects.chill || effects.frozen) dmg *= 1 + (at.bonus || 0.35);
+      } else if (at.id === 'suppress') {
+        if (attacker.suppressTarget === target.id) {
+          const stacks = Math.min(at.maxStacks || 5, attacker.suppressStacks || 0);
+          if (stacks > 0) dmg *= 1 + stacks * (at.perStack || 0.08);
+        }
+      }
+    }
+    const warsong = warsongFor(state, attacker);
+    if (warsong > 0) dmg *= 1 + warsong;
+  }
+  return dmg;
+}
+
+export function dealDamage(state, target, amount, attackerId, opts = {}) {
+  if (!target.alive || amount <= 0) return;
+  if (target.effects && target.effects.evading) return;
+
+  const attacker = state.players[attackerId];
+  const hostile = attacker && attacker.id !== target.id && attacker.alive;
+  if (hostile) attacker.ult = Math.min(ULT_MAX, (attacker.ult || 0) + amount * ULT_GAIN_DEAL);
+  if (state.flags && state.flags.noDamage) return;
+
+  let dmg = amount;
+  if (hostile && attacker && (attacker.isMinion || attacker.isSummon) && attacker.ownerId) {
+    const owner = state.players[attacker.ownerId];
+    if (owner && !owner.isBoss) dmg *= 0.55;
+  }
+  if (!opts.noTalent && hostile) dmg = talentDamageMods(state, attacker, target, dmg);
+  if (hostile && attacker.effects && attacker.effects.dmg_reduce) dmg *= 1 - (attacker.effects.dmg_reduce.factor || 0);
+  if (target.isBoss) dmg = applyBossDamageModifiers(state, target, attacker, dmg);
+  if (target.effects && target.effects.mark) dmg *= 1 + target.effects.mark.bonus;
+  if (target.effects && target.effects.weaken) dmg *= 1 + (target.effects.weaken.factor || 0);
+  if (target.effects && target.effects.protect) dmg *= 1 - (target.effects.protect.factor || 0);
+
+  if (!opts.noReflect && hostile && target.effects && target.effects.reflect) {
+    const reflectDamage = dmg * (target.effects.reflect.factor || 0);
+    if (reflectDamage > 0) dealDamage(state, attacker, reflectDamage, target.id, { noReflect: true, noTalent: true });
+  }
+  if (!opts.noReflect && hostile) {
+    const targetTalent = getCharacter(target.charId).talent;
+    if (targetTalent && targetTalent.id === 'retribution') {
+      const reflectDamage = dmg * (targetTalent.factor || 0.15);
+      if (reflectDamage > 0) dealDamage(state, attacker, reflectDamage, target.id, { noReflect: true, noTalent: true });
+    }
+  }
+
+  if (target.shield > 0) {
+    const absorbed = Math.min(target.shield, dmg);
+    target.shield -= absorbed;
+    dmg -= absorbed;
+  }
+  if (dmg <= 0) return;
+  target.ult = Math.min(ULT_MAX, (target.ult || 0) + dmg * ULT_GAIN_TAKE);
+  target.hp -= dmg;
+
+  if (hostile && attacker.effects && attacker.effects.lifesteal) {
+    const lifesteal = dmg * (attacker.effects.lifesteal.factor || 0);
+    if (lifesteal > 0) attacker.hp = Math.min(attacker.maxHp, attacker.hp + lifesteal);
+  }
+  if (!opts.noTalent && hostile) {
+    const at = getCharacter(attacker.charId).talent;
+    if (at) {
+      if (at.id === 'arcane_flow') attacker.mana = Math.min(attacker.maxMana, attacker.mana + (at.mana || 8));
+      else if (at.id === 'bloodlust') {
+        const lifesteal = dmg * (at.lifesteal || 0.25) * (0.4 + missingHp(attacker));
+        if (lifesteal > 0) attacker.hp = Math.min(attacker.maxHp, attacker.hp + lifesteal);
+      } else if (at.id === 'momentum') {
+        attacker.combo = Math.min(at.maxStacks || 5, (attacker.combo || 0) + 1);
+        attacker.comboTimer = at.window || 2.2;
+      } else if (at.id === 'suppress') {
+        if (attacker.suppressTarget === target.id) attacker.suppressStacks = Math.min(at.maxStacks || 5, (attacker.suppressStacks || 0) + 1);
+        else { attacker.suppressTarget = target.id; attacker.suppressStacks = 1; }
+      }
+    }
+  }
+  if (hostile && attacker.isMinion && attacker.ownerId) {
+    const owner = state.players[attacker.ownerId];
+    if (owner && owner.alive) {
+      const ownerTalent = getCharacter(owner.charId).talent;
+      if (ownerTalent && ownerTalent.id === 'summonbond') owner.hp = Math.min(owner.maxHp, owner.hp + (ownerTalent.heal || 5));
+    }
+  }
+
+  if (target.hp <= 0) {
+    target.hp = 0;
+    target.alive = false;
+    const killer = state.players[attackerId];
+    if (killer && killer.id !== target.id) killer.kills++;
+    if (target.effects && target.effects.weaken) spreadCurse(state, target);
+    addFx(state, { type: 'death', x: target.x, y: target.y, color: '#ffffff', life: 0.5, radius: PLAYER_RADIUS * 2 });
+  }
+}

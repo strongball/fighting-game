@@ -14,7 +14,9 @@
 // 每個技能 a.windup 控制起手秒數 (越簡單的王越長、破綻越大)。
 
 import { ARENA } from './constants.js';
-import { isEnemy, dist, addFx } from './entities.js';
+import { dist } from './entities/math.ts';
+import { addFx } from './entities/fx.ts';
+import { isEnemy } from './entities/team.ts';
 import { getCharacter } from './characters.js';
 import { getBoss } from './bosses.js';
 

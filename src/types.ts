@@ -70,6 +70,7 @@ export interface CharacterMeta {
   skill1: SkillMeta;
   skill2: SkillMeta;
   ultimate?: SkillMeta;
+  evade?: SkillMeta;
 }
 
 // Controller → React 推送的事件。

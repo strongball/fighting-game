@@ -12,6 +12,7 @@ const KEY_MAPS = {
     KeyK: 'skill1',
     KeyL: 'skill2',
     Semicolon: 'ultimate',
+    ShiftLeft: 'evade', ShiftRight: 'evade',
   },
   'arrows-asdf': {
     ArrowUp: 'up',
@@ -22,11 +23,12 @@ const KEY_MAPS = {
     KeyS: 'skill1',
     KeyD: 'skill2',
     KeyF: 'ultimate',
+    ShiftLeft: 'evade', ShiftRight: 'evade',
   },
 };
 
 export function createInput(controlScheme = 'wasd-jkl') {
-  const keys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false };
+  const keys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false };
   let enabled = false;
   let currentScheme = controlScheme;
   let keyMap = KEY_MAPS[currentScheme];
@@ -61,10 +63,11 @@ export function createInput(controlScheme = 'wasd-jkl') {
       return {
         up: keys.up, down: keys.down, left: keys.left, right: keys.right,
         basic: keys.basic, skill1: keys.skill1, skill2: keys.skill2, ultimate: keys.ultimate,
+        evade: keys.evade,
         aim: null, // 人類玩家以移動方向轉向；魔王 AI 則合成 aim 角度 (邊走邊瞑)
       };
     },
   };
 }
 
-export const EMPTY_INPUT = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, aim: null };
+export const EMPTY_INPUT = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, aim: null };

@@ -11,11 +11,11 @@ const data = {
     desc: '以血換取強力 DoT 與汲取的暗系法師。亡者之觸讓持續傷害回復自身、生命汲取鎖血、腐蝕爆發釋放毒霧，大招亡靈大軍召喚亡兵並大範圍腐蝕。與法師的瞬間爆發不同——你是持續壓血的死神。',
     role: '特殊 · 持續壓血',
     synergy: '持續 DoT 與汲取壓制肉盾，靠流血/燃燒回血續戰；配控場把敵人困在毒霧裡。',
-    talent: { id: 'undeath', name: '亡者之觸', desc: '你造成的持續傷害(燃燒/流血)每跳回復自身等量 15% 的生命。', factor: 0.15 },
-    basic: { name: '死亡射線', type: 'projectile', dmg: 12, speed: 560, radius: 12, lifetime: 1.3, knockback: 30, cd: 0.5, color: '#6ab04c', effect: { kind: 'bleed', duration: 3, tick: 0.5, dmg: 9, moveMult: 1.0 }, vfx: 'necro_ray' },
-    skill1: { name: '生命汲取', type: 'channel', duration: 3, tick: 0.4, range: 320, dmg: 26, heal: 5, manaCost: 50, cd: 8, color: '#7bed9f', vfx: 'necro_drain' },
-    skill2: { name: '腐蝕爆發', type: 'zone', range: 130, radius: 130, dmg: 18, lifetime: 4, tick: 0.5, effect: { kind: 'bleed', duration: 2, tick: 0.5, dmg: 8, moveMult: 1.0 }, manaCost: 40, cd: 9, color: '#27ae60', vfx: 'necro_corrupt' },
-    ultimate: { name: '亡靈大軍', type: 'summon', count: 2, cap: 4, minionCharId: 2, minionHp: 150, minionScale: 0.64, minionLife: 16, zone: { radius: 220, dmg: 20, lifetime: 5, tick: 0.5, effect: { kind: 'bleed', duration: 3, tick: 0.5, dmg: 10, moveMult: 1.0 }, color: '#1e8449', vfx: 'necro_ultimate' }, cd: 12, color: '#2ecc71', vfx: 'necro_ultimate', self: { shield: 150, duration: 6, effects: [{ kind: 'lifesteal', duration: 8, factor: 0.1 }] } },
+    talent: { id: 'undeath', name: '亡者之觸', desc: '你造成的持續傷害(燃燒/流血)每跳回復自身等量 10% 的生命。', factor: 0.1 },
+    basic: { name: '死亡射線', type: 'projectile', dmg: 16, speed: 560, radius: 12, lifetime: 1.3, knockback: 30, cd: 0.5, color: '#6ab04c', effect: { kind: 'bleed', duration: 3, tick: 0.5, dmg: 6, moveMult: 1.0 }, vfx: 'necro_ray' },
+    skill1: { name: '生命汲取', type: 'channel', duration: 3, tick: 0.4, range: 320, dmg: 32, heal: 5, manaCost: 35, cd: 7, color: '#7bed9f', vfx: 'necro_drain' },
+    skill2: { name: '腐蝕爆發', type: 'zone', range: 130, radius: 130, dmg: 18, lifetime: 4, tick: 0.5, effect: { kind: 'bleed', duration: 2, tick: 0.5, dmg: 5, moveMult: 1.0 }, manaCost: 40, cd: 9, color: '#27ae60', vfx: 'necro_corrupt' },
+    ultimate: { name: '亡靈大軍', type: 'summon', count: 2, cap: 4, minionCharId: 2, minionHp: 100, minionScale: 0.64, minionLife: 12, zone: { radius: 220, dmg: 20, lifetime: 5, tick: 0.5, effect: { kind: 'bleed', duration: 3, tick: 0.5, dmg: 7, moveMult: 1.0 }, color: '#1e8449', vfx: 'necro_ultimate' }, cd: 12, color: '#2ecc71', vfx: 'necro_ultimate', self: { shield: 150, duration: 6, effects: [{ kind: 'lifesteal', duration: 8, factor: 0.1 }] } },
   };
 
 export class NecromancerCharacter extends BaseCharacter {

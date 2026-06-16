@@ -42,6 +42,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
   const keys = getSkillKeys(controlScheme);
   const chip = {
     basic: skillChip(keys.basic, skills), skill1: skillChip(keys.skill1, skills), skill2: skillChip(keys.skill2, skills), ultimate: skillChip(keys.ultimate, skills),
+    evade: skillChip('Shift', skills),
   };
 
   // 蓄力條 (蓄力技能用，平時隱藏)
@@ -185,6 +186,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
       setChip(chip.skill1, c.skill1, me.cd.skill1,  me.mana);
       setChip(chip.skill2, c.skill2, me.cd.skill2,  me.mana);
       setUltChip(chip.ultimate, c.ultimate, me.ult || 0, me.cd.ultimate);
+      setChip(chip.evade, c.evade, me.cd.evade, me.mana);
 
       // 蓄力條
       const cs = me.chargeState;
