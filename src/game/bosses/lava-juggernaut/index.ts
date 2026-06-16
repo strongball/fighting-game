@@ -1,6 +1,9 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
 
-const lavaJuggernaut = {
+const data = {
     id: 102, round: 3, name: '熔岩鐵衛', subtitle: '烈焰重裝兵',
     color: '#c0392b', shape: 'square', maxHp: 5500, maxMana: 999, speed: 140,
     baseHp: 5500,
@@ -10,7 +13,6 @@ const lavaJuggernaut = {
       weapon: '熔岩巨劍 + 鐵塔盾',
       telegraph: '衝鋒前身體發紅後仰、腳下噴煙與火星、地面浮現直線瞄準指示；揮劍前劍刃熾紅。',
     },
-    model: { bulk: 4.5, weapon: 'sword', scale: 2.2, head: 'square', emissiveCore: '#ff5a1f' },
     ai: 'juggernaut',
     mechanic: { frontArmor: 0.45, chargeWallStun: 2.2 }, // 正面前弧減傷 45%；衝鋒撞牆自暈 2.2s
     talent: { id: 'boss_frontarmor', name: '熔岩重甲', desc: '正面前方受到的傷害減免 45%，背後無防護。', frontArmor: 0.45, arc: 1.6 },
@@ -29,4 +31,4 @@ const lavaJuggernaut = {
     ultimate: { name: '熔岩噴發', type: 'zone', range: 130, radius: 120, dmg: 55, lifetime: 4, tick: 0.5, delay: 0.9, count: 7, scatter: 280, stagger: 0.12, effect: BURN(14, 3), cd: 16, windup: 1.0, telegraph: 'circle', color: '#ff5a1f', vfx: 'boss_juggernaut_ult' },
   };
 
-export default lavaJuggernaut;
+export default new BaseBoss(data, { aiProfile, modelConfig });

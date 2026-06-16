@@ -16,6 +16,7 @@
 import { ARENA } from './constants.js';
 import { isEnemy, dist, addFx } from './entities.js';
 import { getCharacter } from './characters.js';
+import { getBoss } from './bosses.js';
 
 function mkInput() {
   return { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, aim: null };
@@ -87,22 +88,17 @@ function selfCentered(a) {
     a.type === 'mirror_players' || a.type === 'steal_ultimate' || a.type === 'multiblink');
 }
 
-// ---- 每王設定檔 (target 選擇 / 理想距離 / 技能優先序) ----
-// slots：嘗試施放的優先序 (cd 就緒且 usable 才會選中)
+const PICK_TARGETS = {
+  aggroSwap,
+  nearestTarget,
+  lowestTarget,
+};
+
+// ---- 共用 AI 設定檔 (召喚物 / 鏡像) ----
+// Boss 專屬 profile 放在 src/game/bosses/<slug>/ai.ts。
 const PROFILES = {
-  golem: { range: 70, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: aggroSwap },
-  lizard: { range: 90, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: nearestTarget, kite: 60 },
-  juggernaut: { range: 80, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: nearestTarget },
-  frost_assassin: { range: 70, slots: ['ultimate', 'skill2', 'skill1', 'basic'], pickTarget: nearestTarget },
-  ancient_titan: { range: 130, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: nearestTarget, slow: true },
-  necromancer: { range: 420, slots: ['skill1', 'skill2', 'ultimate', 'basic'], pickTarget: nearestTarget, kite: 320 },
-  storm_wolf: { range: 80, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: lowestTarget },
-  void_mage: { range: 360, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: nearestTarget, kite: 280 },
-  fallen_angel: { range: 120, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: nearestTarget },
-  doppelganger: { range: 110, slots: ['skill1', 'skill2', 'ultimate', 'basic'], pickTarget: nearestTarget },
-  // 召喚物 / 鏡像：通用積極近戰；鏡像用自身角色技能組
-  minion: { range: 60, slots: ['skill1', 'skill2', 'basic'], pickTarget: nearestTarget },
-  mirror: { range: 80, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: nearestTarget },
+  minion: { range: 60, slots: ['skill1', 'skill2', 'basic'], pickTarget: 'nearestTarget' },
+  mirror: { range: 80, slots: ['ultimate', 'skill1', 'skill2', 'basic'], pickTarget: 'nearestTarget' },
 };
 
 function aggroSwap(state, ent, dt) {
@@ -142,8 +138,22 @@ export function computeBossInput(state, ent, dt) {
   // 被暈：無法行動，取消起手
   if (ent.effects && ent.effects.stun) { s.mode = 'idle'; s.slot = null; return input; }
 
-  const prof = PROFILES[ent.aiId] || PROFILES.minion;
-  const target = (prof.pickTarget || nearestTarget)(state, ent, dt);
+  const boss = ent.isBoss ? getBoss(ent.charId) : null;
+  if (boss && typeof boss.computeInput === 'function') {
+    return boss.computeInput(state, ent, dt, { computeProfileInput });
+  }
+
+  return computeProfileInput(PROFILES[ent.aiId] || PROFILES.minion, state, ent, dt);
+}
+
+function computeProfileInput(profile, state, ent, dt) {
+  const input = mkInput();
+  const s = ent.aiState || (ent.aiState = {});
+  const prof = profile || PROFILES.minion;
+  const pickTarget = typeof prof.pickTarget === 'function'
+    ? prof.pickTarget
+    : PICK_TARGETS[prof.pickTarget] || nearestTarget;
+  const target = pickTarget(state, ent, dt);
   if (!target) { return input; } // 無敵人 (過場)
   const d = dist(ent.x, ent.y, target.x, target.y);
   const ch = getCharacter(ent.charId);

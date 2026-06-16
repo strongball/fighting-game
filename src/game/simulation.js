@@ -9,6 +9,7 @@ import {
 } from './entities.js';
 import { computeBossInput } from './bossAI.js';
 import { bossTick, checkBossRound, BOSS_TEAM } from './bossMode.js';
+import { executeBossAction } from './bosses/actions.ts';
 
 export function speedOf(p) {
   const c = getCharacter(p.charId);
@@ -136,6 +137,23 @@ function applyAllyBuff(state, caster, ally) {
     if (ally.effect) applyEffect(o, ally.effect.kind, ally.effect, caster.id);
     if (ally.effects) for (const e of ally.effects) applyEffect(o, e.kind, e, caster.id);
   }
+}
+
+function bossActionHelpers() {
+  return {
+    ARENA,
+    PLAYER_RADIUS,
+    BOSS_TEAM,
+    clamp,
+    dist,
+    makeBoss,
+    addFx,
+    isEnemy,
+    applyEffect,
+    dealDamage,
+    getCharacter,
+    executeAction,
+  };
 }
 
 function executeAction(state, p, a, opts = {}) {
@@ -287,136 +305,13 @@ function executeAction(state, p, a, opts = {}) {
     // ======== 一般角色召喚 (召喚師/死靈法師) ========
     case 'summon': summonMinions(state, p, a); break;
     // ======== 闖關模式魔王自訂動作 ========
-    case 'summon_clones': bossSummonClones(state, p, a); break;
-    case 'summon_minions': bossSummonMinions(state, p, a); break;
-    case 'apply_scramble': {
-      for (const o of Object.values(state.players)) {
-        if (!isEnemy(state, p.id, o)) continue;
-        if (dist(p.x, p.y, o.x, o.y) <= (a.radius || 320)) applyEffect(o, 'scramble', { duration: a.duration || 2 });
-      }
-      addFx(state, { type: 'buff', x: p.x, y: p.y, color: a.color, life: 0.5, radius: a.radius || 320 });
+    default:
+      executeBossAction(state, p, a, bossActionHelpers());
       break;
-    }
-    case 'time_rewind': bossTimeRewind(state, p, a); break;
-    case 'soul_bind': bossSoulBind(state, p, a); break;
-    case 'light_dark': bossLightDark(state, p, a); break;
-    case 'mirror_players': bossMirrorPlayers(state, p, a); break;
-    case 'steal_ultimate': bossStealUltimate(state, p, a); break;
   }
   if (a.rewindSelf) chronoRewindSelf(state, p, a); // 時空術士大招時空逆轉 (先引爆 zone，再回溯自身)
   if (a.self) applySelfBuff(p, a.self);
   if (a.ally) applyAllyBuff(state, p, a.ally); // 施放瞬間對友軍的 AoE 增益 (治療/護盾/減傷)
-}
-
-// ======== 魔王自訂動作實作 ========
-function bossSummonClones(state, boss, a) {
-  const n = a.count || 3;
-  const clones = [];
-  for (let i = 0; i < n; i++) {
-    const ang = (i / n) * Math.PI * 2;
-    const x = clamp(boss.x + Math.cos(ang) * 90, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
-    const y = clamp(boss.y + Math.sin(ang) * 90, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
-    const id = boss.id + '-clone-' + Math.random().toString(36).slice(2, 7);
-    const c = makeBoss(id, boss.charId, x, y, BOSS_TEAM, { isFake: true, ownerId: boss.id, aiId: 'fake', maxHp: 1, scale: boss.scale, facing: boss.facing });
-    state.players[id] = c;
-    clones.push(c);
-  }
-  // 真身與隨機分身換位 (swapTell)
-  if (clones.length && Math.random() < 0.6) {
-    const c = clones[Math.floor(Math.random() * clones.length)];
-    const tx = c.x, ty = c.y; c.x = boss.x; c.y = boss.y; boss.x = tx; boss.y = ty;
-  }
-  addFx(state, { type: 'blink', x: boss.x, y: boss.y, color: a.color, life: 0.4, radius: 90 });
-}
-
-function bossSummonMinions(state, boss, a) {
-  const n = a.count || 3;
-  const hp = Math.round((a.minionHp || 240) * (state._hpScale || 1));
-  for (let i = 0; i < n; i++) {
-    const ang = (i / n) * Math.PI * 2 + Math.random();
-    const x = clamp(boss.x + Math.cos(ang) * 110, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
-    const y = clamp(boss.y + Math.sin(ang) * 110, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
-    const id = boss.id + '-min-' + Math.random().toString(36).slice(2, 7);
-    const m = makeBoss(id, a.minionCharId != null ? a.minionCharId : 7, x, y, BOSS_TEAM, { isMinion: true, ownerId: boss.id, aiId: 'minion', maxHp: hp, scale: 1 });
-    state.players[id] = m;
-  }
-  addFx(state, { type: 'buff', x: boss.x, y: boss.y, color: a.color, life: 0.5, radius: 100 });
-}
-
-function bossTimeRewind(state, boss, a) {
-  const back = Math.round((a.rewindSeconds || 3) * 30);
-  for (const o of Object.values(state.players)) {
-    if (!isEnemy(state, boss.id, o)) continue;
-    if (a.dmg) dealDamage(state, o, a.dmg, boss.id);
-    const h = o._hist;
-    if (h && h.length) {
-      const idx = Math.max(0, h.length - back);
-      const pos = h[idx];
-      o.x = clamp(pos.x, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
-      o.y = clamp(pos.y, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
-      addFx(state, { type: 'blink', x: o.x, y: o.y, color: a.color, life: 0.3, radius: 50 });
-    }
-  }
-  const en = Object.values(state.players).filter((o) => isEnemy(state, boss.id, o));
-  if (en.length >= 2) {
-    let i = Math.floor(Math.random() * en.length), j = Math.floor(Math.random() * en.length);
-    if (j === i) j = (j + 1) % en.length;
-    const A = en[i], B = en[j], tx = A.x, ty = A.y; A.x = B.x; A.y = B.y; B.x = tx; B.y = ty;
-  }
-  addFx(state, { type: 'ultimate', x: boss.x, y: boss.y, color: a.color, life: 0.6, radius: a.radius || 150 });
-}
-
-function bossSoulBind(state, boss, a) {
-  const en = Object.values(state.players).filter((o) => isEnemy(state, boss.id, o) && o.alive);
-  if (en.length < 2) return;
-  for (let i = en.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = en[i]; en[i] = en[j]; en[j] = t; }
-  if (!state.tethers) state.tethers = [];
-  const pairs = Math.floor(Math.min(a.count || 2, en.length) / 2);
-  for (let k = 0; k < pairs; k++) {
-    const x = en[k * 2], y = en[k * 2 + 1];
-    state.tethers.push({ a: x.id, b: y.id, minGap: a.minGap || 200, dmg: a.dmg || 18, tick: a.tick || 0.5, tickTimer: 0.5, remaining: a.duration || 6 });
-    addFx(state, { type: 'buff', x: x.x, y: x.y, color: a.color, life: 0.6, radius: 70 });
-    addFx(state, { type: 'buff', x: y.x, y: y.y, color: a.color, life: 0.6, radius: 70 });
-  }
-}
-
-function bossLightDark(state, boss, a) {
-  const safeLeft = Math.random() < 0.5;
-  const midX = ARENA.width / 2;
-  for (const o of Object.values(state.players)) {
-    if (!isEnemy(state, boss.id, o)) continue;
-    const onLeft = o.x < midX;
-    if (onLeft !== safeLeft) { // 站錯側
-      dealDamage(state, o, a.dmg || 80, boss.id);
-      o.kvx += (onLeft ? -1 : 1) * 220;
-    }
-  }
-  addFx(state, { type: 'ultimate', x: midX, y: ARENA.height / 2, color: a.color, life: 0.7, radius: 220 });
-}
-
-function bossMirrorPlayers(state, boss, a) {
-  const en = Object.values(state.players).filter((o) => o.team === 1 && o.alive);
-  for (const o of en) {
-    const x = clamp(boss.x + (o.x - boss.x) * 0.4, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
-    const y = clamp(boss.y + 70, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
-    const id = boss.id + '-mirror-' + o.id;
-    if (state.players[id]) continue;
-    const m = makeBoss(id, o.charId, x, y, BOSS_TEAM, { isMirror: true, ownerId: boss.id, aiId: 'mirror', maxHp: o.maxHp, scale: 1, name: '镜像' });
-    state.players[id] = m;
-    addFx(state, { type: 'blink', x, y, color: a.color, life: 0.4, radius: 70 });
-  }
-}
-
-function bossStealUltimate(state, boss, a) {
-  const en = Object.values(state.players).filter((o) => o.team === 1 && o.alive);
-  if (!en.length) return;
-  const victim = en[Math.floor(Math.random() * en.length)];
-  const ult = getCharacter(victim.charId).ultimate;
-  if (!ult) return;
-  const tgt = en.reduce((b, o) => (dist(boss.x, boss.y, o.x, o.y) < dist(boss.x, boss.y, b.x, b.y) ? o : b), en[0]);
-  boss.facing = Math.atan2(tgt.y - boss.y, tgt.x - boss.x);
-  executeAction(state, boss, ult, { silent: true });
-  addFx(state, { type: 'ultimate', x: boss.x, y: boss.y, color: a.color, life: 0.6, radius: ult.radius || 140 });
 }
 
 // ======== 一般角色召喚系統 (召喚師 / 死靈法師) ========

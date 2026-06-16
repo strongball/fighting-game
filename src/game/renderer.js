@@ -12,7 +12,8 @@ import { createParticleSystem } from './render3d/particles.js';
 import { createEntityLayer } from './render3d/entities3d.js';
 import { createFxBus } from './render3d/fxbus.js';
 import { createHud } from './render3d/hud.js';
-import { createCharacterModel, createPartModel, animateModel, attachSkin } from './render3d/models.js';
+import { createCharacterModel, animateModel, attachSkin } from './render3d/models.js';
+import { computeBossVisualState, createBossPartModel } from './bosses/render3d.ts';
 import { sceneX, sceneZ } from './render3d/coords.js';
 import { getCharacter } from './characters.js';
 import { prepareSkin, instantiateSkin } from './render3d/skins.js';
@@ -68,7 +69,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
     let e = models.get(p.id);
     if (e && e.charId !== p.charId) { disposeModel(e); models.delete(p.id); e = null; }
     if (!e) {
-      const group = p.isPart ? createPartModel(p.partColor || '#ffffff', p.scale || 1) : createCharacterModel(p.charId);
+      const group = p.isPart ? createBossPartModel(p.partColor || '#ffffff', p.scale || 1) : createCharacterModel(p.charId);
       // 召喚物 (非魔王) 依 scale 縮小，呈現「小型戰靈」感；魔王模型已於 createCharacterModel 內套 scale，勿重複。
       if (!p.isPart && !p.isBoss && p.scale && p.scale !== 1) group.scale.setScalar(p.scale);
       group.position.set(sceneX(p.x), 0, sceneZ(p.y));
@@ -177,34 +178,8 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
       pr.hp = p.hp;
       if (p.cd) { if (!pr.cd) pr.cd = {}; for (const slot of CD_SLOTS) pr.cd[slot] = p.cd[slot] || 0; }
 
-      // 弱點教學：算出本地玩家相對魔王是「在背後軟肋」還是「在正面重甲弧」(與 entities.js 傷害判定同公式)，傳給模型亮燈
-      let bossWeakSelf = false, bossFrontSelf = false, coreShielded = 0;
-      if (p.isBoss) {
-        const mech = getCharacter(p.charId).mechanic;
-        if (mech && (mech.backWeak || mech.frontArmor)) {
-          const me = state.players[selfId];
-          if (me && me.alive && me.id !== p.id) {
-            let rel = Math.atan2(me.y - p.y, me.x - p.x) - p.facing;
-            while (rel > Math.PI) rel -= Math.PI * 2;
-            while (rel < -Math.PI) rel += Math.PI * 2;
-            rel = Math.abs(rel);
-            bossWeakSelf = rel > Math.PI - 0.9;   // 背後軟肋 (R1 加傷 / R3 無甲)
-            if (mech.frontArmor) bossFrontSelf = rel < 0.9; // 正面重甲弧 (R3 減傷)
-          }
-        }
-        // 魔王護盾強度 0..1：R5 雙臂任一存活=1；R6 隨存活小怪數 (每隻 perMinion，封頂 max)
-        if (mech && mech.coreArmorUntilPartsDown) {
-          for (const o of Object.values(state.players)) {
-            if (o.isPart && o.ownerId === p.id && o.alive) { coreShielded = 1; break; }
-          }
-        } else if (mech && mech.minionShield) {
-          let nMin = 0;
-          for (const o of Object.values(state.players)) if (o.isMinion && o.ownerId === p.id && o.alive) nMin++;
-          const ms = mech.minionShield;
-          if (nMin > 0) coreShielded = Math.min(1, (nMin * (ms.perMinion || 0.18)) / (ms.max || 0.72));
-        }
-      }
-      animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt, downed, bossWeakSelf, bossFrontSelf, fake: !!p.isFake, coreShielded });
+      const bossVisual = p.isBoss ? computeBossVisualState(state, selfId, p, getCharacter(p.charId)) : {};
+      animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt, downed, fake: !!p.isFake, ...bossVisual });
 
       // ---- 音效 (renderer-side 本地偵測；host+joiner 各自播放；缺檔靜音不報錯) ----
       // 出手音：每角色 vfx id 優先，缺檔回退泛型 (swing/cast/dash/blink/ultimate)

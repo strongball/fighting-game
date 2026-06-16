@@ -1,6 +1,9 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
 
-const stormWolf = {
+const data = {
     id: 106, round: 7, name: '風暴巨狼', subtitle: '狂暴之爪',
     color: '#4a6fa5', shape: 'triangle', maxHp: 7000, maxMana: 999, speed: 250,
     baseHp: 7000,
@@ -10,7 +13,6 @@ const stormWolf = {
       weapon: '雷電利爪 + 撕咬',
       telegraph: '撲擊前壓低身軀、爪下迸放電火並投出衝刺線、雙眼閃光；起手極短，考驗反應。',
     },
-    model: { bulk: 4.0, weapon: 'gloves', scale: 2.2, head: 'triangle', emissiveCore: '#aee3ff', beast: true },
     ai: 'storm_wolf',
     mechanic: { targetLowest: true, enrageBelow: 0.4, enrageHaste: 1.4 }, // 鎖最低血玩家；殘血暴怒加速
     hint: '牠專咬血最少的人 —— 被盯上就拉開距離！起手極短，看到撲擊馬上閃',
@@ -26,4 +28,4 @@ const stormWolf = {
     ultimate: { name: '雷霆亂舞', type: 'multiblink', count: 5, dmg: 60, knockback: 160, effect: STUN(0.3), cd: 16, windup: 0.6, telegraph: 'self', color: '#aee3ff', targetLowest: true, vfx: 'boss_wolf_ult' },
   };
 
-export default stormWolf;
+export default new BaseBoss(data, { aiProfile, modelConfig });

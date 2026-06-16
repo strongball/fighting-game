@@ -1,6 +1,10 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
+import './action.ts';
 
-const voidMage = {
+const data = {
     id: 107, round: 8, name: '虛空大魔導', subtitle: '時空扭曲者',
     color: '#8e44ad', shape: 'circle', maxHp: 7500, maxMana: 999, speed: 150,
     baseHp: 7500,
@@ -10,7 +14,6 @@ const voidMage = {
       weapon: '空間扭曲術 (雙手施法)',
       telegraph: '扭曲前地面與目標身上浮現旋轉符文圈、畫面邊緣出現空間漣漪微光。',
     },
-    model: { bulk: 3.0, weapon: 'orb', robe: true, scale: 1.8, head: 'circle', float: true, emissiveCore: '#c39bff' },
     ai: 'void_mage',
     mechanic: { rewind: true }, // 大招倒流玩家位置
     hint: '符咒會打亂你的移動、黑洞會把你吸進去、大招把你拉回幾秒前 —— 看到預警快閃開！',
@@ -28,4 +31,4 @@ const voidMage = {
     ultimate: { name: '時光倒流', type: 'time_rewind', rewindSeconds: 3.0, dmg: 90, radius: 150, cd: 18, windup: 1.2, telegraph: 'circle', color: '#a06cff', vfx: 'boss_void_ult' },
   };
 
-export default voidMage;
+export default new BaseBoss(data, { aiProfile, modelConfig });

@@ -1,6 +1,10 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
+import { loadVfx } from './vfx.ts';
 
-const poisonLizard = {
+const data = {
     id: 101, round: 2, name: '劇毒飛蜥', subtitle: '沼澤潛伏者',
     color: '#7fbf3f', shape: 'triangle', maxHp: 4500, maxMana: 999, speed: 175,
     baseHp: 4500,
@@ -10,7 +14,6 @@ const poisonLizard = {
       weapon: '毒牙利爪 + 毒液吐息',
       telegraph: '吐毒前口部鼓脹發綠光並噴氣、飛撲前後肢蹲伏冒紫煙。',
     },
-    model: { bulk: 3.5, weapon: 'daggers', scale: 1.8, head: 'triangle', emissiveCore: '#aaff55' },
     ai: 'lizard',
     mechanic: { poisonFloor: true }, // 招式在地面留毒池
     hint: '別踩地上的綠色毒沼 —— 會持續中毒掉血！',
@@ -28,4 +31,4 @@ const poisonLizard = {
     ultimate: { name: '瘴氣風暴', type: 'zone', range: 140, radius: 120, dmg: 30, lifetime: 5, tick: 0.5, delay: 0.8, count: 6, scatter: 260, stagger: 0.16, effect: BURN(14, 3), cd: 16, windup: 1.0, telegraph: 'circle', color: '#6abf2f', vfx: 'boss_lizard_ult' },
   };
 
-export default poisonLizard;
+export default new BaseBoss(data, { aiProfile, modelConfig, loadVfx });

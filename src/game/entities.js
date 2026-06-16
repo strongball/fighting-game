@@ -2,6 +2,8 @@
 
 import { ARENA, PLAYER_RADIUS, ULT_MAX, ULT_GAIN_DEAL, ULT_GAIN_TAKE } from './constants.js';
 import { getCharacter } from './characters.js';
+import { applyBossDamageModifiers } from './bosses/damage.ts';
+import { getBossEntityHitRadius } from './bosses/hitbox.ts';
 
 let _id = 1;
 export function uid() { return _id++; }
@@ -61,17 +63,7 @@ export function makeBoss(id, charId, x, y, team, opts = {}) {
   e.partId = opts.partId || null;
   e.bossRound = opts.round || 0;
   e.scale = opts.scale || 1;        // 模型放大倍率 (渲染用)
-  // 命中半徑：魔王依模型體積放大 (torso 半寬 × scale)，使「可攻擊範圍」貼合視覺體積；
-  // 部位用水晶體積；其餘 (小怪/镜像/分身) 等比 PLAYER_RADIUS。
-  if (opts.isPart) {
-    e.hitR = Math.round(24 * (e.scale || 1));
-  } else if (opts.isBoss) {
-    const md = getCharacter(charId).model || {};
-    const bulk = md.bulk || 2.2;
-    e.hitR = Math.round(11 * bulk * (e.scale || md.scale || 1) * 0.9);
-  } else {
-    e.hitR = Math.round(PLAYER_RADIUS * (e.scale || 1));
-  }
+  e.hitR = getBossEntityHitRadius(charId, e.scale, opts);
   e.aiState = {};                   // 每王腳本暫存 (不需序列化關鍵邏輯，但會隨 snapshot 帶過去)
   e.facing = opts.facing != null ? opts.facing : e.facing;
   return e;
@@ -273,29 +265,6 @@ function talentDamageMods(state, attacker, target, amount) {
   return dmg;
 }
 
-// 魔王受傷修正 (闖關模式)：正面重甲 / 背後弱點 / 小怪護盾 / 核心護甲。
-function bossDamageMods(state, boss, attacker, dmg) {
-  const mech = getCharacter(boss.charId).mechanic;
-  if (!mech) return dmg;
-  if (attacker && (mech.frontArmor || mech.backWeak)) {
-    const ang = Math.atan2(attacker.y - boss.y, attacker.x - boss.x);
-    const rel = Math.abs(angleDiff(ang, boss.facing)); // 0=正前, PI=正後
-    if (mech.frontArmor && rel < 0.9) dmg *= 1 - mech.frontArmor;        // 前弧減傷
-    if (mech.backWeak && rel > Math.PI - 0.9) dmg *= 1 + mech.backWeak;  // 背後增傷
-  }
-  if (mech.minionShield) { // R6：每隻存活小怪給本體減傷
-    let alive = 0;
-    for (const o of Object.values(state.players)) if (o.isMinion && o.ownerId === boss.id && o.alive) alive++;
-    if (alive > 0) dmg *= 1 - Math.min(mech.minionShield.max || 0.7, (mech.minionShield.perMinion || 0.15) * alive);
-  }
-  if (mech.coreArmorUntilPartsDown) { // R5：雙臂未破前核心減傷
-    let anyPartAlive = false;
-    for (const o of Object.values(state.players)) if (o.isPart && o.ownerId === boss.id && o.alive) { anyPartAlive = true; break; }
-    if (anyPartAlive) dmg *= 1 - mech.coreArmorUntilPartsDown;
-  }
-  return dmg;
-}
-
 export function dealDamage(state, target, amount, attackerId, opts = {}) {
   if (!target.alive || amount <= 0) return;
   // 終極能量充能：攻擊者依造成傷害累積
@@ -310,7 +279,7 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
   if (!opts.noTalent && hostile) dmg = talentDamageMods(state, attacker, target, dmg);
   // 削弱輸出 (咒術師 dmg_reduce)：攻擊者輸出降低
   if (hostile && attacker.effects && attacker.effects.dmg_reduce) dmg *= 1 - (attacker.effects.dmg_reduce.factor || 0);
-  if (target.isBoss) dmg = bossDamageMods(state, target, attacker, dmg); // 魔王正面重甲/背後弱點/護盾
+  if (target.isBoss) dmg = applyBossDamageModifiers(state, target, attacker, dmg);
   // 死亡印記：受傷放大 (刺客標記引爆體系)
   if (target.effects && target.effects.mark) dmg *= 1 + target.effects.mark.bonus;
   // 易傷詛咒 (咒術師 weaken)：受傷放大

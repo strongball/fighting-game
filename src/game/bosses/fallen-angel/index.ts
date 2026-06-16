@@ -1,6 +1,10 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
+import './action.ts';
 
-const fallenAngel = {
+const data = {
     id: 108, round: 9, name: '審判之翼', subtitle: '墮落天使',
     color: '#f5d76e', shape: 'triangle', maxHp: 9000, maxMana: 999, speed: 160,
     baseHp: 9000,
@@ -10,7 +14,6 @@ const fallenAngel = {
       weapon: '審判巨劍 + 靈魂鎖鏈',
       telegraph: '靈魂綁定前鎖鏈從魔王延伸連向目標 (明確連線)；審判光柱前展翼上升、地面投出光柱警示。Phase 2 全身光環轉為暗紫。',
     },
-    model: { bulk: 5.0, weapon: 'sword', scale: 2.6, head: 'triangle', wings: true, emissiveCore: '#fff2b0' },
     ai: 'fallen_angel',
     mechanic: { soulBind: { count: 2, minGap: 200, dmg: 18, tick: 0.5 }, phases: 2 }, // 隨機綁定 2 人，過近雙扣
     hint: '牠會用鎖鏈把兩名玩家綁在一起 —— 被綁就和隊友拉開距離，否則一起扣血！',
@@ -28,4 +31,4 @@ const fallenAngel = {
     ultimate: { name: '光暗審判', type: 'light_dark', dmg: 80, radius: 1200, cd: 19, windup: 1.4, telegraph: 'self', color: '#ffe9a8', vfx: 'boss_angel_ult' },
   };
 
-export default fallenAngel;
+export default new BaseBoss(data, { aiProfile, modelConfig });

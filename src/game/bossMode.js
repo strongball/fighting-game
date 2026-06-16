@@ -6,71 +6,23 @@
 //   startBossRound(state, n)   進入第 n 關 (生成魔王 + 部位、滿血全隊、過場橫幅)
 
 import { ARENA } from './constants.js';
-import { makeBoss, dist, addFx, spawnPoints } from './entities.js';
+import { dist, addFx, spawnPoints } from './entities.js';
 import { getBossForRound } from './bosses.js';
+import {
+  BOSS_TEAM,
+  PLAYER_TEAM,
+  clearBossSide,
+  findBossEntity,
+  followBossParts,
+  spawnBoss,
+  teamPlayers,
+} from './bosses/lifecycle.ts';
 
-export const BOSS_TEAM = 2;
-export const PLAYER_TEAM = 1;
+export { BOSS_TEAM, PLAYER_TEAM, findBossEntity, teamPlayers };
 const REVIVE_RADIUS = 100;   // 友方靠近此距離開始復活
 const REVIVE_TIME = 3.0;     // 累計秒數達標即復活
 const REVIVE_HP = 0.4;       // 復活血量比例
 const HIST_CAP = 150;        // 位置歷史上限 (~5s @30Hz，供 R8 時光倒流)
-
-// ---- 查詢 ----
-export function teamPlayers(state) {
-  const out = [];
-  for (const o of Object.values(state.players)) if (o.team === PLAYER_TEAM) out.push(o);
-  return out;
-}
-export function findBossEntity(state) {
-  for (const o of Object.values(state.players)) if (o.isBoss) return o;
-  return null;
-}
-function bossSideEntities(state) {
-  const out = [];
-  for (const o of Object.values(state.players)) if (o.team === BOSS_TEAM) out.push(o);
-  return out;
-}
-
-// ---- 生成魔王 (依存活玩家數縮放血量) ----
-function spawnBoss(state, round) {
-  const data = getBossForRound(round);
-  if (!data) return null;
-  const n = Math.max(1, teamPlayers(state).filter((p) => p.alive).length || state.playerCount || 1);
-  const hpScale = Math.max(0.35, n / 4);
-  state._hpScale = hpScale;
-  const cx = ARENA.width / 2, cy = ARENA.height * 0.3;
-  const id = 'boss-' + round;
-  const scale = (data.model && data.model.scale) || 2;
-  const boss = makeBoss(id, data.id, cx, cy, BOSS_TEAM, {
-    isBoss: true, aiId: data.ai, hpScale, round, name: data.name, scale, facing: Math.PI / 2,
-  });
-  state.players[id] = boss;
-
-  // R5 可破壞部位 (左右臂) —— 以獨立子實體呈現，可被各自集火破壞
-  const mech = data.mechanic;
-  if (mech && mech.parts) {
-    for (const pdef of mech.parts) {
-      const pc = ((data.model && data.model.parts) || []).find((x) => x.id === pdef.id) || {};
-      const off = pdef.offset || { x: 0, y: 0 };
-      const ox = (off.x || 0) * (scale * 0.5), oy = (off.y || 0) * (scale * 0.5);
-      const pid = id + '-' + pdef.id;
-      const part = makeBoss(pid, data.id, cx + ox, cy + oy, BOSS_TEAM, {
-        isPart: true, ownerId: id, partId: pdef.id, maxHp: Math.round((pdef.baseHp || 1500) * hpScale), scale: 1.6, aiId: null,
-      });
-      part.partColor = pc.color || '#ffffff';
-      part._offx = ox; part._offy = oy;
-      state.players[pid] = part;
-    }
-  }
-  return boss;
-}
-
-// ---- 移除魔王陣營殘留 (小怪/分身/鏡像/部位) ----
-function clearBossSide(state) {
-  for (const o of bossSideEntities(state)) delete state.players[o.id];
-  state.tethers = [];
-}
 
 // ---- 全隊復活 + 滿血 (每關開頭與過關時) ----
 function reviveAndHealAll(state) {
@@ -112,22 +64,10 @@ export function startBossRound(state, round) {
 // ---- 每個 fighting tick 的維護 ----
 export function bossTick(state, dt) {
   if (state.roundPhase !== 'fighting') return;
-  partsFollow(state);
+  followBossParts(state);
   tetherTick(state, dt);
   reviveTick(state, dt);
   recordHistory(state);
-}
-
-// 部位跟隨本體 (R5 雷射臂/巨鋸臂固定在魔王左右)
-function partsFollow(state) {
-  for (const o of Object.values(state.players)) {
-    if (!o.isPart || !o.alive) continue;
-    const boss = state.players[o.ownerId];
-    if (!boss || !boss.alive) { o.alive = false; continue; }
-    o.x = boss.x + (o._offx || 0);
-    o.y = boss.y + (o._offy || 0);
-    o.facing = boss.facing;
-  }
 }
 
 // 靈魂綁定 (R9)：成對連線，距離過近 → 雙方持續扣血

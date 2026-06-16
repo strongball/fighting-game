@@ -1,6 +1,10 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
+import './action.ts';
 
-const frostAssassin = {
+const data = {
     id: 103, round: 4, name: '霜雪刺客', subtitle: '冰原幻影',
     color: '#74e0ff', shape: 'triangle', maxHp: 5000, maxMana: 999, speed: 220,
     baseHp: 5000,
@@ -10,7 +14,6 @@ const frostAssassin = {
       weapon: '雙冰匕',
       telegraph: '真身出手前匕首更亮、霜煙較濃；分身更透明且閃爍。瞬移前原地爆出霜煙。',
     },
-    model: { bulk: 2.5, weapon: 'daggers', scale: 1.5, head: 'triangle', emissiveCore: '#bfefff', translucent: true },
     ai: 'frost_assassin',
     mechanic: { clones: 3, swapTell: true }, // 召喚 3 個假身；真身可與分身換位 (有細微 tell)
     hint: '牠會放分身騙你 —— 真身較「實」、分身半透明會閃，認準真身再打！',
@@ -28,4 +31,4 @@ const frostAssassin = {
     ultimate: { name: '絕對冰域', type: 'zone', range: 0, radius: 220, dmg: 30, lifetime: 2.0, tick: 0.5, follow: true, effect: CHILL(2), cd: 17, windup: 1.0, telegraph: 'circle', color: '#cdf6ff', vfx: 'boss_frost_ult' },
   };
 
-export default frostAssassin;
+export default new BaseBoss(data, { aiProfile, modelConfig });

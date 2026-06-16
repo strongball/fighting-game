@@ -1,6 +1,9 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
 
-const ancientTitan = {
+const data = {
     id: 104, round: 5, name: '廢墟古代巨兵', subtitle: '機關核心',
     color: '#95a5a6', shape: 'square', maxHp: 6000, maxMana: 999, speed: 90,
     baseHp: 6000,
@@ -9,13 +12,6 @@ const ancientTitan = {
       style: '石與金屬構成的遠古守護巨像，覆滿苔蘚與廢墟碎石，胸口符文核心發藍光。左臂為藍光雷射砲、右臂為火星四濺的旋轉巨鋸。配色：石灰 #95a5a6 + 金屬銅 #b08d57 + 符文藍 #49d0ff。',
       weapon: '左臂雷射砲 (藍) + 右臂旋轉巨鋸 (橙火星)',
       telegraph: '雷射臂藍光由弱漸強並投出直線警示後發射；鋸臂火星旋轉提速後橫掃。核心踏地前微微下沉蓄力。',
-    },
-    model: {
-      bulk: 7.0, weapon: 'none', scale: 3.0, head: 'square', emissiveCore: '#49d0ff',
-      parts: [
-        { id: 'arm_left', label: '雷射臂', side: 'left', color: '#49d0ff', hp: 2000 },
-        { id: 'arm_right', label: '巨鋸臂', side: 'right', color: '#ff7043', hp: 2000 },
-      ],
     },
     ai: 'ancient_titan',
     mechanic: {
@@ -40,4 +36,4 @@ const ancientTitan = {
     ultimate: { name: '核心過載', type: 'zone', range: 0, radius: 260, dmg: 70, lifetime: 0.6, tick: 0.6, delay: 1.2, knockback: 300, effect: STUN(0.6), requiresPartsDown: true, cd: 18, windup: 1.2, telegraph: 'circle', color: '#9fe8ff', vfx: 'boss_titan_ult' },
   };
 
-export default ancientTitan;
+export default new BaseBoss(data, { aiProfile, modelConfig });

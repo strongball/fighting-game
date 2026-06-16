@@ -1,6 +1,10 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
+import './action.ts';
 
-const doppelganger = {
+const data = {
     id: 109, round: 10, name: '另一個自己', subtitle: '終焉之神',
     color: '#e8e8f0', shape: 'circle', maxHp: 12000, maxMana: 999, speed: 180,
     baseHp: 12000,
@@ -10,7 +14,6 @@ const doppelganger = {
       weapon: '隨階段化形 (複製玩家武器 / 凝聚虛空)',
       telegraph: '複製前周身泛起鏡面波紋、變階段時軀體裂開迸光；施放玩家大招前手勢與該角色一致。',
     },
-    model: { bulk: 7.0, weapon: 'none', scale: 3.0, head: 'circle', emissiveCore: '#ffffff', phases: 3, voidBody: true },
     ai: 'doppelganger',
     mechanic: { mirrorPlayers: true, phases: 3 }, // 複製全體玩家成鏡像；多階段
     hint: '牠會複製全體玩家、還會偷學你們的大招 —— 牠出的招跟你們一樣，預判它！',
@@ -28,4 +31,4 @@ const doppelganger = {
     ultimate: { name: '終焉之刻', type: 'zone', range: 0, radius: 320, dmg: 60, lifetime: 1.2, tick: 0.3, delay: 1.4, knockback: 200, effect: STUN(0.5), cd: 20, windup: 1.4, telegraph: 'circle', color: '#ffffff', vfx: 'boss_doppel_ult' },
   };
 
-export default doppelganger;
+export default new BaseBoss(data, { aiProfile, modelConfig });

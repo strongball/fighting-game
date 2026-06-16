@@ -1,6 +1,10 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
+import './action.ts';
 
-const necromancerConductor = {
+const data = {
     id: 105, round: 6, name: '死靈樂章', subtitle: '幽冥引路人',
     color: '#7d5fff', shape: 'circle', maxHp: 6500, maxMana: 999, speed: 130,
     baseHp: 6500,
@@ -10,7 +14,6 @@ const necromancerConductor = {
       weapon: '靈魂指揮棒 / 鐮刃',
       telegraph: '召喚前高舉指揮棒、地面綻開綠色法陣；護盾隨存活小怪數脈動發亮。',
     },
-    model: { bulk: 3.5, weapon: 'staff', robe: true, scale: 2.0, head: 'circle', float: true, emissiveCore: '#39ff88' },
     ai: 'necromancer',
     mechanic: { minionShield: { perMinion: 0.18, max: 0.72 } }, // 每隻存活小怪給魔王減傷，清空才露破綻
     hint: '牠會召喚小怪 —— 每隻活著的小怪都讓牠減傷，先清掉小怪再打本體！',
@@ -28,4 +31,4 @@ const necromancerConductor = {
     ultimate: { name: '安魂彌撒', type: 'zone', range: 0, radius: 240, dmg: 28, lifetime: 4, tick: 0.5, follow: true, healPerMinion: 30, effect: SLOW(0.6, 0.6), cd: 18, windup: 1.0, telegraph: 'circle', color: '#9d7dff', vfx: 'boss_necro_ult' },
   };
 
-export default necromancerConductor;
+export default new BaseBoss(data, { aiProfile, modelConfig });

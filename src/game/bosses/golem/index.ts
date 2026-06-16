@@ -1,6 +1,9 @@
+import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
+import { aiProfile } from './ai.ts';
+import { modelConfig } from './model.ts';
 
-const golem = {
+const data = {
     id: 100, round: 1, name: '巨木傀儡', subtitle: '森林守護者',
     color: '#6b8e23', shape: 'square', maxHp: 3500, maxMana: 999, speed: 110,
     baseHp: 3500,
@@ -10,7 +13,6 @@ const golem = {
       weapon: '雙樹幹臂 (無持械，以臂砸擊)',
       telegraph: '揮擊前樹幹臂發綠光並緩緩後拉、地面浮現弧形警示；旋掃前全身發光蓄力。動作整體緩慢、破綻大。',
     },
-    model: { bulk: 5.0, weapon: 'sword', scale: 2.2, head: 'square', emissiveCore: '#9acd32' },
     ai: 'golem',
     mechanic: { backWeak: 0.5, aggroSwap: 3.0 }, // 背後受傷 +50%；每 3 秒換仇恨目標
     talent: { id: 'boss_backweak', name: '遲鈍核心', desc: '背後受到的傷害提高 50%。', backWeak: 0.5 },
@@ -28,4 +30,4 @@ const golem = {
     ultimate: { name: '森羅旋掃', type: 'zone', range: 0, radius: 200, dmg: 90, lifetime: 0.5, tick: 0.5, knockback: 360, effect: STUN(0.6), cd: 16, windup: 1.2, telegraph: 'circle', color: '#a6d749', vfx: 'boss_golem_ult' },
   };
 
-export default golem;
+export default new BaseBoss(data, { aiProfile, modelConfig });
