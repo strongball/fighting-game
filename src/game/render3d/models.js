@@ -277,8 +277,12 @@ export function createCharacterModel(charId) {
   const handR = new THREE.Group();
   handR.position.y = -armLen;
   armR.add(handR);
-  const weaponBuilder = modelDef?.buildWeapon || getWeaponBuilder(cfg.weapon);
-  if (weaponBuilder) weaponBuilder(handR, ctx);
+  if (modelDef?.buildWeapon) {
+    modelDef.buildWeapon(handR, ctx);
+  } else {
+    const weaponBuilder = getWeaponBuilder(cfg.weapon);
+    if (weaponBuilder) weaponBuilder(handR, ctx);
+  }
 
   // 頭頂發光識別徽記 (移至大頭上方)
   const emMat = new THREE.MeshStandardMaterial({
