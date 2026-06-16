@@ -92,6 +92,10 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
   if (state.flags && state.flags.noDamage) return;
 
   let dmg = amount;
+  if (state.mode === 'boss' && (target.isMinion || target.isSummon) && target.ownerId) {
+    const owner = state.players[target.ownerId];
+    if (owner && !owner.isBoss) dmg *= 0.2;
+  }
   if (hostile && attacker && (attacker.isMinion || attacker.isSummon) && attacker.ownerId) {
     const owner = state.players[attacker.ownerId];
     if (owner && !owner.isBoss) dmg *= 0.55;
@@ -156,7 +160,12 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
     target.hp = 0;
     target.alive = false;
     const killer = state.players[attackerId];
-    if (killer && killer.id !== target.id) killer.kills++;
+    // 小兵/召喚物/分身/魔王部位 不計入擊殺數；若擊殺者本身是召喚物，擊殺歸功於召喚者
+    const targetCounts = !target.isSummon && !target.isMinion && !target.isFake && !target.isPart;
+    if (killer && killer.id !== target.id && targetCounts) {
+      const owner = (killer.isMinion || killer.isSummon) && killer.ownerId ? state.players[killer.ownerId] : null;
+      (owner || killer).kills++;
+    }
     if (target.effects && target.effects.weaken) spreadCurse(state, target);
     addFx(state, { type: 'death', x: target.x, y: target.y, color: '#ffffff', life: 0.5, radius: PLAYER_RADIUS * 2 });
   }

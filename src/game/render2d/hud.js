@@ -5,7 +5,7 @@ import { drawBar } from './utils.js';
 export function drawHUD(ctx, state, selfId) {
   const me = state.players[selfId];
   if (me) {
-    const x = 24, y = CANVAS_H - 70, w = 280;
+    const x = 24, y = CANVAS_H - 70, w = 224;
     const c = getCharacter(me.charId);
     ctx.font = 'bold 16px system-ui, sans-serif';
     ctx.textAlign = 'left';
@@ -42,13 +42,12 @@ function drawSkillIcons(ctx, me, x, y, c) {
     ['K', c.skill1, 'skill1'],
     ['L', c.skill2, 'skill2'],
     [';', c.ultimate, 'ultimate'],
-    ['Shift', c.evade, 'evade'],
   ];
 
-  const IW = 82;
-  const IH = 28;
-  const GAP = 6;
-  const CDH = 4;
+  const IW = 66;
+  const IH = 22;
+  const GAP = 5;
+  const CDH = 3;
 
   for (let i = 0; i < slots.length; i++) {
     const [key, action, cdKey] = slots[i];
@@ -69,29 +68,29 @@ function drawSkillIcons(ctx, me, x, y, c) {
     ctx.fillStyle = bgColor;
     ctx.fillRect(ix, y, IW, IH);
 
-    ctx.font = 'bold 10px system-ui';
+    ctx.font = 'bold 9px system-ui';
     ctx.textAlign = 'left';
     ctx.fillStyle = onCd ? '#7a8a9a' : noMana ? '#ff7a7a' : '#d0eeff';
-    ctx.fillText(key, ix + 4, y + 12);
+    ctx.fillText(key, ix + 4, y + 10);
     ctx.fillStyle = onCd ? '#9aaab8' : noMana ? '#ffaaaa' : '#ffffff';
-    ctx.font = '10px system-ui';
-    ctx.fillText(action.name, ix + 16, y + 12);
+    ctx.font = '9px system-ui';
+    ctx.fillText(action.name, ix + 14, y + 10);
 
     if (!onCd && noMana) {
       ctx.fillStyle = '#ff6060';
-      ctx.font = '9px system-ui';
+      ctx.font = '8px system-ui';
       if (isUlt) {
         const ultPct = Math.floor(((me.ult || 0) / ULT_MAX) * 100);
-        ctx.fillText(`能量 ${ultPct}%`, ix + 4, y + 22);
+        ctx.fillText(`能量 ${ultPct}%`, ix + 4, y + 18);
       } else {
-        ctx.fillText(`魔力不足 (${manaCost})`, ix + 4, y + 22);
+        ctx.fillText(`無魔 (${manaCost})`, ix + 4, y + 18);
       }
     }
 
     if (onCd) {
       ctx.fillStyle = '#aabbc8';
-      ctx.font = '9px system-ui';
-      ctx.fillText(`${cdVal.toFixed(1)}s`, ix + 4, y + 22);
+      ctx.font = '8px system-ui';
+      ctx.fillText(`${cdVal.toFixed(1)}s`, ix + 4, y + 18);
     }
 
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -114,5 +113,56 @@ function drawSkillIcons(ctx, me, x, y, c) {
     ctx.strokeStyle = onCd ? 'rgba(80,100,120,0.6)' : noMana ? 'rgba(200,60,60,0.7)' : 'rgba(100,180,255,0.7)';
     ctx.lineWidth = 1;
     ctx.strokeRect(ix + 0.5, y + 0.5, IW - 1, IH - 1);
+  }
+
+  // Draw custom circular Evade button next to them
+  const evadeAction = c.evade;
+  if (evadeAction) {
+    const r = 18; // Radius
+    const ex = x + 4 * (IW + GAP) + r; // Center x
+    const ey = y + IH / 2; // Center y
+    const cdVal = me.cd.evade || 0;
+    const cdMax = evadeAction.cd || 1;
+    const cdRatio = Math.max(0, Math.min(1, cdVal / cdMax));
+    const onCd = cdVal > 0;
+
+    // Draw background circle
+    ctx.beginPath();
+    ctx.arc(ex, ey, r, 0, Math.PI * 2);
+    ctx.fillStyle = onCd ? 'rgba(40,40,50,0.85)' : 'rgba(60,160,255,0.85)';
+    ctx.fill();
+
+    // Draw radial cooldown sweep
+    if (onCd) {
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.arc(ex, ey, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * cdRatio, false);
+      ctx.lineTo(ex, ey);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fill();
+    }
+
+    // Border
+    ctx.beginPath();
+    ctx.arc(ex, ey, r, 0, Math.PI * 2);
+    ctx.strokeStyle = onCd ? 'rgba(80,100,120,0.6)' : 'rgba(100,180,255,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Center text/labels
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (onCd) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px system-ui';
+      ctx.fillText(`${cdVal.toFixed(1)}s`, ex, ey);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 7px system-ui';
+      ctx.fillText('Space', ex, ey - 4);
+      ctx.fillStyle = '#d0eeff';
+      ctx.font = '6px system-ui';
+      ctx.fillText(evadeAction.name, ex, ey + 4);
+    }
   }
 }

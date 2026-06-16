@@ -35,6 +35,7 @@ export function summonMinions(state, summoner, action) {
       isMinion: true,
       ownerId: summoner.id,
       aiId: 'minion',
+      name: action.minionName,
       maxHp: action.minionHp || 160,
       scale: action.minionScale || 0.7,
       facing: summoner.facing,

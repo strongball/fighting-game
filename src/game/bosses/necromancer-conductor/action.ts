@@ -12,6 +12,7 @@ registerBossAction('summon_minions', (state, boss, a, h) => {
       isMinion: true,
       ownerId: boss.id,
       aiId: 'minion',
+      name: a.minionName || '亡者殘影',
       maxHp: hp,
       scale: 1,
     });

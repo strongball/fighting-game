@@ -76,7 +76,10 @@ function usable(a, d) {
     case 'charge': return d >= 90 && d <= (a.range || 320) + 40;
     case 'leap': return d >= 60 && d <= (a.range || 280) + 40;
     case 'blink': return d <= (a.range || 280) + 80;
-    case 'projectile': return d <= 760;
+    case 'projectile': {
+      const projRange = a.range || (a.speed && a.lifetime ? a.speed * a.lifetime : 760);
+      return d <= projRange;
+    }
     case 'zone': return (a.range || 0) === 0 ? true : d <= (a.range || 0) + (a.radius || 120) + 40;
     default: return true; // dash/multiblink/buff/召喚/自訂 → 隨時可用
   }
@@ -151,7 +154,14 @@ export function computeBossInput(state, ent, dt) {
 function computeProfileInput(profile, state, ent, dt) {
   const input = mkInput();
   const s = ent.aiState || (ent.aiState = {});
-  const prof = profile || PROFILES.minion;
+  let prof = profile || PROFILES.minion;
+  if (ent.charId === -2) {
+    prof = {
+      ...prof,
+      range: 480,
+      kite: 360,
+    };
+  }
   const pickTarget = typeof prof.pickTarget === 'function'
     ? prof.pickTarget
     : PICK_TARGETS[prof.pickTarget] || nearestTarget;

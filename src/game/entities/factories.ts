@@ -34,7 +34,9 @@ export function makePlayer(id, name, charId, x, y, team = 0) {
 }
 
 export function makeBoss(id, charId, x, y, team, opts = {}) {
-  const e = makePlayer(id, opts.name || 'Boss', charId, x, y, team);
+  // \u540d\u7a31\uff1a\u512a\u5148\u7528 opts.name\uff1b\u5176\u6b21\u9b54\u738b\u7528 'Boss'\u3001\u5176\u9918 (\u5c0f\u5175/\u5206\u8eab/\u90e8\u4f4d/\u93e1\u50cf) \u7528\u6a21\u677f\u540d\u7a31\u3002
+  const fallbackName = opts.isBoss ? 'Boss' : (getCharacter(charId).name || 'Boss');
+  const e = makePlayer(id, opts.name || fallbackName, charId, x, y, team);
   if (opts.hpScale) { e.maxHp = Math.max(1, Math.round(e.maxHp * opts.hpScale)); e.hp = e.maxHp; }
   if (opts.maxHp) { e.maxHp = opts.maxHp; e.hp = e.maxHp; }
   e.isBoss = !!opts.isBoss;

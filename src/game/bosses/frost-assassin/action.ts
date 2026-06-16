@@ -12,6 +12,7 @@ registerBossAction('summon_clones', (state, boss, a, h) => {
       isFake: true,
       ownerId: boss.id,
       aiId: 'fake',
+      name: '幻影分身',
       maxHp: 1,
       scale: boss.scale,
       facing: boss.facing,

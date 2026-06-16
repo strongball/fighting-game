@@ -150,7 +150,7 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
               <div className="char-skills">
                 <span>{skillDisplay.basic} {c.basic.name}</span><span>{skillDisplay.skill1} {c.skill1.name}</span><span>{skillDisplay.skill2} {c.skill2.name}</span>
                 {c.ultimate && <span className="ult">{skillDisplay.ultimate} {c.ultimate.name}（大絕）</span>}
-                {c.evade && <span>Shift {c.evade.name}</span>}
+                {c.evade && <span>Space {c.evade.name}</span>}
               </div>
             </button>
           ))}

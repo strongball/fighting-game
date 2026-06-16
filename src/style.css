@@ -190,7 +190,7 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   position: absolute; inset: 0; z-index: 10; pointer-events: none;
   overflow: hidden; font-family: system-ui, sans-serif;
 }
-.hud-self { position: absolute; left: 18px; bottom: 16px; width: 300px; }
+.hud-self { position: absolute; left: 18px; bottom: 16px; width: 336px; }
 .hud-self-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; text-shadow: 0 1px 2px #000; }
 .hud-self-talent { font-size: 11px; color: #6fe3a0; margin: -2px 0 6px; text-shadow: 0 1px 2px #000; }
 .hud-bar { position: relative; height: 16px; border-radius: 6px; background: #0c1c2a; margin-top: 4px; overflow: hidden; border: 1px solid rgba(0,0,0,0.5); }
@@ -211,7 +211,79 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 .hud-bar.charge.full { box-shadow: 0 0 12px 3px rgba(120, 230, 255, 0.95); border-color: rgba(160, 245, 255, 0.9); }
 .hud-bar.charge.full > i { background: linear-gradient(90deg, #ffffff, #9fe8ff); animation: chargepulse 0.45s ease-in-out infinite; }
 @keyframes chargepulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(2); } }
-.hud-skills { display: flex; gap: 6px; margin-top: 8px; }
+.hud-skills-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+.hud-skills {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+.hud-evade-wrap {
+  flex-shrink: 0;
+}
+.chip.evade-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(45, 55, 72, 0.75);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chip.evade-circle.ready {
+  background: rgba(58, 160, 255, 0.85);
+  border-color: rgba(100, 190, 255, 0.7);
+  box-shadow: 0 0 12px rgba(58, 160, 255, 0.5);
+}
+.chip.evade-circle.on-cd {
+  background: rgba(25, 30, 40, 0.85);
+  border-color: rgba(80, 100, 120, 0.4);
+}
+.chip.evade-circle.on-cd .chip-label {
+  opacity: 0.15;
+}
+.chip.evade-circle .chip-label {
+  line-height: 1.25;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-align: center;
+  overflow: visible;
+  white-space: normal;
+}
+.chip.evade-circle .key-name {
+  display: block;
+  font-size: 9px;
+  color: #fff;
+}
+.chip.evade-circle .skill-name {
+  display: block;
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 1px;
+}
+.chip.evade-circle .cd-bar {
+  display: none;
+}
+.chip.evade-circle s {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  bottom: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  z-index: 4;
+}
 /* 技能格子 */
 .chip {
   position: relative; flex: 1;

@@ -325,7 +325,7 @@ function createController(): GameController {
     const winnerName = winner ? winner.name : null;
     const winnerTeam = gameState.winnerTeam || 0;
     const players = Object.values(gameState.players)
-      .filter((p: any) => !isBoss || p.team === 1)
+      .filter((p: any) => !p.ownerId && (!isBoss || p.team === 1))
       .map((p: any) => ({ name: p.name, charId: p.charId, kills: p.kills, team: p.team || 0 }));
     net.broadcast({ t: 'gameover', winner: winnerName, winnerTeam, players, bossResult, bossRound });
     showGameover({ winnerName, winnerTeam, players, isHost: true, bossResult, bossRound } as GameOverView);

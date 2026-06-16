@@ -38,11 +38,16 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
   const ultWrap = el('div', 'hud-bar ult', self);
   const ultFill = el('i', '', ultWrap);
   const ultTxt = el('span', '', ultWrap);
-  const skills = el('div', 'hud-skills', self);
+  const skillsContainer = el('div', 'hud-skills-container', self);
+  const skills = el('div', 'hud-skills', skillsContainer);
+  const evadeWrap = el('div', 'hud-evade-wrap', skillsContainer);
   const keys = getSkillKeys(controlScheme);
   const chip = {
-    basic: skillChip(keys.basic, skills), skill1: skillChip(keys.skill1, skills), skill2: skillChip(keys.skill2, skills), ultimate: skillChip(keys.ultimate, skills),
-    evade: skillChip('Shift', skills),
+    basic: skillChip(keys.basic, skills),
+    skill1: skillChip(keys.skill1, skills),
+    skill2: skillChip(keys.skill2, skills),
+    ultimate: skillChip(keys.ultimate, skills),
+    evade: skillChip('Space', evadeWrap, 'evade-circle'),
   };
 
   // 蓄力條 (蓄力技能用，平時隱藏)
@@ -208,7 +213,9 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
 
     // 計分板
     const isBoss = state.mode === 'boss';
-    const listPlayers = isBoss ? players.filter((p) => p.team === 1) : players;
+    // 排除召喚物/小兵/分身/部位 (皆帶 ownerId)，只列真實玩家與魔王。
+    const realPlayers = players.filter((p) => !p.ownerId);
+    const listPlayers = isBoss ? realPlayers.filter((p) => p.team === 1) : realPlayers;
     const sorted = listPlayers.slice().sort((a, b) => b.kills - a.kills);
     const aliveN = listPlayers.filter((p) => p.alive).length;
     setText(boardTitle, isBoss ? `闖關隊伍 ${aliveN}/${listPlayers.length} 存活` : `存活 ${aliveN} 人`);
@@ -297,7 +304,11 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
   }
 
   function setChip(c, action, cd, curMana) {
-    setText(c.label, `${c.key} ${action.name}`);
+    if (c.root.classList.contains('evade-circle')) {
+      setHtml(c.label, `<span class="key-name">${c.key}</span><span class="skill-name">${action.name}</span>`);
+    } else {
+      setText(c.label, `${c.key} ${action.name}`);
+    }
     const onCd    = cd > 0;
     const cdMax   = action.cd || 1;
     const manaCost = action.manaCost || 0;
@@ -364,8 +375,8 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
   return { update, render, resize, clear };
 }
 
-function skillChip(key, parent) {
-  const root    = el('div', 'chip', parent);
+function skillChip(key, parent, extraClass = '') {
+  const root    = el('div', 'chip' + (extraClass ? ' ' + extraClass : ''), parent);
   const cool    = el('i', 'cool', root);         // 冷卻遮罩 (從頂部向下)
   const label   = el('span', 'chip-label', root); // 按鍵 + 技能名
   const cdBar   = el('b', 'cd-bar', root);        // 底部進度條

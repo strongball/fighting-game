@@ -13,7 +13,7 @@ registerBossAction('mirror_players', (state, boss, a, h) => {
       aiId: 'mirror',
       maxHp: o.maxHp,
       scale: 1,
-      name: '镜像',
+      name: '鏡像',
     });
     state.players[id] = m;
     h.addFx(state, { type: 'blink', x, y, color: a.color, life: 0.4, radius: 70 });

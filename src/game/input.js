@@ -12,7 +12,7 @@ const KEY_MAPS = {
     KeyK: 'skill1',
     KeyL: 'skill2',
     Semicolon: 'ultimate',
-    ShiftLeft: 'evade', ShiftRight: 'evade',
+    Space: 'evade',
   },
   'arrows-asdf': {
     ArrowUp: 'up',
@@ -23,7 +23,7 @@ const KEY_MAPS = {
     KeyS: 'skill1',
     KeyD: 'skill2',
     KeyF: 'ultimate',
-    ShiftLeft: 'evade', ShiftRight: 'evade',
+    Space: 'evade',
   },
 };
 

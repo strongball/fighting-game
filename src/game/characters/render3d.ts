@@ -1,4 +1,5 @@
 import { CHARACTERS } from './index.ts';
+import { getMinion } from './minions/index.ts';
 
 const WEAPON_BUILDERS = new Map<string, (hand: any, ctx: any) => void>();
 for (const character of CHARACTERS) {
@@ -10,6 +11,7 @@ for (const character of CHARACTERS) {
 WEAPON_BUILDERS.set('axe', WEAPON_BUILDERS.get('axes') || (() => {}));
 
 export function getCharacterModelDef(charId: number) {
+  if (charId < 0) return getMinion(charId);
   return CHARACTERS[charId] || null;
 }
 
