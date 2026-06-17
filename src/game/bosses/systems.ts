@@ -2,7 +2,9 @@ import { ARENA } from '../constants.js';
 import { dist } from '../entities/math.ts';
 import { spawnPoints } from '../entities/factories.ts';
 import { addFx } from '../entities/fx.ts';
+import { recordRevive } from '../entities/stats.ts';
 import { followBossParts, teamPlayers } from './lifecycle.ts';
+import { tickBossPhases } from './phases.ts';
 
 const REVIVE_RADIUS = 100;
 const REVIVE_TIME = 3.0;
@@ -27,6 +29,7 @@ export function reviveAndHealAll(state: any) {
 
 export function tickBossSystems(state: any, dt: number) {
   followBossParts(state);
+  tickBossPhases(state, dt);
   tetherTick(state, dt);
   reviveTick(state, dt);
   recordHistory(state);
@@ -75,6 +78,14 @@ function reviveTick(state: any, dt: number) {
         p.cd = { basic: 0, skill1: 0, skill2: 0, ultimate: 0 };
         p.reviveProg = 0; p.kvx = 0; p.kvy = 0;
         addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#7CFC00', life: 0.6, radius: 70 });
+        // 找最近的活人記為復活施援者
+        let helperId = null, best = Infinity;
+        for (const o of humans) {
+          if (!o.alive || o.id === p.id) continue;
+          const d = dist(o.x, o.y, p.x, p.y);
+          if (d < best) { best = d; helperId = o.id; }
+        }
+        if (helperId != null) recordRevive(state, helperId);
       }
     } else {
       p.reviveProg = Math.max(0, (p.reviveProg || 0) - dt * 0.5);

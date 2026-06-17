@@ -36,7 +36,7 @@ function getSkillKeys(controlScheme) {
   return { basic: 'J', skill1: 'K', skill2: 'L', ultimate: ';' };
 }
 
-export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) {
+export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', hooks = {} }) {
   const css2d = new CSS2DRenderer();
   css2d.domElement.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:8;';
   stage.appendChild(css2d.domElement);
@@ -104,6 +104,52 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
   const hazardWarn = el('div', 'hud-hazard', layer);
   const hazardText = el('div', 'hud-hazard-text', hazardWarn);
   hazardWarn.style.display = 'none';
+
+  // 闖關 Boss 登場動畫 overlay (3 段：暗幕 → 名字滑入 → 機制 tag 揭曉 → 淡出)
+  const introOv = el('div', 'hud-intro', layer);
+  const introVeil = el('div', 'hud-intro-veil', introOv);
+  const introRound = el('div', 'hud-intro-round', introOv);
+  const introName = el('div', 'hud-intro-name', introOv);
+  const introSub = el('div', 'hud-intro-sub', introOv);
+  const introTags = el('div', 'hud-intro-tags', introOv);
+  const introHint = el('div', 'hud-intro-hint', introOv);
+  introOv.style.display = 'none';
+
+  // 機制提示卡 (右側，固定常駐；H 鍵摺疊)
+  const mechCard = el('div', 'hud-mech', layer);
+  const mechHead = el('div', 'hud-mech-head', mechCard);
+  const mechTitle = el('div', 'hud-mech-title', mechHead);
+  mechTitle.textContent = '⚠️ 機制提醒';
+  const mechToggle = el('div', 'hud-mech-toggle', mechHead);
+  mechToggle.textContent = '[H]';
+  const mechBody = el('div', 'hud-mech-body', mechCard);
+  const mechHint = el('div', 'hud-mech-hint', mechCard);
+  mechCard.style.display = 'none';
+  let mechCollapsed = false;
+  function setMechCollapsed(c) {
+    mechCollapsed = c;
+    mechCard.classList.toggle('collapsed', c);
+  }
+  mechHead.onclick = () => setMechCollapsed(!mechCollapsed);
+  function onMechKey(e) {
+    if (e.code === 'KeyH' && !e.repeat) setMechCollapsed(!mechCollapsed);
+  }
+  window.addEventListener('keydown', onMechKey);
+
+  // 全滅後的「重打 / 放棄」面板 — 只在 roundPhase === 'wiped' 顯示
+  const wipePanel = el('div', 'hud-wipe', layer);
+  const wipeTitle = el('div', 'hud-wipe-title', wipePanel);
+  const wipeSub = el('div', 'hud-wipe-sub', wipePanel);
+  const wipeActions = el('div', 'hud-wipe-actions', wipePanel);
+  const wipeRetry = el('button', 'btn primary', wipeActions);
+  wipeRetry.textContent = '🔁 重打本關';
+  const wipeQuit = el('button', 'btn ghost', wipeActions);
+  wipeQuit.textContent = '🚪 放棄離場';
+  const wipeWait = el('div', 'hud-wipe-wait', wipePanel);
+  wipeWait.textContent = '等待房主決定…';
+  wipePanel.style.display = 'none';
+  wipeRetry.onclick = () => { if (hooks.onBossRetry) hooks.onBossRetry(); };
+  wipeQuit.onclick = () => { if (hooks.onBossQuit) hooks.onBossQuit(); };
 
   // 自身狀態警示 (R7 被獵殺 / R9 被靈魂綁定…)，文字動態設定
   const huntWarn = el('div', 'hud-hunt', layer);
@@ -291,18 +337,38 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
       } else {
         setStyle(bossPanel, 'display', 'none');
       }
-      if (state.banner && (state.banner.life == null || state.banner.life > 0)) {
+      // intro 階段用大型登場 overlay；cleared 階段用原 banner
+      const inIntro = state.roundPhase === 'intro';
+      if (inIntro) {
+        setStyle(banner, 'display', 'none');
+        const dur = state.introDur || 3.2;
+        const t = Math.max(0, Math.min(1, 1 - (state.roundTimer || 0) / dur));
+        renderIntro({
+          t, boss, round: state.round, banner: state.banner,
+          el: { root: introOv, veil: introVeil, round: introRound, name: introName, sub: introSub, tags: introTags, hint: introHint },
+        });
+      } else if (state.banner && (state.banner.life == null || state.banner.life > 0)) {
+        setStyle(introOv, 'display', 'none');
         setStyle(banner, 'display', '');
+        const isPhase = state.banner.kind === 'phase';
+        setClass(banner, 'hud-banner' + (isPhase ? ' phase' : ''));
+        if (isPhase && state.banner.color) {
+          setStyle(banner, 'borderColor', state.banner.color);
+          setStyle(bannerText, 'color', state.banner.color);
+        } else {
+          setStyle(banner, 'borderColor', '');
+          setStyle(bannerText, 'color', '');
+        }
         setText(bannerText, state.banner.text || '');
         setText(bannerSub, state.banner.sub || '');
-        // 開場橫幅戰術提示 (由當前魔王資料的 hint 驅動；intro 階段魔王存在)
-        const bh = boss ? (getCharacter(boss.charId).hint || '') : '';
+        const bh = boss && !isPhase ? (getCharacter(boss.charId).hint || '') : '';
         setText(bannerHint, bh);
         setStyle(bannerHint, 'display', bh ? '' : 'none');
-      } else setStyle(banner, 'display', 'none');
+      } else { setStyle(banner, 'display', 'none'); setStyle(introOv, 'display', 'none'); }
     } else {
       setStyle(bossPanel, 'display', 'none');
       setStyle(banner, 'display', 'none');
+      setStyle(introOv, 'display', 'none');
     }
 
     // ---- 站進敵方地面危險區 (毒沼等) → 全螢幕警示 (通用：任何敵方造成的 zone) ----
@@ -319,6 +385,36 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
       }
     }
     setStyle(hazardWarn, 'display', inHazard ? '' : 'none');
+
+    // 機制提示卡：boss 模式才顯示；intro / fighting / wiped 都顯示，cleared 時隱藏
+    const isBossMode = state.mode === 'boss';
+    const showMech = isBossMode && state.roundPhase !== 'cleared' && !state.banner;
+    setStyle(mechCard, 'display', showMech ? '' : 'none');
+    if (showMech) {
+      let bossForCard = null;
+      for (const pp of players) if (pp.isBoss) { bossForCard = pp; break; }
+      const bc = bossForCard ? getCharacter(bossForCard.charId) : null;
+      const overrideTags = bossForCard && bossForCard.phaseTagsOverride;
+      const tags = overrideTags || (bc && bc.tags);
+      if (tags && tags.length) {
+        const html = tags.map((t) => `<div class="hud-mech-row"><em>${esc(t.icon || '⚠️')}</em><span>${esc(t.text)}</span></div>`).join('');
+        setHtml(mechBody, html);
+      } else setHtml(mechBody, '<div class="hud-mech-row dim">無特殊機制</div>');
+      setText(mechHint, bc && bc.hint ? bc.hint : '');
+      setStyle(mechHint, 'display', bc && bc.hint ? '' : 'none');
+    }
+
+    // 全滅面板：只在 boss 模式且 roundPhase === 'wiped' 顯示
+    const wiped = state.mode === 'boss' && state.roundPhase === 'wiped';
+    setStyle(wipePanel, 'display', wiped ? '' : 'none');
+    if (wiped) {
+      const isHost = hooks.isHost ? hooks.isHost() : false;
+      const retries = (state.stats && state.stats._retryCount) || 0;
+      setText(wipeTitle, `💀 ROUND ${state.bossWipedRound || state.round} — 全隊倒下`);
+      setText(wipeSub, retries > 0 ? `已重打 ${retries} 次` : '想再試一次嗎？');
+      setStyle(wipeActions, 'display', isHost ? '' : 'none');
+      setStyle(wipeWait, 'display', isHost ? 'none' : '');
+    }
     if (inHazard) {
       // 文字與顏色都依當前魔王的危險屬性 (毒綠 / 火紅 / 冰藍…)，不再一律綠色
       let ht = '⚠️ 站在危險地面上 — 快離開！', hc = '#9ad13a';
@@ -404,6 +500,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl' }) 
   function clear() {
     for (const pl of plates.values()) scene.remove(pl.obj);
     plates.clear();
+    window.removeEventListener('keydown', onMechKey);
   }
 
   return { update, render, resize, clear };
@@ -437,6 +534,57 @@ function pct(r) { return `${Math.max(0, Math.min(1, r)) * 100}%`; }
 function hexA(hex, a) { const h = hex.replace('#', ''); const s = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; const n = parseInt(s, 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
 function lighten(hex, t) { const h = hex.replace('#', ''); const s = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; const n = parseInt(s, 16); const m = (c) => Math.round(c + (255 - c) * t); return `rgb(${m((n >> 16) & 255)},${m((n >> 8) & 255)},${m(n & 255)})`; }
 function esc(s) { return String(s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+
+// 闖關 Boss 登場動畫：以 0-1 的進度 t 推進 3 段表演
+// 0-0.25: 暗幕降下 + ROUND N 浮現
+// 0.25-0.7: 魔王名 + 副標巨字滑入；機制 tag 卡逐條進場
+// 0.7-1.0: 全部淡出
+function renderIntro({ t, boss, round, banner, el }) {
+  if (!el.root) return;
+  el.root.style.display = '';
+  const bc = boss ? getCharacterCachedHud(boss.charId) : null;
+
+  // 暗幕：0-0.7 全顯，之後淡出
+  const veilA = t < 0.05 ? t / 0.05 : (t < 0.7 ? 1 : Math.max(0, 1 - (t - 0.7) / 0.3));
+  el.veil.style.opacity = String(veilA * 0.75);
+
+  // ROUND N：0.05 出現、放大；0.85 後淡出
+  const roundFade = t < 0.08 ? 0 : t < 0.18 ? (t - 0.08) / 0.1 : t > 0.85 ? Math.max(0, 1 - (t - 0.85) / 0.15) : 1;
+  el.round.style.opacity = String(roundFade);
+  setText(el.round, `ROUND ${round || 1}`);
+
+  // 名字：0.2 由右滑入；0.85 後淡出
+  const nameOpa = t < 0.2 ? 0 : t < 0.3 ? (t - 0.2) / 0.1 : t > 0.85 ? Math.max(0, 1 - (t - 0.85) / 0.15) : 1;
+  const nameSlide = t < 0.2 ? 160 : t < 0.35 ? (1 - (t - 0.2) / 0.15) * 160 : 0;
+  el.name.style.opacity = String(nameOpa);
+  el.name.style.transform = `translateX(${nameSlide}px)`;
+  setText(el.name, bc ? bc.name : (banner && banner.text) || '');
+
+  // 副標：0.32 後跟著上
+  const subOpa = t < 0.32 ? 0 : t < 0.42 ? (t - 0.32) / 0.1 : t > 0.85 ? Math.max(0, 1 - (t - 0.85) / 0.15) : 1;
+  el.sub.style.opacity = String(subOpa);
+  setText(el.sub, bc ? bc.subtitle || '' : '');
+
+  // tag 機制卡：0.45 後逐條從下往上彈
+  const tags = bc && bc.tags ? bc.tags : [];
+  let tagsHtml = '';
+  for (let i = 0; i < tags.length; i++) {
+    const start = 0.45 + i * 0.08;
+    const local = (t - start) / 0.15;
+    const opa = local < 0 ? 0 : local > 1 ? (t > 0.85 ? Math.max(0, 1 - (t - 0.85) / 0.15) : 1) : local;
+    const rise = local < 0 ? 30 : local > 1 ? 0 : (1 - local) * 30;
+    const tt = tags[i];
+    tagsHtml += `<div class="hud-intro-tag" style="opacity:${opa};transform:translateY(${rise}px)"><em>${esc(tt.icon || '⚠️')}</em><span>${esc(tt.text)}</span></div>`;
+  }
+  setHtml(el.tags, tagsHtml);
+
+  // hint：最後 0.6 後出現
+  const hintOpa = t < 0.6 ? 0 : t < 0.7 ? (t - 0.6) / 0.1 : t > 0.9 ? Math.max(0, 1 - (t - 0.9) / 0.1) : 1;
+  el.hint.style.opacity = String(hintOpa);
+  setText(el.hint, bc && bc.hint ? bc.hint : '');
+}
+
+function getCharacterCachedHud(id) { return getCharacter(id); }
 
 function buildPlateBuffs(p) {
   const list = [];

@@ -42,6 +42,39 @@ export interface GameOverView {
   isHost: boolean;
   bossResult?: 'victory' | 'defeat'; // 闖關模式結果
   bossRound?: number;                // 抵達/通關的關卡
+  bossStats?: BossRunStats;          // 闖關統計 (僅 boss 模式)
+}
+
+export interface BossRoundEntry {
+  round: number;
+  bossName: string;
+  duration: number;
+  defeated: boolean;
+  retries: number;
+}
+
+export interface BossPlayerStats {
+  id: string;
+  name: string;
+  charId: number;
+  dmgDealt: number;
+  dmgTaken: number;
+  healing: number;
+  kills: number;
+  deaths: number;
+  revives: number;
+  maxHit: number;
+  critCount: number;
+  ccApplied: number;
+  skillUses: { basic: number; skill1: number; skill2: number; ultimate: number; evade: number };
+}
+
+export interface BossRunStats {
+  totalDuration: number;
+  retryCount: number;
+  perRound: BossRoundEntry[];
+  perPlayer: BossPlayerStats[];
+  mvpId: string | null;
 }
 
 // 角色資料：characters.js 為 .js，這裡描述 UI 會用到的欄位。
@@ -98,8 +131,11 @@ export interface GameController {
   devStartGame(charId?: number): void;
   devStartBoss(charId?: number): void;
   returnToLobby(): void;
+  bossRetry(): void;
+  bossQuit(): void;
   leave(): void;
   attachCanvas(canvas: HTMLCanvasElement): void;
   detachCanvas(): void;
   readonly selectedChar: number;
+  readonly isHost: boolean;
 }

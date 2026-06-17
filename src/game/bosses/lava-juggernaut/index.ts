@@ -2,6 +2,7 @@ import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
 import { modelConfig } from './model.ts';
+import { burnNearby } from '../phaseHooks.ts';
 
 const data = {
     id: 102, round: 3, name: '熔岩鐵衛', subtitle: '烈焰重裝兵',
@@ -24,6 +25,16 @@ const data = {
     ],
     hazardText: '🔥 站在烈焰上！快離開',
     hazardColor: '#ff5a2a',
+
+    phases: [
+      { hpPct: 0.5, name: '熔岩沸騰', sub: '裝甲剝落', color: '#ff5a1f', dmgMult: 1.4, speedMult: 1.2, cdMult: 0.8,
+        onEnter: burnNearby(360, 8, 4),
+        tagsOverride: [
+          { icon: '🔥', text: '熔岩四溢 — 進入後燃燒' },
+          { icon: '⚔️', text: '攻擊強化 +40%' },
+          { icon: '💢', text: '衝鋒更頻繁' },
+        ] },
+    ],
 
     basic: { name: '熔岩劈斬', type: 'melee', dmg: 50, range: 120, arc: 1.2, knockback: 200, cd: 1.4, windup: 0.7, telegraph: 'arc', color: '#ff7043', effect: BURN(8, 2), vfx: 'boss_juggernaut_slash' },
     skill1: { name: '烈焰衝鋒', type: 'charge', speed: 900, range: 520, dmg: 80, hitRadius: 70, knockback: 320, stopOnHit: true, effect: STUN(1.0), cd: 8, windup: 0.9, telegraph: 'line', color: '#ff5a1f', wallStun: 2.2, vfx: 'boss_juggernaut_charge' },

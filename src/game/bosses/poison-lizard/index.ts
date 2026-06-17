@@ -25,6 +25,15 @@ const data = {
     hazardText: '☠️ 中毒中！快離開毒沼',
     hazardColor: '#8ee03a',
 
+    phases: [
+      { hpPct: 0.5, name: '劇毒沸騰', sub: '瘴氣翻湧', color: '#7fff00', dmgMult: 1.3, speedMult: 1.15, cdMult: 0.75,
+        tagsOverride: [
+          { icon: '☠️', text: '毒沼範圍變大' },
+          { icon: '⚡', text: '攻擊強化 +30%' },
+          { icon: '🐍', text: '飛撲更頻繁' },
+        ] },
+    ],
+
     basic: { name: '毒爪', type: 'melee', dmg: 30, range: 80, arc: 1.1, knockback: 120, cd: 0.9, windup: 0.4, telegraph: 'arc', color: '#9acd32', effect: BURN(6, 2), vfx: 'boss_lizard_claw' },
     skill1: { name: '腐蝕毒吐', type: 'projectile', dmg: 22, speed: 460, radius: 16, lifetime: 1.1, count: 3, spread: 0.28, knockback: 40, cd: 6, windup: 0.6, telegraph: 'line', color: '#7fff00', effect: BURN(10, 3), leaveZone: { radius: 90, dmg: 16, lifetime: 4, tick: 0.5, effect: BURN(10, 2), color: '#5a8f2f', vfx: 'boss_lizard_pool' }, vfx: 'boss_lizard_spit' },
     skill2: { name: '毒沼飛撲', type: 'leap', range: 280, dur: 0.5, dmg: 60, radius: 120, knockback: 160, cd: 8, windup: 0.5, telegraph: 'circle', color: '#6a3d9a', effect: BURN(8, 2), leaveZone: { radius: 110, dmg: 18, lifetime: 5, tick: 0.5, effect: BURN(12, 2), color: '#4e7a2f', vfx: 'boss_lizard_pool' }, vfx: 'boss_lizard_pounce' },

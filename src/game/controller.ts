@@ -10,7 +10,7 @@ import { createNetwork, makeRoomCode } from './network.js';
 import { createInput, EMPTY_INPUT } from './input.js';
 import { createInitialState } from './entities.js';
 import { CHARACTERS } from './characters.js';
-import { startBossRound } from './bossMode.js';
+import { startBossRound, retryBossRound, quitBossRun } from './bossMode.js';
 import { step, applyMovement } from './simulation.js';
 import { DT, SNAPSHOT_INTERVAL, INPUT_INTERVAL, MAX_PLAYERS } from './constants.js';
 import type {
@@ -327,14 +327,48 @@ function createController(): GameController {
     const players = Object.values(gameState.players)
       .filter((p: any) => !p.ownerId && (!isBoss || p.team === 1))
       .map((p: any) => ({ name: p.name, charId: p.charId, kills: p.kills, team: p.team || 0 }));
-    net.broadcast({ t: 'gameover', winner: winnerName, winnerTeam, players, bossResult, bossRound });
-    showGameover({ winnerName, winnerTeam, players, isHost: true, bossResult, bossRound } as GameOverView);
+    const bossStats = isBoss ? buildBossStats(gameState) : undefined;
+    net.broadcast({ t: 'gameover', winner: winnerName, winnerTeam, players, bossResult, bossRound, bossStats });
+    showGameover({ winnerName, winnerTeam, players, isHost: true, bossResult, bossRound, bossStats } as GameOverView);
   }
 
   function joinerGameover(data: any) {
     stopLoop();
     input.disable();
-    showGameover({ winnerName: data.winner, winnerTeam: data.winnerTeam || 0, players: data.players, isHost: false, bossResult: data.bossResult, bossRound: data.bossRound } as GameOverView);
+    showGameover({ winnerName: data.winner, winnerTeam: data.winnerTeam || 0, players: data.players, isHost: false, bossResult: data.bossResult, bossRound: data.bossRound, bossStats: data.bossStats } as GameOverView);
+  }
+
+  function buildBossStats(state: any) {
+    const stats = state.stats;
+    if (!stats) return undefined;
+    const perPlayer = Object.entries(stats.perPlayer || {}).map(([id, raw]: any) => ({
+      id,
+      name: raw.name,
+      charId: raw.charId,
+      dmgDealt: Math.round(raw.dmgDealt || 0),
+      dmgTaken: Math.round(raw.dmgTaken || 0),
+      healing: Math.round(raw.healing || 0),
+      kills: raw.kills || 0,
+      deaths: raw.deaths || 0,
+      revives: raw.revives || 0,
+      maxHit: Math.round(raw.maxHit || 0),
+      critCount: raw.critCount || 0,
+      ccApplied: raw.ccApplied || 0,
+      skillUses: { basic: raw.skillUses?.basic || 0, skill1: raw.skillUses?.skill1 || 0, skill2: raw.skillUses?.skill2 || 0, ultimate: raw.skillUses?.ultimate || 0, evade: raw.skillUses?.evade || 0 },
+    }));
+    let mvpId: string | null = null;
+    let mvpScore = -1;
+    for (const p of perPlayer) {
+      const score = p.dmgDealt + p.healing * 0.6 + p.revives * 80 + p.kills * 25;
+      if (score > mvpScore) { mvpScore = score; mvpId = p.id; }
+    }
+    return {
+      totalDuration: (state.time || 0) - (stats.runStart || 0),
+      retryCount: stats._retryCount || 0,
+      perRound: stats.perRound || [],
+      perPlayer,
+      mvpId,
+    };
   }
 
   function showGameover(viewData: GameOverView) {
@@ -477,6 +511,16 @@ function createController(): GameController {
     startBossGame();
   }
 
+  function bossRetry() {
+    if (role !== 'host' || !gameState) return;
+    retryBossRound(gameState);
+  }
+
+  function bossQuit() {
+    if (role !== 'host' || !gameState) return;
+    quitBossRun(gameState);
+  }
+
   function returnToLobby() {
     if (role !== 'host') return;
     stopLoop();
@@ -495,7 +539,11 @@ function createController(): GameController {
   function attachCanvas(canvas: HTMLCanvasElement) {
     if (renderer && canvasEl === canvas) { maybeStartLoop(); return; }
     canvasEl = canvas;
-    renderer = createRenderer(canvas, selectedControlScheme);
+    renderer = createRenderer(canvas, selectedControlScheme, {
+      isHost: () => role === 'host',
+      onBossRetry: bossRetry,
+      onBossQuit: bossQuit,
+    });
     maybeStartLoop();
   }
 
@@ -521,7 +569,10 @@ function createController(): GameController {
     devStartGame,
     devStartBoss,
     returnToLobby,
+    bossRetry,
+    bossQuit,
     leave,
+    get isHost() { return role === 'host'; },
     attachCanvas,
     detachCanvas,
     get selectedChar() { return selectedChar; },

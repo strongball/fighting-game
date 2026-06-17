@@ -40,7 +40,7 @@ function buildHuntMarker() {
   return g;
 }
 
-export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
+export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
   const sceneMgr = createSceneManager(canvas);
   const { scene, camera } = sceneMgr;
 
@@ -48,7 +48,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
   particles.setDpr(sceneMgr.renderer.getPixelRatio());
   const fxbus = createFxBus({ scene, particles, sceneMgr });
   const entities = createEntityLayer(scene, particles, { addTransient: fxbus.addTransient, sceneMgr });
-  const hud = createHud({ stage: sceneMgr.stage, scene, camera, controlScheme });
+  const hud = createHud({ stage: sceneMgr.stage, scene, camera, controlScheme, hooks });
   const sfx = getSfxManager();
 
   // 本地視覺狀態 (不進 snapshot)
@@ -396,6 +396,21 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl') {
     entities.syncZones(state.zones, dt);
     particles.update(dt);
     fxbus.update(dt);
+    // 登場動畫：把鏡頭朝 Boss 推近。intro 期間 strength 隨 t 由 0→1→0 (ease in/out)。
+    let introStr = 0, bossSx = 0, bossSz = 0;
+    if (state.mode === 'boss' && state.roundPhase === 'intro') {
+      const dur = state.introDur || 3.2;
+      const elapsed = Math.max(0, dur - (state.roundTimer || 0));
+      const t = Math.min(1, elapsed / dur);
+      // 0-0.18 推近、0.18-0.78 維持、0.78-1.0 退回
+      if (t < 0.18) introStr = t / 0.18;
+      else if (t < 0.78) introStr = 1;
+      else introStr = Math.max(0, 1 - (t - 0.78) / 0.22);
+      for (const pp of Object.values(state.players)) {
+        if (pp.isBoss) { bossSx = sceneX(pp.x); bossSz = sceneZ(pp.y); break; }
+      }
+    }
+    sceneMgr.setIntroFocus(introStr, bossSx, bossSz);
     sceneMgr.update(dt);
     hud.update(state, selfId);
 

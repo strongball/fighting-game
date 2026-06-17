@@ -3,6 +3,7 @@ import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
 import { modelConfig } from './model.ts';
 import './action.ts';
+import { scrambleAll } from '../phaseHooks.ts';
 
 const data = {
     id: 107, round: 8, name: '虛空大魔導', subtitle: '時空扭曲者',
@@ -24,6 +25,16 @@ const data = {
     ],
     hazardText: '🕳️ 被黑洞吸住了！快脫離',
     hazardColor: '#a06cff',
+
+    phases: [
+      { hpPct: 0.5, name: '規則崩壞', sub: '時空紊亂', color: '#b14fd8', dmgMult: 1.25, cdMult: 0.7,
+        onEnter: scrambleAll(4),
+        tagsOverride: [
+          { icon: '🌀', text: '所有人操作被打亂' },
+          { icon: '⏪', text: '時空扭曲頻率提高' },
+          { icon: '🕳️', text: '黑洞範圍變大' },
+        ] },
+    ],
 
     basic: { name: '虛空彈', type: 'projectile', dmg: 28, speed: 520, radius: 14, lifetime: 1.6, count: 3, spread: 0.4, knockback: 50, cd: 1.0, windup: 0.4, telegraph: 'line', color: '#c39bff', vfx: 'boss_void_bolt' },
     skill1: { name: '混沌符咒', type: 'apply_scramble', radius: 320, duration: 2.4, cd: 9, windup: 0.8, telegraph: 'circle', color: '#b14fd8', vfx: 'boss_void_scramble' },

@@ -6,6 +6,7 @@ import { angleDiff, missingHp } from './math.ts';
 import { addFx } from './fx.ts';
 import { applyHeal } from './heal.ts';
 import { applyEffect } from './effects.ts';
+import { recordDamage, recordKill, recordDeath } from './stats.ts';
 import { isAlly, isEnemy } from './team.ts';
 
 function warsongFor(state, attacker) {
@@ -86,6 +87,10 @@ function talentDamageMods(state, attacker, target, amount) {
 export function dealDamage(state, target, amount, attackerId, opts = {}) {
   if (!target.alive || amount <= 0) return;
   if (target.effects && target.effects.evading) return;
+  // 闖關登場動畫期間：全場無敵
+  if (state.mode === 'boss' && state.roundPhase !== 'fighting') return;
+  // 階段轉換 i-frame：Boss 短暫無敵
+  if (target.isBoss && (target.phaseIframe || 0) > 0) return;
 
   const attacker = state.players[attackerId];
   const hostile = attacker && attacker.id !== target.id && attacker.alive;
@@ -102,6 +107,11 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
     if (owner && !owner.isBoss) dmg *= 0.55;
   }
   if (!opts.noTalent && hostile) dmg = talentDamageMods(state, attacker, target, dmg);
+  // Boss 階段傷害倍率 (含部位攻擊歸屬 Boss 本體時)
+  if (hostile && attacker && (attacker.isBoss || (attacker.isPart && attacker.ownerId)) && (attacker.phaseDmgMult || (state.players[attacker.ownerId] && state.players[attacker.ownerId].phaseDmgMult))) {
+    const mult = attacker.isBoss ? (attacker.phaseDmgMult || 1) : (state.players[attacker.ownerId].phaseDmgMult || 1);
+    dmg *= mult;
+  }
   if (hostile && attacker.effects && attacker.effects.dmg_reduce) dmg *= 1 - (attacker.effects.dmg_reduce.factor || 0);
   if (target.isBoss) dmg = applyBossDamageModifiers(state, target, attacker, dmg);
   if (target.effects && target.effects.mark) dmg *= 1 + target.effects.mark.bonus;
@@ -135,6 +145,7 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
 
   const isCrit = dmg >= amount * 1.35 || dmg >= 30;
   addFx(state, { type: 'popup', x: target.x, y: target.y, color: isCrit ? '#ffd166' : '#ff5050', life: 0.85, text: Math.round(dmg), kind: isCrit ? 'crit' : 'damage' });
+  recordDamage(state, attackerId, target, dmg, { isCrit });
 
   if (hostile && attacker.effects && attacker.effects.lifesteal) {
     const lifesteal = dmg * (attacker.effects.lifesteal.factor || 0);
@@ -180,7 +191,16 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
       const owner = (killer.isMinion || killer.isSummon) && killer.ownerId ? state.players[killer.ownerId] : null;
       (owner || killer).kills++;
     }
+    recordKill(state, attackerId, target);
+    recordDeath(state, target);
     if (target.effects && target.effects.weaken) spreadCurse(state, target);
     addFx(state, { type: 'death', x: target.x, y: target.y, color: '#ffffff', life: 0.5, radius: PLAYER_RADIUS * 2 });
+    // 闖關 Boss 擊破：全場慢動作 + 巨型爆閃 + 「BOSS DOWN」橫幅
+    if (target.isBoss && state.mode === 'boss') {
+      state.timeFreeze = { scale: 0.3, remaining: 0.8 };
+      state.banner = { text: 'BOSS DOWN', sub: target.name || '', life: 1.0, kind: 'phase', color: '#ffd166' };
+      addFx(state, { type: 'ultimate', x: target.x, y: target.y, facing: target.facing, color: '#ffd166', life: 1.0, radius: 320 });
+      addFx(state, { type: 'ultimate', x: target.x, y: target.y, facing: target.facing, color: '#ffffff', life: 0.6, radius: 180 });
+    }
   }
 }

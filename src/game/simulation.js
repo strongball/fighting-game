@@ -20,6 +20,13 @@ export { applyMovement, speedOf };
 // 一個固定步的權威模擬
 export function step(state, inputs, dt) {
   if (state.phase !== 'playing') return;
+  // 慢動作：擊破 Boss 時觸發，dt 縮放但 remaining 用實際 dt 倒數。
+  const tf = state.timeFreeze;
+  if (tf && tf.remaining > 0) {
+    tf.remaining -= dt;
+    dt = dt * (tf.scale || 0.3);
+    if (tf.remaining <= 0) state.timeFreeze = null;
+  }
   state.time += dt;
 
   for (const p of Object.values(state.players)) {
@@ -30,6 +37,9 @@ export function step(state, inputs, dt) {
     if (p.aiId) {
       if (state.mode === 'boss') input = state.roundPhase === 'fighting' ? computeBossInput(state, p, dt) : EMPTY_INPUT;
       else input = computeBossInput(state, p, dt); // FFA 召喚物 AI
+    } else if (state.mode === 'boss' && state.roundPhase !== 'fighting') {
+      // 闖關 intro/cleared/wiped：人類玩家輸入凍結 (登場動畫期間不能動)
+      input = EMPTY_INPUT;
     }
     const character = getCharacter(p.charId);
     const talent = character.talent;

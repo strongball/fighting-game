@@ -25,6 +25,15 @@ const data = {
     hazardText: '☠️ 站在亡靈領域裡！快離開',
     hazardColor: '#46f0a0',
 
+    phases: [
+      { hpPct: 0.5, name: '亡者大進行曲', sub: '亡魂奔流', color: '#7d5fff', dmgMult: 1.3, cdMult: 0.65,
+        tagsOverride: [
+          { icon: '💀', text: '召喚速度加快' },
+          { icon: '🛡️', text: '護盾再生更頻繁' },
+          { icon: '🎵', text: '攻擊強化 +30%' },
+        ] },
+    ],
+
     basic: { name: '靈魂彈', type: 'projectile', dmg: 26, speed: 480, radius: 12, lifetime: 1.6, count: 2, spread: 0.18, knockback: 40, cd: 1.0, windup: 0.4, telegraph: 'line', color: '#39ff88', vfx: 'boss_necro_bolt' },
     skill1: { name: '亡者召集', type: 'summon_minions', count: 3, minionHp: 240, minionCharId: -2, minionName: '亡者殘影', cd: 12, windup: 0.8, telegraph: 'self', color: '#7d5fff', vfx: 'boss_necro_summon' },
     skill2: { name: '亡靈護壁', type: 'buff', shield: 400, duration: 12, cd: 14, windup: 0.6, telegraph: 'self', color: '#b39dff', shieldPerMinion: 200, vfx: 'boss_necro_shield' },

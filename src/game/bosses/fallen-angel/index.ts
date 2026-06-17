@@ -3,6 +3,7 @@ import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
 import { modelConfig } from './model.ts';
 import './action.ts';
+import { tetherAllPairs } from '../phaseHooks.ts';
 
 const data = {
     id: 108, round: 9, name: '審判之翼', subtitle: '墮落天使',
@@ -24,6 +25,20 @@ const data = {
     ],
     hazardText: '☀️ 站在審判光柱下！快離開',
     hazardColor: '#ffd24a',
+
+    phases: [
+      { hpPct: 0.6, name: '光明之翼', sub: '聖光綻放', color: '#fff2b0', dmgMult: 1.2, cdMult: 0.8,
+        tagsOverride: [
+          { icon: '✨', text: '出招更頻繁' },
+          { icon: '🔗', text: '綁定範圍變大' },
+        ] },
+      { hpPct: 0.3, name: '審判降臨', sub: '靈魂審判', color: '#d8b3ff', dmgMult: 1.5, cdMult: 0.55,
+        onEnter: tetherAllPairs({ minGap: 240, dmg: 14, duration: 16 }),
+        tagsOverride: [
+          { icon: '🔗', text: '全員兩兩自動綁定' },
+          { icon: '⚔️', text: '攻擊大幅強化 +50%' },
+        ] },
+    ],
 
     basic: { name: '聖劍光弧', type: 'melee', dmg: 40, range: 140, arc: 1.4, knockback: 180, cd: 1.2, windup: 0.5, telegraph: 'arc', color: '#fff2b0', vfx: 'boss_angel_slash' },
     skill1: { name: '靈魂綁定', type: 'soul_bind', count: 2, minGap: 200, dmg: 18, duration: 6, cd: 13, windup: 0.9, telegraph: 'self', color: '#d8b3ff', vfx: 'boss_angel_bind' },

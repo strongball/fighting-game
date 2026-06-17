@@ -24,6 +24,20 @@ const data = {
     hazardText: '⚠️ 快離開攻擊範圍！',
     hazardColor: '#e6b352',
 
+    phases: [
+      { hpPct: 0.66, name: '狂亂之根', sub: '怒火覺醒', color: '#a6d749', dmgMult: 1.2, speedMult: 1.1, cdMult: 0.85,
+        tagsOverride: [
+          { icon: '🪵', text: '背後弱點 +50%' },
+          { icon: '🎯', text: '仇恨切換更快' },
+          { icon: '⚡', text: '攻擊強化 +20%' },
+        ] },
+      { hpPct: 0.33, name: '森羅之怒', sub: '終末綻放', color: '#ff7a3d', dmgMult: 1.5, speedMult: 1.25, cdMult: 0.65,
+        tagsOverride: [
+          { icon: '🔥', text: '狂暴 — 攻擊 +50%' },
+          { icon: '⚡', text: '出招間隔縮短' },
+        ] },
+    ],
+
     basic: { name: '橫掃巨臂', type: 'melee', dmg: 45, range: 130, arc: 1.5, knockback: 240, cd: 1.6, windup: 0.8, telegraph: 'arc', color: '#8fbf3f', vfx: 'boss_golem_sweep' },
     skill1: { name: '巨力砸地', type: 'zone', range: 120, radius: 130, dmg: 70, lifetime: 0.4, tick: 0.4, delay: 1.0, knockback: 200, effect: STUN(0.5), cd: 7, windup: 1.0, telegraph: 'circle', color: '#7a5a2b', vfx: 'boss_golem_slam' },
     skill2: { name: '纏根束縛', type: 'zone', range: 0, radius: 200, dmg: 24, lifetime: 1.2, tick: 0.5, pull: 200, effect: ROOT(1.2), cd: 11, windup: 0.7, telegraph: 'circle', color: '#4e7a2f', vfx: 'boss_golem_roots' },

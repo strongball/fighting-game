@@ -1,6 +1,7 @@
 import { ARENA } from '../constants.js';
 import { makeBoss } from '../entities/factories.ts';
 import { getBossForRound } from '../bosses.js';
+import { initBossPhase } from './phases.ts';
 
 export const BOSS_TEAM = 2;
 export const PLAYER_TEAM = 1;
@@ -36,6 +37,7 @@ export function spawnBoss(state: any, round: number) {
     isBoss: true, aiId: data.ai, hpScale, round, name: data.name, scale, facing: Math.PI / 2,
   });
   state.players[id] = boss;
+  initBossPhase(boss);
 
   const mech = data.mechanic;
   if (mech && mech.parts) {

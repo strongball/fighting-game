@@ -10,6 +10,7 @@ export function speedOf(p) {
   if (p.effects.chill) speed *= p.effects.chill.factor;
   if (p.effects.haste) speed *= p.effects.haste.factor;
   if (p.effects.rage) speed *= p.effects.rage.speed;
+  if (p.isBoss && p.phaseSpeedMult) speed *= p.phaseSpeedMult;
   return speed;
 }
 

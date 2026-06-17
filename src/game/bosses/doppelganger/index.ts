@@ -25,6 +25,21 @@ const data = {
     hazardText: '💥 站在終焉領域裡！快離開',
     hazardColor: '#c9c0ff',
 
+    phases: [
+      { hpPct: 0.66, name: '鏡像進化', sub: '虛空覺醒', color: '#cfcfff', dmgMult: 1.2, speedMult: 1.1, cdMult: 0.85,
+        tagsOverride: [
+          { icon: '🪞', text: '鏡像更頻繁出現' },
+          { icon: '🎭', text: '更常使用你的大招' },
+          { icon: '⚡', text: '攻擊強化 +20%' },
+        ] },
+      { hpPct: 0.33, name: '終焉之姿', sub: '萬象崩解', color: '#ffffff', dmgMult: 1.55, speedMult: 1.3, cdMult: 0.5,
+        tagsOverride: [
+          { icon: '💥', text: '攻擊大幅強化 +55%' },
+          { icon: '⚡', text: '出招幾乎無冷卻' },
+          { icon: '🌌', text: '終焉領域常駐' },
+        ] },
+    ],
+
     basic: { name: '虛空裂斬', type: 'melee', dmg: 44, range: 150, arc: 1.3, knockback: 200, cd: 1.0, windup: 0.4, telegraph: 'arc', color: '#ffffff', vfx: 'boss_doppel_slash' },
     skill1: { name: '鏡像複製', type: 'mirror_players', cd: 22, once: true, windup: 1.0, telegraph: 'self', color: '#cfcfff', vfx: 'boss_doppel_mirror' },
     skill2: { name: '竊取絕技', type: 'steal_ultimate', cd: 10, windup: 0.8, telegraph: 'self', color: '#b0b0ff', vfx: 'boss_doppel_steal' },

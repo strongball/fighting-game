@@ -15,8 +15,25 @@ import {
   teamPlayers,
 } from './bosses/lifecycle.ts';
 import { reviveAndHealAll, tickBossSystems } from './bosses/systems.ts';
+import { initRunStats, ensureAllPlayerStats, recordRoundStart, recordRoundEnd, recordRetry } from './entities/stats.ts';
 
 export { BOSS_TEAM, PLAYER_TEAM, findBossEntity, teamPlayers };
+
+// ---- 房主：選擇「重打本關」 ----
+export function retryBossRound(state) {
+  if (state.roundPhase !== 'wiped' || state.mode !== 'boss') return;
+  recordRetry(state);
+  startBossRound(state, state.round);
+}
+
+// ---- 房主：選擇「放棄本輪」(轉到原先的 failed/gameover 流程) ----
+export function quitBossRun(state) {
+  if (state.roundPhase !== 'wiped' || state.mode !== 'boss') return;
+  state.roundPhase = 'failed';
+  state.bossResult = 'defeat';
+  state.phase = 'gameover';
+  state.winner = null; state.winnerTeam = 0;
+}
 
 // ---- 進入第 n 關 ----
 export function startBossRound(state, round) {
@@ -25,14 +42,18 @@ export function startBossRound(state, round) {
   state.tethers = [];
   clearBossSide(state);
   reviveAndHealAll(state);
+  if (!state.stats || round === 1) initRunStats(state);
+  else ensureAllPlayerStats(state);
+  recordRoundStart(state);
   const boss = spawnBoss(state, round);
   state.bossId = boss ? boss.id : null;
   state.bossHp = boss ? boss.hp : 0;
   state.bossMaxHp = boss ? boss.maxHp : 0;
   state.roundPhase = 'intro';
-  state.roundTimer = 2.8;
+  state.roundTimer = 3.2;
+  state.introDur = 3.2;
   const data = getBossForRound(round);
-  state.banner = { text: 'ROUND ' + round, sub: data ? data.subtitle + '「' + data.name + '」' : '', life: 2.8 };
+  state.banner = { text: 'ROUND ' + round, sub: data ? data.subtitle + '「' + data.name + '」' : '', life: 3.2 };
   return boss;
 }
 
@@ -57,7 +78,16 @@ export function checkBossRound(state, dt) {
   }
 
   if (state.roundPhase === 'fighting') {
+    // 階段橫幅 / 其他 fighting 期間的短暫橫幅倒數
+    if (state.banner && state.banner.life != null) {
+      state.banner.life -= dt;
+      if (state.banner.life <= 0) state.banner = null;
+    }
     if (!boss || !boss.alive) {
+      // Boss 死亡時若慢動作仍在進行，等慢動作結束再進入 cleared (保留場上 Boss 模型供爆閃秀)
+      if (state.timeFreeze && state.timeFreeze.remaining > 0) return;
+      const bossData = getBossForRound(state.round);
+      recordRoundEnd(state, { bossName: bossData ? bossData.name : '', defeated: true });
       state.roundPhase = 'cleared';
       state.roundTimer = 3.0;
       clearBossSide(state);
@@ -66,11 +96,16 @@ export function checkBossRound(state, dt) {
       return;
     }
     if (!anyAlive) {
-      state.roundPhase = 'failed';
-      state.bossResult = 'defeat';
-      state.phase = 'gameover';
-      state.winner = null; state.winnerTeam = 0;
+      // 全滅 → 進入 'wiped'，等房主決定 (重打 / 放棄)；遊戲仍在 playing
+      state.roundPhase = 'wiped';
+      state.banner = null;
+      state.bossWipedRound = state.round;
     }
+    return;
+  }
+
+  if (state.roundPhase === 'wiped') {
+    // 等待房主呼叫 retryBossRound / quitBossRun (controller)
     return;
   }
 

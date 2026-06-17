@@ -119,6 +119,15 @@ export function createSceneManager(canvas) {
   }
   function setBloom(on) { bloomOn = !!on; } // render() 內依旗標選擇 composer / 直接渲染
 
+  // 登場動畫鏡頭：strength 0..1，1 = 完全推近到 target
+  let introStrength = 0;
+  let introTargetX = 0, introTargetZ = 0;
+  function setIntroFocus(strength, targetX = 0, targetZ = 0) {
+    introStrength = Math.max(0, Math.min(1, strength));
+    introTargetX = targetX;
+    introTargetZ = targetZ;
+  }
+
   function update(dt) {
     time += dt;
     // 震動衰減
@@ -134,8 +143,19 @@ export function createSceneManager(canvas) {
     _v.copy(camBase);
     _v.y += Math.sin(time * 0.5) * 6;
     _v.z += Math.sin(time * 0.37) * 5;
+    // 登場動畫推近：向 (introTargetX, 200, introTargetZ+360) 內插，並把 lookAt 也朝 Boss
+    let lookX = camTarget.x, lookY = camTarget.y, lookZ = camTarget.z;
+    if (introStrength > 0) {
+      const cx = introTargetX, cz = introTargetZ;
+      _v.x += (cx - _v.x) * introStrength * 0.65;
+      _v.y += (260 - _v.y) * introStrength * 0.55;
+      _v.z += ((cz + 360) - _v.z) * introStrength * 0.65;
+      lookX = cx * introStrength;
+      lookY = 60 * introStrength;
+      lookZ = cz * introStrength;
+    }
     camera.position.copy(_v);
-    camera.lookAt(camTarget);
+    camera.lookAt(lookX, lookY, lookZ);
     if (shakeMag > 0) {
       // 取相機座標系的 right / up
       _right.setFromMatrixColumn(camera.matrixWorld, 0);
@@ -156,7 +176,7 @@ export function createSceneManager(canvas) {
 
   return {
     scene, camera, renderer, stage,
-    resize, update, render, addShake, addFlash, setBloom, dispose,
+    resize, update, render, addShake, addFlash, setBloom, setIntroFocus, dispose,
     get time() { return time; },
   };
 }

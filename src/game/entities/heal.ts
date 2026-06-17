@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { addFx } from './fx.ts';
+import { recordHeal } from './stats.ts';
 
 const POPUP_THRESHOLD = 4;
 
@@ -9,6 +10,7 @@ export function applyHeal(state, p, amount, opts = {}) {
   p.hp = Math.min(p.maxHp, p.hp + amount);
   const healed = p.hp - before;
   if (healed <= 0) return 0;
+  recordHeal(state, p, healed);
   if (opts.burst || healed >= POPUP_THRESHOLD) {
     addFx(state, { type: 'popup', x: p.x, y: p.y, color: '#5cffa6', life: 0.7, text: `+${Math.round(healed)}`, kind: 'heal' });
   } else {
