@@ -28,7 +28,13 @@ export function tickCooldowns(state, p, talent, dt) {
   let cdRate = 1;
   if (talent && talent.id === 'bloodlust') cdRate = 1 + (talent.haste || 0.6) * missingHp(p);
   cdRate /= COOLDOWN_MULTIPLIER;
-  for (const slot of COOLDOWN_SLOTS) p.cd[slot] = Math.max(0, p.cd[slot] - dt * cdRate);
+  for (const slot of COOLDOWN_SLOTS) {
+    let rate = cdRate;
+    if (slot === 'basic' && p.effects.overdrive && p.effects.overdrive.atkSpeed) {
+      rate *= p.effects.overdrive.atkSpeed;
+    }
+    p.cd[slot] = Math.max(0, p.cd[slot] - dt * rate);
+  }
   if (state.flags && state.flags.noCooldown) {
     for (const slot of COOLDOWN_SLOTS) p.cd[slot] = 0;
   }

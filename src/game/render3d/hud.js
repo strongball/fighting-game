@@ -15,6 +15,7 @@ const EFFECT_META = {
   reflect:    { icon: '🪞', name: '反射',   buff: true },
   lifesteal:  { icon: '🩸', name: '吸血',   buff: true },
   rage:       { icon: '🔥', name: '狂暴',   buff: true },
+  overdrive:  { icon: '⚡', name: '超載',   buff: true },
   invis:      { icon: '👻', name: '隱身',   buff: true },
   evading:    { icon: '💨', name: '無敵',   buff: true },
   slow:       { icon: '🐢', name: '緩速',   buff: false },

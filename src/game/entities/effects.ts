@@ -85,5 +85,6 @@ export function applyEffect(p, kind, data, srcId) {
     factor: data.factor,
     speed: data.speed,
     dmg: data.dmg,
+    atkSpeed: data.atkSpeed,
   };
 }

@@ -15,6 +15,7 @@ export function outMult(p, a) {
   let m = 1;
   if (a.lowHpBonus) m *= 1 + (1 - p.hp / p.maxHp);
   if (p.effects.rage) m *= p.effects.rage.dmg;
+  if (p.effects.overdrive && p.effects.overdrive.dmg) m *= p.effects.overdrive.dmg;
   if (p.iaiReady) {
     const t = getCharacter(p.charId).talent;
     m *= 1 + ((t && t.bonus) || 0.8);

@@ -832,7 +832,7 @@ export function animateModel(group, dt, info) {
     parts.shieldRing.scale.setScalar(pulse);
     parts.shieldRing.material.emissiveIntensity = 1.6 + 0.8 * pulse;
   }
-  const rageOn = p && p.effects && p.effects.rage;
+  const rageOn = p && p.effects && (p.effects.rage || p.effects.overdrive);
   parts.rageRing.visible = !!rageOn;
   if (rageOn) {
     const pulse = 0.85 + 0.15 * Math.sin(ud.breathe * 6);
