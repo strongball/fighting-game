@@ -33,6 +33,9 @@ function getSkillKeys(controlScheme) {
   if (controlScheme === 'arrows-asdf') {
     return { basic: 'A', skill1: 'S', skill2: 'D', ultimate: 'F' };
   }
+  if (controlScheme === 'wasd-ijkl') {
+    return { basic: 'J', skill1: 'K', skill2: 'L', ultimate: 'I' };
+  }
   return { basic: 'J', skill1: 'K', skill2: 'L', ultimate: ';' };
 }
 

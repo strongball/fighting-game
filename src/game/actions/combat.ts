@@ -57,7 +57,7 @@ export function meleeHit(state, p, a, silent) {
       addFx(state, { type: 'hit', x: o.x, y: o.y, color: a.color, life: 0.26, radius: 64, vfx: a.vfx });
     }
     if (a.execute && o.hp <= o.maxHp * (a.execute.threshold || 0.25)) dmg *= a.execute.mult || 5;
-    dealDamage(state, o, dmg, p.id);
+    dealDamage(state, o, dmg, p.id, { meleeHit: true });
     if (a.knockback && d > 0) { o.kvx += (dx / d) * a.knockback; o.kvy += (dy / d) * a.knockback; }
     if (a.effect) applyEffectFrom(state, o, a.effect, p.id);
   }

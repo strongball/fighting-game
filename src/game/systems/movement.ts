@@ -19,41 +19,40 @@ export function speedOf(p) {
     speed *= BOSS_BASE_SPEED_MULT;
     if (p.phaseSpeedMult) speed *= p.phaseSpeedMult;
     if ((p.recoverWindow || 0) > 0) speed *= BOSS_RECOVER_SPEED_MULT;
+  } else if (character.meleeRole) {
+    speed *= 1.12; // 近戰補正：黏 Boss 不脫節
   }
   return speed;
 }
 
+// 加速度：起步 / 煞車的響應度 (越大越靈敏；玩家比 Boss 更敏捷)
+const PLAYER_ACCEL = 14;
+const BOSS_ACCEL = 9;
+
 export function applyMovement(p, input, dt) {
   const rooted = !!p.effects.root;
   const scrambled = !!p.effects.scramble;
+  let targetVx = 0, targetVy = 0;
   if (!p.effects.stun) {
     let dx = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     let dy = (input.down ? 1 : 0) - (input.up ? 1 : 0);
-    if (scrambled) {
-      dx = -dx;
-      dy = -dy;
-    }
+    if (scrambled) { dx = -dx; dy = -dy; }
     if (dx || dy) {
       const l = Math.hypot(dx, dy);
-      dx /= l;
-      dy /= l;
+      dx /= l; dy /= l;
       if (input.aim == null && !p.chargeState) p.facing = Math.atan2(dy, dx);
-      if (rooted) {
-        p.vx = 0;
-        p.vy = 0;
-      } else {
-        const moveSpeed = p.chargeState ? speedOf(p) * 0.35 : speedOf(p);
-        p.vx = dx * moveSpeed;
-        p.vy = dy * moveSpeed;
+      if (!rooted) {
+        const moveSpeed = p.chargeState ? speedOf(p) * 0.5 : speedOf(p); // 蓄力時減速從 0.35 放寬到 0.5
+        targetVx = dx * moveSpeed;
+        targetVy = dy * moveSpeed;
       }
-    } else {
-      p.vx = 0;
-      p.vy = 0;
     }
-  } else {
-    p.vx = 0;
-    p.vy = 0;
   }
+  // 加速度平滑 (起步漸進、放開鍵慢慢煞車)
+  const accel = p.isBoss ? BOSS_ACCEL : PLAYER_ACCEL;
+  const k = Math.min(1, dt * accel);
+  p.vx += (targetVx - p.vx) * k;
+  p.vy += (targetVy - p.vy) * k;
   if (input.aim != null && !p.effects.stun) p.facing = input.aim;
 
   p.x += (p.vx + p.kvx) * dt;

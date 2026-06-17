@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 3, name: '坦克', color: '#7f8c8d', shape: 'square', sprite: characterSprite('tank', '#7f8c8d', true, drawTankTexture),
+    id: 3, name: '坦克', color: '#7f8c8d', shape: 'square', sprite: characterSprite('tank', '#7f8c8d', true, drawTankTexture), meleeRole: true,
     maxHp: 460, maxMana: 70, speed: 125,
     desc: '前排保護與擾亂堡壘。守護壁壘分享護盾、巨力擒抱聚怪定身，大招橫掃震開敵陣並為全隊罩上減傷護罩。傷害極低，價值在開團與保護。',
     role: '前排 · 保護/擾亂',

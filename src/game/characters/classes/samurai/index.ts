@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 13, name: '武士', color: '#c0392b', shape: 'triangle', sprite: characterSprite('samurai', '#c0392b', false, drawSamuraiTexture),
+    id: 13, name: '武士', color: '#c0392b', shape: 'triangle', sprite: characterSprite('samurai', '#c0392b', false, drawSamuraiTexture), meleeRole: true,
     maxHp: 240, maxMana: 60, speed: 192,
     desc: '蓄勢一擊的精準近戰。居合之道讓蓄力後的出刀致命、居合·閃高速突斬、刀背擋格擋反擊，大招一閃·千刀流連斬群敵。講究的是一擊斃命，與格鬥家的連段、狂戰士的狂暴截然不同。',
     role: '近戰 · 蓄力一擊',

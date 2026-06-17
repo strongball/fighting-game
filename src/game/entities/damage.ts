@@ -125,6 +125,11 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
   }
   if (target.effects && target.effects.weaken) dmg *= 1 + (target.effects.weaken.factor || 0);
   if (target.effects && target.effects.protect) dmg *= 1 - (target.effects.protect.factor || 0);
+  // 近戰減傷：近戰角色受傷 ×0.85 (補生存)
+  if (hostile && !target.isBoss && !target.ownerId) {
+    const tc = getCharacter(target.charId);
+    if (tc.meleeRole) dmg *= 0.85;
+  }
 
   if (!opts.noReflect && hostile && target.effects && target.effects.reflect) {
     const reflectDamage = dmg * (target.effects.reflect.factor || 0);
@@ -160,6 +165,16 @@ export function dealDamage(state, target, amount, attackerId, opts = {}) {
     if (lifesteal > 0) {
       attacker.hp = Math.min(attacker.maxHp, attacker.hp + lifesteal);
       addFx(state, { type: 'popup', x: attacker.x, y: attacker.y, color: '#5cffa6', life: 0.7, text: `+${Math.round(lifesteal)}`, kind: 'heal' });
+    }
+  }
+  // 近戰命中回血：近戰角色普攻 / 近戰技命中目標回 4% 傷害
+  if (hostile && attacker && !attacker.isBoss && !attacker.ownerId && opts.meleeHit) {
+    const ac = getCharacter(attacker.charId);
+    if (ac.meleeRole && attacker.alive && attacker.hp < attacker.maxHp) {
+      const heal = dmg * 0.04;
+      if (heal >= 0.5) {
+        attacker.hp = Math.min(attacker.maxHp, attacker.hp + heal);
+      }
     }
   }
   if (!opts.noTalent && hostile) {

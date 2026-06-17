@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 6, name: '狂戰士', color: '#922b21', shape: 'square', sprite: characterSprite('berserker', '#922b21', true, drawBerserkerTexture),
+    id: 6, name: '狂戰士', color: '#922b21', shape: 'square', sprite: characterSprite('berserker', '#922b21', true, drawBerserkerTexture), meleeRole: true,
     maxHp: 290, maxMana: 50, speed: 152,
     desc: '殘血滾雪球的處決者。躍斬入場撕裂流血、血怒爆走自損續戰，大招血祭對殘敵直接斬殺。高風險高回報，靠治療補上自損的血量。',
     role: '突進 · 處決鬥士',

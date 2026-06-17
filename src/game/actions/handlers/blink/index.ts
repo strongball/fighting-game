@@ -7,8 +7,12 @@ import { meleeHit } from '../../combat.ts';
 
 export function blink(ctx) {
   const { state, caster, action, cos, sin, silent } = ctx;
-  caster.x = clamp(caster.x + cos * action.range, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
-  caster.y = clamp(caster.y + sin * action.range, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
+  // 反方向逃：若玩家正在移動，blink 朝「移動方向」 (可往後跳)；否則沿 facing
+  let dx = cos, dy = sin;
+  const mvLen = Math.hypot(caster.vx || 0, caster.vy || 0);
+  if (mvLen > 1) { dx = caster.vx / mvLen; dy = caster.vy / mvLen; }
+  caster.x = clamp(caster.x + dx * action.range, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
+  caster.y = clamp(caster.y + dy * action.range, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
   if (action.dmg) {
     meleeHit(state, caster, {
       dmg: action.dmg,

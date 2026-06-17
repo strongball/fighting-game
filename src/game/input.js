@@ -25,6 +25,17 @@ const KEY_MAPS = {
     KeyF: 'ultimate',
     Space: 'evade',
   },
+  'wasd-ijkl': {
+    KeyW: 'up', ArrowUp: 'up',
+    KeyS: 'down', ArrowDown: 'down',
+    KeyA: 'left', ArrowLeft: 'left',
+    KeyD: 'right', ArrowRight: 'right',
+    KeyJ: 'basic',
+    KeyK: 'skill1',
+    KeyL: 'skill2',
+    KeyI: 'ultimate',
+    Space: 'evade',
+  },
 };
 
 export function createInput(controlScheme = 'wasd-jkl') {
@@ -56,7 +67,6 @@ export function createInput(controlScheme = 'wasd-jkl') {
     setScheme(scheme) {
       currentScheme = scheme;
       keyMap = KEY_MAPS[scheme];
-      // 切換方式時清空所有按鍵狀態
       for (const k in keys) keys[k] = false;
     },
     get() {
@@ -64,7 +74,7 @@ export function createInput(controlScheme = 'wasd-jkl') {
         up: keys.up, down: keys.down, left: keys.left, right: keys.right,
         basic: keys.basic, skill1: keys.skill1, skill2: keys.skill2, ultimate: keys.ultimate,
         evade: keys.evade,
-        aim: null, // 人類玩家以移動方向轉向；魔王 AI 則合成 aim 角度 (邊走邊瞑)
+        aim: null, // 人類玩家以移動方向轉向；魔王 AI 則合成 aim 角度
       };
     },
   };

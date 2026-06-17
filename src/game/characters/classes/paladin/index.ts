@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 10, name: '聖騎士', color: '#daa520', shape: 'square', sprite: characterSprite('paladin', '#daa520', false, drawPaladinTexture),
+    id: 10, name: '聖騎士', color: '#daa520', shape: 'square', sprite: characterSprite('paladin', '#daa520', false, drawPaladinTexture), meleeRole: true,
     maxHp: 380, maxMana: 80, speed: 138,
     desc: '以信仰反擊的前排坦克。聖光懲戒讓攻擊你的敵人自食惡果、神聖衝鋒暈眩開團、制裁之光淨化全隊並懲擊敵群，大招天堂審判降下光柱持續灼燒並庇佑友軍。傷害不高，價值在懲罰與守護。',
     role: '前排 · 反擊/淨化',

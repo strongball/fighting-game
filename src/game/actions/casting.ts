@@ -114,12 +114,46 @@ export function tryUltimate(state, p) {
   }
 }
 
+const BUFFER_WINDOW = 0.22; // 連招輸入緩衝 (秒) — CD 還沒到也可預按
+
+// 偵測 rising edge (這幀按下、上一幀未按)；把按鍵塞進 buffer，CD 到時自動施放
+function detectAndBuffer(p, input) {
+  if (!p._lastInput) p._lastInput = {};
+  if (!p._buffer) p._buffer = {}; // slot -> remaining time
+  const slots = ['basic', 'skill1', 'skill2', 'ultimate', 'evade'];
+  for (const slot of slots) {
+    const cur = !!input[slot];
+    const prev = !!p._lastInput[slot];
+    if (cur && !prev) p._buffer[slot] = BUFFER_WINDOW; // rising edge → 進入緩衝
+    p._lastInput[slot] = cur;
+  }
+}
+
+function tickBuffer(state, p, dt) {
+  if (!p._buffer) return;
+  for (const slot of Object.keys(p._buffer)) {
+    p._buffer[slot] -= dt;
+    if (p._buffer[slot] <= 0) { delete p._buffer[slot]; continue; }
+    // CD 到 → 嘗試施放；成功就清緩衝
+    const before = p.cd[slot] || 0;
+    if (before > 0) continue;
+    if (slot === 'ultimate') tryUltimate(state, p);
+    else tryAction(state, p, slot);
+    // 成功施放會把 cd 設成 action.cd，>0 表示放出去了
+    if ((p.cd[slot] || 0) > 0) delete p._buffer[slot];
+  }
+}
+
 export function castInputActions(state, p, input, dt) {
   tickChargeState(state, p, input, dt);
-  if (p.effects.stun) return;
+  if (p.effects.stun) { p._buffer = null; return; }
+  detectAndBuffer(p, input);
+  // 即時 (按住) 觸發 — 沿用既有行為
   if (input.basic) tryAction(state, p, 'basic');
   if (input.skill1) tryAction(state, p, 'skill1');
   if (input.skill2) tryAction(state, p, 'skill2');
   if (input.ultimate) tryUltimate(state, p);
   if (input.evade) tryAction(state, p, 'evade');
+  // 緩衝消耗 — CD 到了補放
+  tickBuffer(state, p, dt);
 }

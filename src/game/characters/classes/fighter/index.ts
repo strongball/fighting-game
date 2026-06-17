@@ -7,7 +7,7 @@ import { attachSkinGear } from './gear.ts';
 import './vfx.ts';
 
 const data = {
-    id: 9, name: '格鬥家', color: '#f1c40f', shape: 'circle', sprite: characterSprite('fighter', '#f1c40f', true, drawFighterTexture),
+    id: 9, name: '格鬥家', color: '#f1c40f', shape: 'circle', sprite: characterSprite('fighter', '#f1c40f', true, drawFighterTexture), meleeRole: true,
     maxHp: 260, maxMana: 70, speed: 196,
     desc: '自給自足的連段決鬥者。連環拳累積氣勢、上勾拳擊飛收尾、招架反擊彈回傷害，大招真·昇龍霸一記定身重擊。最不依賴隊友的萬用 flex。',
     role: '近戰 · 連段決鬥',

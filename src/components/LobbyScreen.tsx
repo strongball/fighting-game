@@ -79,6 +79,12 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
           >
             ↑↓←→ 移動 + ASDF 技能
           </button>
+          <button
+            className={'btn' + (selectedControlScheme === 'wasd-ijkl' ? ' primary' : '')}
+            onClick={() => onSelectControlScheme('wasd-ijkl')}
+          >
+            WASD 移動 + JKL 技能 + I 大絕
+          </button>
         </div>
 
         <h3>隊伍</h3>
@@ -177,7 +183,10 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
                     <span className="pchar">{c.name}</span>
                     {p.team ? <span className="pteam">隊 {p.team}</span> : null}
                     <span className="pcontrol">
-                      {p.isNpc ? '🤖 NPC' : (p.controlScheme === 'wasd-jkl' ? '⌨️ WASD' : '🎮 ↑↓←→')}
+                      {p.isNpc ? '🤖 NPC'
+                        : p.controlScheme === 'wasd-jkl' ? '⌨️ WASD+;'
+                        : p.controlScheme === 'wasd-ijkl' ? '⌨️ WASD+I'
+                        : '🎮 ↑↓←→'}
                     </span>
                   </div>
                 );

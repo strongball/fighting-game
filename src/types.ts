@@ -2,7 +2,7 @@
 // 引擎模組（game/*.js）維持 JavaScript，這裡只描述跨界傳遞用到的形狀。
 
 export type AppPhase = 'menu' | 'lobby' | 'game' | 'gameover';
-export type ControlScheme = 'wasd-jkl' | 'arrows-asdf';
+export type ControlScheme = 'wasd-jkl' | 'arrows-asdf' | 'wasd-ijkl';
 
 export interface GameFlags {
   freeMana: boolean;
