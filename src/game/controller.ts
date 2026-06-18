@@ -63,11 +63,16 @@ function createController(): GameController {
   let lastSnapshot: any = null;
   let view: any = null;
   let localSelf: any = null;       // 本機自身移動預測
+  // 快照時間緩衝：加入者在「最新快照之前 INTERP_DELAY 秒」的時間點,於兩個快照之間插值，
+  // 讓遠端角色在 60fps 下完全滑順、且能吸收網路抖動 / 單包遺失 (緩衝內仍有資料可插)。
+  const INTERP_DELAY = 0.10; // 渲染落後最新快照約 100ms
+  let snapBuf: { recv: number; snap: any }[] = []; // recv = performance.now()/1000
+  let lastSnapSeq = -1;            // 丟棄 unreliable 通道後到的舊/重複快照
 
   let running = false;
   let wantLoop = false;            // 想啟動迴圈但等待 canvas 掛上
   let gameoverSent = false;
-  let accumulator = 0, snapAcc = 0, inputAcc = 0;
+  let accumulator = 0, snapAcc = 0, inputAcc = 0, snapSeq = 0;
   let lastLogic = 0;
   let lastRender = 0;
   let logicTimer: ReturnType<typeof setInterval> | null = null;
@@ -128,7 +133,7 @@ function createController(): GameController {
     net.on('onData', (_from: string, data: any) => {
       if (data.t === 'lobby') { lobby = data.players; if (data.gameFlags) gameFlags = data.gameFlags; renderLobby(); }
       else if (data.t === 'start') { lobby = data.lobby; startFromSnapshot(data.state); }
-      else if (data.t === 'state') { receiveSnapshot(data.snapshot); }
+      else if (data.t === 'state') { receiveSnapshot(data.snapshot, data.seq); }
       else if (data.t === 'gameover') { joinerGameover(data); }
       else if (data.t === 'tolobby') { lobby = data.players; stopLoop(); input.disable(); emit('phase', 'lobby'); renderLobby(); }
       else if (data.t === 'full') { alert('房間已滿（上限 ' + MAX_PLAYERS + ' 人）'); window.location.reload(); }
@@ -163,6 +168,9 @@ function createController(): GameController {
   function startFromSnapshot(state: any) {
     lastSnapshot = state;
     view = emptyView();
+    // 以初始狀態種子化快照緩衝,讓第一個 'state' 到達前就有遠端角色可插值
+    snapBuf = [{ recv: performance.now() / 1000, snap: state }];
+    lastSnapSeq = -1;
     const me = state.players[selfId as string];
     localSelf = me ? { x: me.x, y: me.y, facing: me.facing, kvx: 0, kvy: 0, charId: me.charId } : null;
     beginLoop();
@@ -170,6 +178,45 @@ function createController(): GameController {
 
   function emptyView() {
     return { players: {}, projectiles: [], zones: [], fx: [], destructibles: [], phase: 'playing', winner: null, time: 0 };
+  }
+
+  // ---------- 房主：精簡快照 (只送加入者「渲染/HUD」需要的欄位) ----------
+  // 原本廣播整包 gameState：每個實體都帶大量「房主專用」模擬欄位 (魔王/小兵的 aiState、
+  // charge/leap/trail/suppress 計時器、不斷累積的 stats…)。這些加入者完全用不到，卻要在
+  // 主執行緒以 30Hz 反序列化，造成 GC / 解析尖峰 → 加入者畫面卡頓 (房主擁有物件故不受影響)。
+  // 改送精簡快照後，封包小很多、加入者每幀分配的垃圾大幅下降，卡頓即緩解。
+  function serializePlayer(p: any) {
+    return {
+      id: p.id, name: p.name, charId: p.charId,
+      x: p.x, y: p.y, facing: p.facing, kvx: p.kvx, kvy: p.kvy,
+      hp: p.hp, maxHp: p.maxHp, mana: p.mana, maxMana: p.maxMana,
+      alive: p.alive, shield: p.shield, shieldTime: p.shieldTime, kills: p.kills,
+      effects: p.effects, cd: p.cd, ult: p.ult, team: p.team, chargeState: p.chargeState,
+      // 魔王/召喚物/部位渲染旗標
+      isBoss: p.isBoss, isPart: p.isPart, isMinion: p.isMinion, isFake: p.isFake, isMirror: p.isMirror,
+      ownerId: p.ownerId, partId: p.partId, partColor: p.partColor, scale: p.scale, reviveProg: p.reviveProg,
+      // HUD/渲染額外線索：破綻窗口、相位機制覆寫、倒地判定 (aiId)、引導光束 (channel)
+      aiId: p.aiId, channel: p.channel, recoverWindow: p.recoverWindow, recoverHeavy: p.recoverHeavy,
+      phaseTagsOverride: p.phaseTagsOverride,
+    };
+  }
+
+  function serializeSnapshot(state: any) {
+    const players: Record<string, any> = {};
+    for (const id of Object.keys(state.players)) players[id] = serializePlayer(state.players[id]);
+    return {
+      phase: state.phase, winner: state.winner, winnerTeam: state.winnerTeam, time: state.time,
+      mode: state.mode, round: state.round, bossId: state.bossId,
+      bossHp: state.bossHp, bossMaxHp: state.bossMaxHp,
+      roundPhase: state.roundPhase, roundTimer: state.roundTimer, introDur: state.introDur,
+      banner: state.banner, tethers: state.tethers, bossWipedRound: state.bossWipedRound,
+      // 全滅面板只需要重打次數；不送整包 stats (會持續累積、且只在結算才完整用到)
+      stats: state.stats ? { _retryCount: state.stats._retryCount || 0 } : null,
+      players,
+      // 投射物/區域/特效/可破壞物仍是渲染必需，原樣帶上 (數量少、生命短)
+      projectiles: state.projectiles, zones: state.zones, fx: state.fx,
+      destructibles: state.destructibles || [],
+    };
   }
 
   // ---------- 迴圈生命週期 ----------
@@ -221,13 +268,16 @@ function createController(): GameController {
       while (accumulator >= DT && guard < 8) { step(gameState, inputs, DT); accumulator -= DT; guard++; }
 
       snapAcc += dt;
-      if (snapAcc >= SNAPSHOT_INTERVAL) { snapAcc = 0; net.broadcast({ t: 'state', snapshot: gameState }); }
+      // 快照走「不可靠 / 不排序」通道 (broadcastSnapshot)：state 是 latest-wins,允許掉包/亂序,
+      // 藉此避開可靠通道的 head-of-line blocking (一包延遲卡住後續全部) — 偶發大卡頓的根因。
+      // 帶 seq 讓加入者丟棄後到的舊包。
+      if (snapAcc >= SNAPSHOT_INTERVAL) { snapAcc = 0; net.broadcastSnapshot({ t: 'state', seq: snapSeq++, snapshot: serializeSnapshot(gameState) }); }
 
       if (gameState.phase === 'gameover' && !gameoverSent) hostGameover();
     } else {
       inputAcc += dt;
       if (inputAcc >= INPUT_INTERVAL) { inputAcc = 0; net.sendToHost({ t: 'input', input: inp }); }
-      predictAndInterpolate(inp, dt);
+      tickSelfPrediction(inp, dt); // 自身固定步預測；遠端插值改在 draw() 以 60fps 進行
     }
 
     // 後備渲染：若 requestAnimationFrame 因分頁被視為隱藏而暫停，
@@ -239,7 +289,7 @@ function createController(): GameController {
     if (!renderer) return;
     lastRender = performance.now();
     if (role === 'host') { if (gameState) renderer.render(gameState, selfId); }
-    else if (view) renderer.render(view, selfId);
+    else { const v = buildView(); if (v) renderer.render(v, selfId); } // 每幀重建插值視圖
   }
 
   // ---------- 渲染迴圈 ----------
@@ -251,67 +301,99 @@ function createController(): GameController {
     rafId = requestAnimationFrame(renderLoop);
   }
 
-  // ---------- 加入者：預測 + 插值 ----------
-  function receiveSnapshot(snap: any) {
+  // ---------- 加入者：快照緩衝 + 自身預測 + 遠端插值 ----------
+  function receiveSnapshot(snap: any, seq?: number) {
+    // 不可靠通道可能後到舊包 / 重複：以 seq 丟棄非最新者 (沒帶 seq 的舊路徑則照收)
+    if (seq != null) { if (seq <= lastSnapSeq) return; lastSnapSeq = seq; }
     lastSnapshot = snap;
+    const recv = performance.now() / 1000;
+    snapBuf.push({ recv, snap });
+    // 只保留最近約 1 秒,避免無限成長
+    const cut = recv - 1.0;
+    while (snapBuf.length > 2 && snapBuf[0].recv < cut) snapBuf.shift();
+    // 自身位置校正 (server reconciliation)：把預測拉回權威值,死亡則直接對齊
     if (localSelf && snap.players[selfId as string]) {
       const me = snap.players[selfId as string];
-      const blend = me.alive ? 0.2 : 1; // 死亡直接對齊
+      const blend = me.alive ? 0.2 : 1;
       localSelf.x += (me.x - localSelf.x) * blend;
       localSelf.y += (me.y - localSelf.y) * blend;
       localSelf.kvx = me.kvx; localSelf.kvy = me.kvy;
     }
   }
 
-  function predictAndInterpolate(inp: any, dt: number) {
+  // 自身移動固定步預測 (與輸入同頻;遠端不在此處)
+  function tickSelfPrediction(inp: any, dt: number) {
     const snap = lastSnapshot;
-    if (!snap || !view) return;
-    view.phase = snap.phase; view.winner = snap.winner; view.time = snap.time;
-    // 闖關模式視圖欄位 (HUD 需要)
-    view.mode = snap.mode; view.round = snap.round; view.bossId = snap.bossId;
-    view.bossHp = snap.bossHp; view.bossMaxHp = snap.bossMaxHp;
-    view.roundPhase = snap.roundPhase; view.banner = snap.banner; view.tethers = snap.tethers;
+    if (!snap || !localSelf) return;
+    const me = snap.players[selfId as string];
+    if (me && me.alive) {
+      const tmp = { charId: localSelf.charId, x: localSelf.x, y: localSelf.y, vx: 0, vy: 0, kvx: localSelf.kvx, kvy: localSelf.kvy, facing: localSelf.facing, effects: me.effects };
+      applyMovement(tmp, inp, dt);
+      localSelf.x = tmp.x; localSelf.y = tmp.y; localSelf.facing = tmp.facing;
+      localSelf.kvx = tmp.kvx; localSelf.kvy = tmp.kvy;
+    } else if (me) {
+      localSelf.x = me.x; localSelf.y = me.y;
+    }
+  }
 
-    const k = 1 - Math.exp(-14 * dt); // 遠端玩家位置平滑
+  // 找出夾住 renderTime 的兩個快照 (供線性插值)；緩衝不足/枯竭時夾在端點 (hold)
+  function findBracket(rt: number): { a: any; b: any; alpha: number } | null {
+    if (snapBuf.length === 0) return null;
+    let i = -1;
+    for (let k = 0; k < snapBuf.length; k++) { if (snapBuf[k].recv <= rt) i = k; else break; }
+    if (i < 0) return { a: snapBuf[0].snap, b: snapBuf[0].snap, alpha: 0 };          // rt 比最舊還舊
+    if (i >= snapBuf.length - 1) {                                                    // rt 超過最新 → hold 最新
+      const last = snapBuf[snapBuf.length - 1].snap; return { a: last, b: last, alpha: 0 };
+    }
+    const A = snapBuf[i], B = snapBuf[i + 1];
+    const span = B.recv - A.recv;
+    const alpha = span > 1e-6 ? (rt - A.recv) / span : 0;
+    return { a: A.snap, b: B.snap, alpha: Math.max(0, Math.min(1, alpha)) };
+  }
+
+  // 每幀 (60fps) 由 draw() 呼叫：頂層欄位取最新快照,遠端玩家在時間緩衝內插值,自身用預測值
+  function buildView() {
+    const latest = lastSnapshot;
+    if (!latest) return null;
+    if (!view) view = emptyView();
+    // 頂層 (HUD / 過場動畫 / 動態物件) 一律取最新快照
+    view.phase = latest.phase; view.winner = latest.winner; view.time = latest.time;
+    view.mode = latest.mode; view.round = latest.round; view.bossId = latest.bossId;
+    view.bossHp = latest.bossHp; view.bossMaxHp = latest.bossMaxHp;
+    view.roundPhase = latest.roundPhase; view.banner = latest.banner; view.tethers = latest.tethers;
+    view.introDur = latest.introDur; view.roundTimer = latest.roundTimer;
+    view.bossWipedRound = latest.bossWipedRound; view.stats = latest.stats;
+    // 投射物/區域/特效/可破壞物：生命短、移動快,取最新即可 (插值意義不大)
+    view.projectiles = latest.projectiles; view.zones = latest.zones;
+    view.fx = latest.fx; view.destructibles = latest.destructibles || [];
+
+    const rt = performance.now() / 1000 - INTERP_DELAY;
+    const pair = findBracket(rt);
     const next: Record<string, any> = {};
-    for (const id of Object.keys(snap.players)) {
-      const sp = snap.players[id];
-      let vp = view.players[id];
-      if (!vp) vp = { ...sp };
-      Object.assign(vp, {
-        id: sp.id, name: sp.name, charId: sp.charId, facing: sp.facing,
-        hp: sp.hp, maxHp: sp.maxHp, mana: sp.mana, maxMana: sp.maxMana,
-        alive: sp.alive, shield: sp.shield, kills: sp.kills, effects: sp.effects, cd: sp.cd, ult: sp.ult, team: sp.team, chargeState: sp.chargeState,
-        // 魔王/召喚物/部位渲染旗標
-        isBoss: sp.isBoss, isPart: sp.isPart, isMinion: sp.isMinion, isFake: sp.isFake, isMirror: sp.isMirror,
-        ownerId: sp.ownerId, partId: sp.partId, partColor: sp.partColor, scale: sp.scale, reviveProg: sp.reviveProg,
-      });
+    for (const id of Object.keys(latest.players)) {
+      const sp = latest.players[id];
+      const vp = view.players[id] || {};
+      Object.assign(vp, sp); // 快照已精簡 → 直接覆蓋所有渲染欄位 (含 x/y/facing,下方再覆寫)
       if (id === selfId && localSelf) {
         vp.x = localSelf.x; vp.y = localSelf.y; vp.facing = localSelf.facing;
-      } else {
-        vp.x += (sp.x - vp.x) * k;
-        vp.y += (sp.y - vp.y) * k;
+      } else if (pair) {
+        const a = pair.a.players[id], b = pair.b.players[id];
+        if (a && b) {
+          // 瞬移/閃現：兩快照間位移過大時直接對齊終點,避免被插值成「滑行」而失去瞬移感
+          if ((b.x - a.x) ** 2 + (b.y - a.y) ** 2 > 160 * 160) {
+            vp.x = b.x; vp.y = b.y; vp.facing = b.facing;
+          } else {
+            vp.x = a.x + (b.x - a.x) * pair.alpha;
+            vp.y = a.y + (b.y - a.y) * pair.alpha;
+            vp.facing = lerpAngle(a.facing, b.facing, pair.alpha);
+          }
+        } else if (b) { vp.x = b.x; vp.y = b.y; vp.facing = b.facing; }
+        else if (a) { vp.x = a.x; vp.y = a.y; vp.facing = a.facing; }
       }
       next[id] = vp;
     }
     view.players = next;
-    view.projectiles = snap.projectiles;
-    view.zones = snap.zones;
-    view.fx = snap.fx;
-    view.destructibles = snap.destructibles || [];
-
-    // 預測自身移動
-    if (localSelf) {
-      const me = snap.players[selfId as string];
-      if (me && me.alive) {
-        const tmp = { charId: localSelf.charId, x: localSelf.x, y: localSelf.y, vx: 0, vy: 0, kvx: localSelf.kvx, kvy: localSelf.kvy, facing: localSelf.facing, effects: me.effects };
-        applyMovement(tmp, inp, dt);
-        localSelf.x = tmp.x; localSelf.y = tmp.y; localSelf.facing = tmp.facing;
-        localSelf.kvx = tmp.kvx; localSelf.kvy = tmp.kvy;
-      } else if (me) {
-        localSelf.x = me.x; localSelf.y = me.y;
-      }
-    }
+    return view;
   }
 
   // ---------- 結算 ----------
@@ -578,6 +660,14 @@ function createController(): GameController {
     detachCanvas,
     get selectedChar() { return selectedChar; },
   };
+}
+
+// 角度插值 (走最短弧,避免 ±π 邊界瞬轉)
+function lerpAngle(a: number, b: number, t: number): number {
+  let d = b - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
 }
 
 // 模組單例：整個 App 共用同一個 controller。
