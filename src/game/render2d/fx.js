@@ -13,6 +13,7 @@ export function drawFx(ctx, fx, renderCtx) {
     case 'dash': drawDashFx(ctx, fx, t, p); break;
     case 'popup': drawPopupFx(ctx, fx, t, p); break;
     case 'skillname': drawSkillNameFx(ctx, fx, t, p); break;
+    case 'ultimate': drawUltimateFx(ctx, fx, t, p); break;
     default: drawHitFx(ctx, fx, t, p);
   }
 }
@@ -254,4 +255,54 @@ function drawDashFx(ctx, fx, t) {
   }
   ctx.restore();
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+
+function drawUltimateFx(ctx, fx, t, p) {
+  const x = sx(fx.x), y = sy(fx.y) - BODY_HEIGHT * 0.5;
+  const radius = fx.radius || 140;
+  const scale = fx.isBoss ? 1.8 : 1.0;
+  const R = radius * scale;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  // Multiple expanding shockwaves
+  for (let k = 0; k < 3; k++) {
+    ctx.globalAlpha = t * (0.85 - k * 0.2);
+    ctx.lineWidth = (6 - k * 1.5) * (fx.isBoss ? 2 : 1);
+    ctx.strokeStyle = k === 0 ? '#ffffff' : fx.color;
+    ctx.beginPath();
+    ctx.arc(x, y, R * (0.2 + 0.8 * p) * (1 - k * 0.15), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Large radial flash
+  const g = ctx.createRadialGradient(x, y, 0, x, y, R);
+  g.addColorStop(0, `rgba(255,255,255,${0.95 * t})`);
+  g.addColorStop(0.3, hexA(fx.color, 0.75 * t));
+  g.addColorStop(0.7, hexA(fx.color, 0.3 * t));
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, R, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Burst lines
+  ctx.globalAlpha = t * 0.9;
+  ctx.lineWidth = fx.isBoss ? 3 : 2;
+  ctx.strokeStyle = '#ffffff';
+  const lines = fx.isBoss ? 16 : 8;
+  for (let i = 0; i < lines; i++) {
+    const ang = (i / lines) * Math.PI * 2 + p * 0.5;
+    const l0 = R * 0.1, l1 = R * (0.4 + 0.6 * p);
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(ang) * l0, y + Math.sin(ang) * l0);
+    ctx.lineTo(x + Math.cos(ang) * l1, y + Math.sin(ang) * l1);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
 }

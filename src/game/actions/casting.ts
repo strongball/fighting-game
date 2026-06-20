@@ -96,6 +96,7 @@ export function tryUltimate(state: GameState, p: Player) {
   }
   executeAction(state, p, action, { silent: true });
   p.iaiReady = false;
+
   if (talent && talent.id === 'timeprism') applyEffect(p, 'haste', { duration: talent.duration || 1.5, factor: talent.factor || 1.25 });
   recordSkillUse(state, p, 'ultimate');
   addFx(state, {
@@ -107,7 +108,8 @@ export function tryUltimate(state: GameState, p: Player) {
     life: 0.7,
     radius: action.radius || 140,
     allyRadius: action.ally ? action.ally.radius : undefined,
-    vfx: action.vfx
+    vfx: action.vfx,
+    isBoss: p.isBoss
   });
   if (action.name) {
     addFx(state, { type: 'skillname', x: p.x, y: p.y, color: action.color || '#ffd166', life: 1.4, text: action.name, owner: p.id, ultimate: true });

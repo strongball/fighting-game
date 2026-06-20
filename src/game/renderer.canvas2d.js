@@ -10,6 +10,7 @@ import { getCharacter } from './characters.js';
 import { drawFx } from './render2d/fx.js';
 import { drawHUD } from './render2d/hud.js';
 import { createParticleSystem } from './render2d/particles.js';
+import { createBossUltimateAura2d } from './render2d/bossUltimateAura.js';
 import { drawBar, seeded, shade, sx, sy } from './render2d/utils.js';
 import { drawFloor, drawZone } from './render2d/world.js';
 
@@ -37,6 +38,7 @@ export function createRenderer(canvas) {
     shakeMag *= Math.exp(-SHAKE_DECAY * dt); if (shakeMag < 0.3) shakeMag = 0;
     flashA *= Math.exp(-FLASH_DECAY * dt); if (flashA < 0.01) flashA = 0;
   }
+  const bossUltimateAura = createBossUltimateAura2d({ ctx, particles, addShake, addFlash });
 
   // ---- fx 事件去重 → 觸發一次性粒子爆發 / 震動 / 閃光 ----
   function processFxEvents(state) {
@@ -216,6 +218,8 @@ export function createRenderer(canvas) {
     const sqX = 1 - Math.sin(a.phase * 2) * 0.045 * a.move;
     const bodyCY = by - BODY_HEIGHT - bob;
 
+    bossUltimateAura.draw(p, bx, bodyCY, r);
+
     const invis = p.effects && p.effects.invis;
     const evading = p.effects && p.effects.evading;
     const alpha = evading ? 0.55 : (invis ? (isSelf ? 0.5 : 0.22) : 1);
@@ -385,6 +389,7 @@ export function createRenderer(canvas) {
     // fx 事件 (一次性爆發/震動/閃光) + 本地模擬
     processFxEvents(state);
     updateTrails(state);
+    bossUltimateAura.sync(state.players, curDt);
     particles.update(curDt);
     updateShakeFlash(curDt);
 
@@ -417,6 +422,8 @@ export function createRenderer(canvas) {
     particles.draw();
 
     ctx.restore();
+
+    bossUltimateAura.drawOverlay();
 
     // ---- 全畫面命中閃光 (世界之上、HUD 之下) ----
     if (flashA > 0) {

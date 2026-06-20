@@ -58,7 +58,7 @@ const data = {
 
     basic: { name: '踏地震波', type: 'zone', range: 0, radius: 160, dmg: 36, lifetime: 0.4, tick: 0.4, knockback: 220, cd: 2.0, windup: 0.7, telegraph: 'circle', color: '#b0a99f', effect: STUN(0.4), vfx: 'boss_titan_stomp' },
     skill1: { name: '殲滅雷射', type: 'zone', range: 110, radius: 90, dmg: 50, lifetime: 1.6, tick: 0.3, delay: 1.0, moving: 200, requiresPart: 'arm_left', cd: 7, windup: 1.0, telegraph: 'line', color: '#49d0ff', vfx: 'boss_titan_laser' },
-    skill2: { name: '旋轉巨鋸', type: 'zone', range: 100, radius: 150, dmg: 30, lifetime: 2.2, tick: 0.25, moving: 280, requiresPart: 'arm_right', cd: 8, windup: 0.8, telegraph: 'arc', color: '#ff7043', effect: BURN(6, 2), vfx: 'boss_titan_saw' },
+    skill2: { name: '旋轉巨鋸', type: 'zone', range: 100, radius: 150, dmg: 30, lifetime: 2.2, tick: 0.25, moving: 280, requiresPart: 'arm_right', cd: 8, windup: 0.8, telegraph: 'line', color: '#ff7043', effect: BURN(6, 2), vfx: 'boss_titan_saw' },
     ultimate: { name: '核心過載', type: 'zone', range: 0, radius: 260, dmg: 70, lifetime: 0.6, tick: 0.6, delay: 1.2, knockback: 300, effect: STUN(0.6), requiresPartsDown: true, cd: 18, windup: 1.2, telegraph: 'circle', color: '#9fe8ff', vfx: 'boss_titan_ult' },
   };
 

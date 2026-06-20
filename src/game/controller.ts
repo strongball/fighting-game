@@ -570,6 +570,7 @@ function createController(): GameController {
   function detachCanvas() {
     stopLoop();
     input.disable();
+    renderer?.dispose?.();
     renderer = null;
     canvasEl = null;
   }

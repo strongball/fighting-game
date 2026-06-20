@@ -114,6 +114,8 @@ export function dealDamage(
   if (state.mode === 'boss' && state.roundPhase !== 'fighting') return;
   // 階段轉換 i-frame：Boss 短暫無敵
   if (target.isBoss && (target.phaseIframe || 0) > 0) return;
+  // Boss 限界突破鎖血期間無敵
+  if (target.isBoss && target.ultLockInvincible) return;
 
   const attacker = state.players[attackerId];
   const hostile = attacker && attacker.id !== target.id && attacker.alive;
@@ -179,6 +181,92 @@ export function dealDamage(
   }
   if (dmg <= 0) return;
   target.ult = Math.min(ULT_MAX, (target.ult || 0) + dmg * ULT_GAIN_TAKE);
+
+  // 20% Health-lock forced ultimate cast mechanism for bosses
+  if (target.isBoss && !target.ultLockTriggered) {
+    const threshold = target.maxHp * 0.2;
+    if (target.hp - dmg <= threshold) {
+      dmg = Math.max(0, target.hp - threshold);
+      target.ultLockTriggered = true;
+      target.ultLockInvincible = true;
+      target.isCastingLockHpUlt = true;
+
+      // Cleanse all status effects/debuffs
+      applyEffect(target, 'cleanse');
+
+      // Clear charge state if any
+      target.chargeState = null;
+
+      // Setup the forced ultimate cast in the AI
+      const character = getCharacter(target.charId);
+      const action = character.ultimate;
+      if (action) {
+        // Clear CD of ultimate
+        target.cd.ultimate = 0;
+
+        // Force the AI state
+        const s = target.aiState || (target.aiState = {});
+        s.mode = 'windup';
+        s.slot = 'ultimate';
+
+        const rawWindup = action.windup != null ? action.windup : 0.5;
+        s.windupT = Math.max(1.0, rawWindup);
+        s.totalWindupT = s.windupT;
+        s.chainQueue = null;
+        s.precalculatedZones = null;
+        s.preselectedSoulBindPairs = null;
+        s.stolenUltimate = null;
+        s.safeLeft = null;
+
+        // Aim at the nearest player/enemy
+        const enemies = [];
+        for (const o of Object.values(state.players) as any[]) {
+          if (o.alive && isEnemy(state, target.id, o)) enemies.push(o);
+        }
+        if (enemies.length > 0) {
+          let closest = null, bd = Infinity;
+          for (const o of enemies) {
+            const d = Math.hypot(o.x - target.x, o.y - target.y);
+            if (d < bd) { bd = d; closest = o; }
+          }
+          if (closest) {
+            s.aimAng = Math.atan2(closest.y - target.y, closest.x - target.x);
+            s.lastTargetX = closest.x;
+            s.lastTargetY = closest.y;
+          } else {
+            s.aimAng = target.facing;
+          }
+        } else {
+          s.aimAng = target.facing;
+        }
+      }
+
+      // Show screen banner and ultimate visual effect
+      state.banner = {
+        text: '奧義·限界突破',
+        sub: `${target.name} 進入無敵狀態，釋放終極大招！`,
+        life: 2.0,
+        kind: 'phase',
+        color: '#ff3333'
+      };
+
+      addFx(state, {
+        type: 'ultimate',
+        x: target.x, y: target.y, facing: target.facing,
+        color: '#ff3333',
+        life: 1.2, radius: 400,
+        isBoss: true
+      });
+      addFx(state, {
+        type: 'ultimate',
+        x: target.x, y: target.y, facing: target.facing,
+        color: '#ffffff',
+        life: 0.8, radius: 250,
+        isBoss: true
+      });
+    }
+  }
+
   target.hp -= dmg;
 
   const isCrit = dmg >= amount * 1.35 || dmg >= 30;

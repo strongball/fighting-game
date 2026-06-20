@@ -144,6 +144,9 @@ export function applyEffect(p: Player, kind: EffectKind, data?: any, srcId?: Ent
     for (const k of CLEANSEABLE) delete p.effects[k];
     return;
   }
+  if (p.isBoss && p.ultLockInvincible && EFFECT_DEFS[kind]?.cleanseable) {
+    return;
+  }
   const def = EFFECT_DEFS[kind];
   (def && def.apply ? def.apply : genericApply)(p, kind, data || {}, srcId);
 }

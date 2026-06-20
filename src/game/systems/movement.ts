@@ -56,6 +56,11 @@ export function applyMovement(p: Player, input: Input, dt: number) {
   p.vy += (targetVy - p.vy) * k;
   if (input.aim != null && !p.effects.stun) p.facing = input.aim;
 
+  if (p.isBoss && p.ultLockInvincible) {
+    p.kvx = 0;
+    p.kvy = 0;
+  }
+
   p.x += (p.vx + p.kvx) * dt;
   p.y += (p.vy + p.kvy) * dt;
 

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { setVecFromWorld, PROJECTILE_Y } from './coords.js';
 import { getVfx } from './vfx/index.ts';
+import { ultimateBurst } from './vfx/lib.js';
 import { getSfxManager } from '../../utils/sfxManager';
 
 export function createFxBus({ scene, particles, sceneMgr }) {
@@ -24,53 +25,104 @@ export function createFxBus({ scene, particles, sceneMgr }) {
     if (shape === 'arc') {
       const arc = f.arc || 1.4;
       const range = f.range || f.radius || 100;
-      const inner = range * 0.18;
-      const geo = new THREE.RingGeometry(inner, range, 32, 1, -arc / 2, arc);
-      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-        color: f.color, transparent: true, opacity: baseOpacity, side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending, depthWrite: false,
+      const inner = 0;
+      const geo = new THREE.RingGeometry(inner, 1, 32, 1, -arc / 2, arc);
+      
+      const mBg = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: f.color, transparent: true, opacity: baseOpacity * 0.25, side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
       }));
-      m.rotation.x = -Math.PI / 2;
+      mBg.rotation.x = -Math.PI / 2;
+      mBg.scale.setScalar(range);
+
+      const mFill = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: f.color, transparent: true, opacity: baseOpacity * 0.65 * progress, side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+      }));
+      mFill.rotation.x = -Math.PI / 2;
+      mFill.position.y = -0.1;
+      mFill.scale.setScalar(range * progress);
+
       const g = new THREE.Group();
       g.position.set(c.x, 2, c.z);
       g.rotation.y = -(f.facing || 0);
-      g.add(m);
-      addTransient(g, life, (mesh, t) => {
-        m.material.opacity = baseOpacity * (1 - t);
+      g.add(mBg);
+      g.add(mFill);
+
+      addTransient(g, life, (group, t) => {
+        mBg.material.opacity = baseOpacity * 0.25 * (1 - t);
+        mFill.material.opacity = baseOpacity * 0.65 * progress * (1 - t);
       });
       g.userData.geo = geo;
-      g.userData.mat = m.material;
+      g.userData.mat = mBg.material;
+      g.userData.mat2 = mFill.material;
     } else if (shape === 'line') {
       const range = f.range || 320;
-      const width = (f.radius || 40) * 1.6;
-      const geo = new THREE.PlaneGeometry(range, width);
-      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-        color: f.color, transparent: true, opacity: baseOpacity, side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending, depthWrite: false,
+      const width = (f.radius || 40) * 2;
+      const geo = new THREE.PlaneGeometry(1, 1);
+      
+      const mBg = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: f.color, transparent: true, opacity: baseOpacity * 0.25, side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
       }));
-      m.rotation.x = -Math.PI / 2;
-      m.position.x = range / 2;
+      mBg.rotation.x = -Math.PI / 2;
+      mBg.scale.set(range, width, 1);
+      mBg.position.x = range / 2;
+
+      const mFill = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: f.color, transparent: true, opacity: baseOpacity * 0.65 * progress, side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+      }));
+      mFill.rotation.x = -Math.PI / 2;
+      mFill.position.y = -0.1;
+      mFill.scale.set(range * progress, width * 0.95, 1);
+      mFill.position.x = (range * progress) / 2;
+
       const g = new THREE.Group();
       g.position.set(c.x, 2, c.z);
       g.rotation.y = -(f.facing || 0);
-      g.add(m);
-      addTransient(g, life, () => { m.material.opacity = baseOpacity * (1 - 0); });
+      g.add(mBg);
+      g.add(mFill);
+
+      addTransient(g, life, (group, t) => {
+        mBg.material.opacity = baseOpacity * 0.25 * (1 - t);
+        mFill.material.opacity = baseOpacity * 0.65 * progress * (1 - t);
+      });
       g.userData.geo = geo;
-      g.userData.mat = m.material;
+      g.userData.mat = mBg.material;
+      g.userData.mat2 = mFill.material;
     } else {
       // circle / self
       const r = f.radius || 80;
+      const g = new THREE.Group();
+      g.position.set(c.x, 2, c.z);
+
       const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
-        color: f.color, transparent: true, opacity: baseOpacity, side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending, depthWrite: false,
+        color: f.color, transparent: true, opacity: baseOpacity * 0.4, side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
       }));
       m.rotation.x = -Math.PI / 2;
-      m.position.set(c.x, 2, c.z);
       m.scale.setScalar(r);
-      addTransient(m, life, (mesh, t) => {
-        m.material.opacity = baseOpacity * (1 - t);
+      g.add(m);
+
+      const diskGeo = new THREE.CircleGeometry(1, 32);
+      const mFill = new THREE.Mesh(diskGeo, new THREE.MeshBasicMaterial({
+        color: f.color, transparent: true, opacity: baseOpacity * 0.45 * progress, side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+      }));
+      mFill.rotation.x = -Math.PI / 2;
+      mFill.position.y = -0.2;
+      mFill.scale.setScalar(r * progress);
+      g.add(mFill);
+
+      addTransient(g, life, (group, t) => {
+        m.material.opacity = baseOpacity * 0.4 * (1 - t);
+        mFill.material.opacity = baseOpacity * 0.45 * progress * (1 - t);
         m.scale.setScalar(r * (1 + 0.05 * Math.sin(t * 10)));
       });
+      g.userData.geo = diskGeo;
+      g.userData.mat = m.material;
+      g.userData.mat2 = mFill.material;
     }
   }
 
@@ -314,6 +366,16 @@ export function createFxBus({ scene, particles, sceneMgr }) {
       }
 
       case 'ultimate': {
+        if (f.isBoss) {
+          ultimateBurst(ctx, c, {
+            color: f.color,
+            radius: f.radius || 240,
+            count: 80,
+            shake: 30,
+            flash: 0.55
+          });
+          break;
+        }
         if (vfx && vfx.onCast) { vfx.onCast(ctx, f, c); break; }
         // 通用大招華麗回饗 (無專屬 vfx 時)
         const R = f.radius || 140;
@@ -353,7 +415,8 @@ export function createFxBus({ scene, particles, sceneMgr }) {
         scene.remove(tr.mesh);
         if (tr.mesh.userData.geo) tr.mesh.userData.geo.dispose();
         if (tr.mesh.userData.mat) tr.mesh.userData.mat.dispose();
-        else if (tr.mesh.material) tr.mesh.material.dispose();
+        if (tr.mesh.userData.mat2) tr.mesh.userData.mat2.dispose();
+        if (tr.mesh.material) tr.mesh.material.dispose();
         transients.splice(i, 1);
       }
     }
@@ -373,8 +436,10 @@ export function createFxBus({ scene, particles, sceneMgr }) {
   function clear() {
     for (const tr of transients) {
       scene.remove(tr.mesh);
+      if (tr.mesh.userData.geo) tr.mesh.userData.geo.dispose();
       if (tr.mesh.userData.mat) tr.mesh.userData.mat.dispose();
-      else if (tr.mesh.material) tr.mesh.material.dispose();
+      if (tr.mesh.userData.mat2) tr.mesh.userData.mat2.dispose();
+      if (tr.mesh.material) tr.mesh.material.dispose();
     }
     transients.length = 0;
     for (const fl of floats) {

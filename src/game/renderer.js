@@ -14,6 +14,7 @@ import { createFxBus } from './render3d/fxbus.js';
 import { createHud } from './render3d/hud.js';
 import { applyDecorations, updateDecorationFade } from './render3d/decorations.js';
 import { createAtmosphere } from './render3d/atmosphere.js';
+import { createBossUltimateAura } from './render3d/bossUltimateAura.js';
 import { getBossForRound } from './bosses.js';
 import { createCharacterModel, animateModel, attachSkin } from './render3d/models.js';
 import { computeBossVisualState, createBossPartModel } from './bosses/render3d.ts';
@@ -53,6 +54,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
   const entities = createEntityLayer(scene, particles, { addTransient: fxbus.addTransient, sceneMgr });
   const hud = createHud({ stage: sceneMgr.stage, scene, camera, controlScheme, hooks });
   const atmosphere = createAtmosphere(particles);
+  const bossUltimateAura = createBossUltimateAura({ scene, particles, sceneMgr });
   let appliedThemeRound = -1;
   let appliedThemeMode = '';
   const sfx = getSfxManager();
@@ -149,6 +151,13 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
       e.ry += (p.y - e.ry) * lerpK;
       e.group.position.x = sceneX(e.rx);
       e.group.position.z = sceneZ(e.ry);
+
+      // Model Power Vibration (Visual Shake) for Invincible Bosses
+      if (p.isBoss && p.ultLockInvincible) {
+        const shakeAmp = 1.35 * (p.scale || 1);
+        e.group.position.x += (Math.random() - 0.5) * shakeAmp;
+        e.group.position.z += (Math.random() - 0.5) * shakeAmp;
+      }
 
       // 速度：由平滑後的實際位移推導，再低通平滑 (穩定的 walk/idle 判定，避免動畫抖動)
       const instSpeed = dt > 0 ? Math.hypot(e.rx - prevRx, e.ry - prevRy) / dt : 0;
@@ -426,6 +435,8 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
 
     fxbus.process(state);
     syncPlayers(state, selfId, dt);
+    bossUltimateAura.sync(state.players, dt);
+
     updateHuntMarker(state, dt);
     entities.syncProjectiles(state.projectiles, dt);
     entities.syncZones(state.zones, dt);
@@ -458,5 +469,5 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     hud.render();
   }
 
-  return { render };
+  return { render, dispose: () => bossUltimateAura.dispose() };
 }

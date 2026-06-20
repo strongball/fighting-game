@@ -13,8 +13,8 @@
 //   recover → 施放後短暫停頓 → 回 idle
 // 每個技能 a.windup 控制起手秒數 (越簡單的王越長、破綻越大)。
 
-import { ARENA } from './constants.js';
-import { dist } from './entities/math.ts';
+import { ARENA, PLAYER_RADIUS } from './constants.js';
+import { dist, clamp } from './entities/math.ts';
 import { addFx } from './entities/fx.ts';
 import { isEnemy } from './entities/team.ts';
 import { dangerColor } from './bosses/danger.ts';
@@ -59,25 +59,389 @@ function moveAway(input, ent, tx, ty) {
 }
 const aimAt = (ent, tx, ty) => Math.atan2(ty - ent.y, tx - ent.x);
 
+// ---- 進入技能蓄力 (Windup) 狀態，並計算準確的預警標示參數 ----
+function startWindup(state, ent, slot, a, target, customWindup = null) {
+  const s = ent.aiState;
+  s.mode = 'windup';
+  s.slot = slot;
+
+  let rawWindup = customWindup != null ? customWindup : (a.windup != null ? a.windup : 0.5);
+  if (ent.isBoss) {
+    rawWindup = Math.max(1.0, rawWindup);
+  }
+  s.windupT = rawWindup;
+  s.totalWindupT = rawWindup;
+
+  if (a.once) s['_used_' + slot] = true;
+
+  // 鎖定瞄準與預警落點
+  s.aimAng = aimAt(ent, target.x, target.y);
+  
+  // 記錄初始目標位置（用於鎖定目標型預警，防玩家移動造成預警亂移）
+  s.lastTargetX = target.x;
+  s.lastTargetY = target.y;
+
+  // 清除先前的預計算數據，防止干擾
+  s.precalculatedZones = null;
+  s.preselectedSoulBindPairs = null;
+  s.stolenUltimate = null;
+  s.safeLeft = null;
+
+  if (a.type === 'zone' && (a.count || 1) > 1) {
+    const ang = s.aimAng;
+    const cos = Math.cos(ang);
+    const sin = Math.sin(ang);
+    const baseX = clamp(ent.x + cos * (a.range || 0), PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
+    const baseY = clamp(ent.y + sin * (a.range || 0), PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
+    const n = a.count;
+    const scatter = a.scatter || 120;
+    const zones = [];
+    for (let i = 0; i < n; i++) {
+      let zx = baseX;
+      let zy = baseY;
+      if (i > 0) {
+        const randAng = Math.random() * Math.PI * 2;
+        const rr = Math.sqrt(Math.random()) * scatter;
+        zx = clamp(baseX + Math.cos(randAng) * rr, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
+        zy = clamp(baseY + Math.sin(randAng) * rr, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
+      }
+      zones.push({ x: zx, y: zy });
+    }
+    s.precalculatedZones = zones;
+  }
+
+  if (a.type === 'soul_bind') {
+    const enemies = enemiesOf(state, ent);
+    if (enemies.length >= 2) {
+      const list = enemies.slice();
+      for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = list[i]; list[i] = list[j]; list[j] = t;
+      }
+      const pairs = Math.floor(Math.min(a.count || 2, list.length) / 2);
+      const chosen = [];
+      for (let k = 0; k < pairs; k++) {
+        chosen.push({ a: list[k * 2].id, b: list[k * 2 + 1].id });
+      }
+      s.preselectedSoulBindPairs = chosen;
+    }
+  }
+
+  if (a.type === 'steal_ultimate') {
+    const enemies = enemiesOf(state, ent);
+    if (enemies.length > 0) {
+      const victim = enemies[Math.floor(Math.random() * enemies.length)];
+      const ult = getCharacter(victim.charId).ultimate;
+      if (ult) {
+        s.stolenUltimate = ult;
+      }
+    }
+  }
+
+  if (a.type === 'light_dark') {
+    s.safeLeft = Math.random() < 0.5;
+  }
+}
+
+function getMultiblinkTargets(state, caster, action) {
+  const n = action.count || 3;
+  const cands = Object.values(state.players).filter((o) => o.alive && isEnemy(state, caster.id, o));
+  cands.sort((x, y) => {
+    const mx = (x.effects && x.effects.mark) ? 0 : 1;
+    const my = (y.effects && y.effects.mark) ? 0 : 1;
+    if (mx !== my) return mx - my;
+    const dxv = dist(caster.x, caster.y, x.x, x.y);
+    const dyv = dist(caster.x, caster.y, y.x, y.y);
+    if (dxv !== dyv) return dxv - dyv;
+    return Number(x.id) - Number(y.id);
+  });
+  return cands.slice(0, n);
+}
+
 // ---- 預警特效：依危險等級上色、依進度脈動加速、依招式形狀畫地面 decal ----
 function telegraph(state, ent, action, dt) {
   const s = ent.aiState;
-  const totalT = action.windup != null ? action.windup : 0.5;
+  const totalT = s.totalWindupT || Math.max(1.0, action.windup != null ? action.windup : 0.5);
   const progress = Math.max(0, Math.min(1, 1 - s.windupT / Math.max(0.001, totalT)));
   // 進度越高脈動越快 (0.22s → 0.08s)
   const interval = 0.22 - 0.14 * progress;
   s._tele = (s._tele || 0) - dt;
   if (s._tele > 0) return;
   s._tele = interval;
+  
   const color = action.telegraphColor || dangerColor(action);
-  const shape = action.telegraph || 'circle';
+  const ang = s.aimAng != null ? s.aimAng : (ent.facing || 0);
+
+  // 1. 如果是偷取大絕招，且預選好了，則遞迴用所偷的大招 config 繪製預警
+  if (action.type === 'steal_ultimate') {
+    if (s.stolenUltimate) {
+      telegraph(state, ent, s.stolenUltimate, dt);
+      return;
+    }
+  }
+
+  // 2. 如果是分裂畫面大招 (light_dark)
+  if (action.type === 'light_dark') {
+    const safeLeft = s.safeLeft !== null && s.safeLeft !== undefined ? s.safeLeft : true;
+    const tx = safeLeft ? ARENA.width / 2 : 0;
+    const ty = ARENA.height / 2;
+    const tr = ARENA.height / 2; // radius is half-width (800)
+    const trange = ARENA.width / 2; // range is half-length (1200)
+    addFx(state, {
+      type: 'telegraph',
+      x: tx, y: ty,
+      facing: 0,
+      color,
+      radius: tr,
+      range: trange,
+      arc: action.arc || 1.4,
+      shape: 'line',
+      progress,
+      life: 0.32,
+      danger: action.dangerLevel || undefined,
+    });
+    return;
+  }
+
+  // 3. 如果是靈魂綁定且有預選對象
+  if (action.type === 'soul_bind' && s.preselectedSoulBindPairs) {
+    for (const pair of s.preselectedSoulBindPairs) {
+      const pA = state.players[pair.a];
+      const pB = state.players[pair.b];
+      if (pA && pA.alive) {
+        addFx(state, {
+          type: 'telegraph',
+          x: pA.x, y: pA.y,
+          facing: ang,
+          color,
+          radius: PLAYER_RADIUS * 2.2,
+          range: 0,
+          arc: action.arc || 1.4,
+          shape: 'circle',
+          progress,
+          life: 0.32,
+          danger: action.dangerLevel || undefined,
+        });
+      }
+      if (pB && pB.alive) {
+        addFx(state, {
+          type: 'telegraph',
+          x: pB.x, y: pB.y,
+          facing: ang,
+          color,
+          radius: PLAYER_RADIUS * 2.2,
+          range: 0,
+          arc: action.arc || 1.4,
+          shape: 'circle',
+          progress,
+          life: 0.32,
+          danger: action.dangerLevel || undefined,
+        });
+      }
+    }
+    return;
+  }
+
+  // 4. 如果是多重瞬步 (multiblink)
+  if (action.type === 'multiblink') {
+    const targets = getMultiblinkTargets(state, ent, action);
+    for (const tgt of targets) {
+      addFx(state, {
+        type: 'telegraph',
+        x: tgt.x, y: tgt.y,
+        facing: ang,
+        color,
+        radius: PLAYER_RADIUS * 2.2,
+        range: 0,
+        arc: action.arc || 1.4,
+        shape: 'circle',
+        progress,
+        life: 0.32,
+        danger: action.dangerLevel || undefined,
+      });
+    }
+    return;
+  }
+
+  // 5. 如果是時光倒流 (time_rewind) 或 複製鏡像 (mirror_players) -> 全體玩家警告
+  if (action.type === 'time_rewind' || action.type === 'mirror_players') {
+    const enemies = enemiesOf(state, ent);
+    for (const tgt of enemies) {
+      addFx(state, {
+        type: 'telegraph',
+        x: tgt.x, y: tgt.y,
+        facing: ang,
+        color,
+        radius: PLAYER_RADIUS * 2.2,
+        range: 0,
+        arc: action.arc || 1.4,
+        shape: 'circle',
+        progress,
+        life: 0.32,
+        danger: action.dangerLevel || undefined,
+      });
+    }
+    return;
+  }
+
+  // 6. 如果是多重區域且已預計算好位置
+  if (action.type === 'zone' && s.precalculatedZones) {
+    const tr = (action.radius || 120) + PLAYER_RADIUS;
+    for (const pos of s.precalculatedZones) {
+      addFx(state, {
+        type: 'telegraph',
+        x: pos.x, y: pos.y,
+        facing: ang,
+        color,
+        radius: tr,
+        range: 0,
+        arc: action.arc || 1.4,
+        shape: 'circle',
+        progress,
+        life: 0.32,
+        danger: action.dangerLevel || undefined,
+      });
+    }
+    return;
+  }
+
+  // 決定預警形狀
+  let shape = action.telegraph || 'circle';
+  if (action.type === 'melee' && !action.telegraph) shape = 'arc';
+  if (action.type === 'projectile' && !action.telegraph) shape = 'line';
+  if (action.type === 'charge' && !action.telegraph) shape = 'line';
+
+  // 實時計算預警中心點、半徑與長度 (加上 PLAYER_RADIUS 以完美匹配實際碰撞判定)
+  let tx = ent.x;
+  let ty = ent.y;
+  let tr = action.radius || 60;
+  let trange = action.range || 0;
+
+  if (action.type === 'melee') {
+    tx = ent.x;
+    ty = ent.y;
+    tr = (action.range || 80) + PLAYER_RADIUS;
+    trange = (action.range || 80) + PLAYER_RADIUS;
+  } else if (action.type === 'projectile') {
+    tx = ent.x;
+    ty = ent.y;
+    tr = (action.radius || 40) + PLAYER_RADIUS;
+    trange = (action.range || (action.speed && action.lifetime ? action.speed * action.lifetime : 320)) + PLAYER_RADIUS;
+
+    // 如果有彈幕分裂
+    if (action.count && action.count > 1 && action.spread) {
+      const n = action.count;
+      for (let i = 0; i < n; i++) {
+        const projAng = ang + (i - (n - 1) / 2) * action.spread;
+        addFx(state, {
+          type: 'telegraph',
+          x: tx, y: ty,
+          facing: projAng,
+          color,
+          radius: tr,
+          range: trange,
+          arc: action.arc || 1.4,
+          shape,
+          progress,
+          life: 0.32,
+          danger: action.dangerLevel || undefined,
+        });
+      }
+      return;
+    }
+  } else if (action.type === 'charge') {
+    tx = ent.x;
+    ty = ent.y;
+    const hitR = action.hitRadius || action.radius || 40;
+    tr = hitR + PLAYER_RADIUS;
+    trange = (action.range || 300) + hitR + PLAYER_RADIUS;
+  } else if (action.type === 'leap' || action.type === 'blink') {
+    if (action.telegraph === 'line') {
+      // 劃出一條軌跡線
+      tx = ent.x;
+      ty = ent.y;
+      const rad = action.radius || action.hitRadius || 40;
+      tr = rad + PLAYER_RADIUS;
+      trange = (action.range || 240) + rad + PLAYER_RADIUS;
+      addFx(state, {
+        type: 'telegraph',
+        x: tx, y: ty,
+        facing: ang,
+        color,
+        radius: tr,
+        range: trange,
+        arc: action.arc || 1.4,
+        shape: 'line',
+        progress,
+        life: 0.32,
+        danger: action.dangerLevel || undefined,
+      });
+
+      // 並且在落點畫一個圓圈
+      const r = action.range || 240;
+      const landingX = clamp(ent.x + Math.cos(ang) * r, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
+      const landingY = clamp(ent.y + Math.sin(ang) * r, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
+      const landingR = (action.radius || action.hitRadius || 120) + PLAYER_RADIUS;
+      addFx(state, {
+        type: 'telegraph',
+        x: landingX, y: landingY,
+        facing: ang,
+        color,
+        radius: landingR,
+        range: 0,
+        arc: action.arc || 1.4,
+        shape: 'circle',
+        progress,
+        life: 0.32,
+        danger: action.dangerLevel || undefined,
+      });
+      return;
+    } else {
+      const r = action.range || 240;
+      tx = clamp(ent.x + Math.cos(ang) * r, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
+      ty = clamp(ent.y + Math.sin(ang) * r, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
+      tr = (action.radius || action.hitRadius || 120) + PLAYER_RADIUS;
+    }
+  } else if (action.type === 'zone') {
+    if ((action.range || 0) === 0) {
+      tx = ent.x;
+      ty = ent.y;
+      tr = (action.radius || 120) + PLAYER_RADIUS;
+    } else {
+      if (action.telegraph === 'line') {
+        tx = ent.x;
+        ty = ent.y;
+        tr = (action.radius || 40) + PLAYER_RADIUS;
+        trange = (action.range || 0) + (action.moving ? action.moving * action.lifetime : 0) + (action.radius || 40) + PLAYER_RADIUS;
+      } else if (action.telegraph === 'arc') {
+        tx = ent.x;
+        ty = ent.y;
+        const zoneReach = action.range + (action.radius || 150);
+        tr = zoneReach + PLAYER_RADIUS;
+        trange = zoneReach + (action.moving ? action.moving * action.lifetime : 0) + PLAYER_RADIUS;
+      } else {
+        tx = clamp(ent.x + Math.cos(ang) * action.range, PLAYER_RADIUS, ARENA.width - PLAYER_RADIUS);
+        ty = clamp(ent.y + Math.sin(ang) * action.range, PLAYER_RADIUS, ARENA.height - PLAYER_RADIUS);
+        tr = (action.radius || 120) + PLAYER_RADIUS;
+      }
+    }
+  } else if (selfCentered(action)) {
+    tx = ent.x;
+    ty = ent.y;
+    tr = (action.radius || action.range || 120) + PLAYER_RADIUS;
+  } else {
+    tx = s.lastTargetX !== undefined ? s.lastTargetX : ent.x;
+    ty = s.lastTargetY !== undefined ? s.lastTargetY : ent.y;
+    tr = (action.radius || action.hitRadius || 80) + PLAYER_RADIUS;
+  }
+
   addFx(state, {
     type: 'telegraph',
-    x: s.teleX, y: s.teleY,
-    facing: s.aimAng || 0,
+    x: tx, y: ty,
+    facing: ang,
     color,
-    radius: s.teleR || (action.radius || 60),
-    range: action.range || 0,
+    radius: tr,
+    range: trange,
     arc: action.arc || 1.4,
     shape,        // 'circle' / 'line' / 'arc' / 'self'
     progress,     // 0-1
@@ -85,6 +449,7 @@ function telegraph(state, ent, action, dt) {
     danger: action.dangerLevel || undefined,
   });
 }
+
 
 // ---- 技能是否在當前距離可用 (依 action type 概略門檻) ----
 function usable(a, d) {
@@ -238,26 +603,17 @@ function computeProfileInput(profile, state, ent, dt) {
       ent.recoverWindow = 0;
       ent.recoverMaxWindow = 0;
       ent.recoverHeavy = false;
+      const hasChainNext = s.chainQueue && s.chainQueue.length > 0;
+      if (!hasChainNext && ent.isCastingLockHpUlt) {
+        ent.isCastingLockHpUlt = false;
+        ent.ultLockInvincible = false;
+      }
       // 連段下一招：強制進入下一個 windup (不檢查 CD，連段強制執行)
       if (s.chainQueue && s.chainQueue.length) {
         const next = s.chainQueue.shift();
         const a2 = ch[next.slot];
         if (a2) {
-          s.mode = 'windup';
-          s.slot = next.slot;
-          s.windupT = next.windup != null ? next.windup : (a2.windup || 0.3);
-          // 重新鎖定瞄準與預警落點 (用最新目標位置)
-          let tx2 = target.x, ty2 = target.y;
-          if (selfCentered(a2)) { tx2 = ent.x; ty2 = ent.y; }
-          s.aimAng = aimAt(ent, target.x, target.y);
-          if (a2.type === 'zone' && (a2.range || 0) > 0) {
-            const ang = s.aimAng;
-            s.teleX = ent.x + Math.cos(ang) * a2.range; s.teleY = ent.y + Math.sin(ang) * a2.range; s.teleR = a2.radius || 120;
-          } else if (selfCentered(a2)) {
-            s.teleX = ent.x; s.teleY = ent.y; s.teleR = a2.radius || a2.range || 120;
-          } else {
-            s.teleX = tx2; s.teleY = ty2; s.teleR = a2.radius || a2.hitRadius || 80;
-          }
+          startWindup(state, ent, next.slot, a2, target, next.windup);
           // 連段強制：CD 不擋 (清掉本招 CD 讓 tryAction 通過)
           ent.cd = ent.cd || {};
           ent.cd[next.slot] = 0;
@@ -287,22 +643,7 @@ function computeProfileInput(profile, state, ent, dt) {
 
   if (chosen) {
     const a = ch[chosen];
-    s.mode = 'windup';
-    s.slot = chosen;
-    s.windupT = a.windup != null ? a.windup : 0.5;
-    if (a.once) s['_used_' + chosen] = true;
-    // 鎖定瞄準與預警落點
-    let tx = target.x, ty = target.y;
-    if (selfCentered(a)) { tx = ent.x; ty = ent.y; }
-    s.aimAng = aimAt(ent, target.x, target.y);
-    // 預警圈位置：射程型落在目標、近身型在自己
-    if (a.type === 'zone' && (a.range || 0) > 0) {
-      const ang = s.aimAng; s.teleX = ent.x + Math.cos(ang) * a.range; s.teleY = ent.y + Math.sin(ang) * a.range; s.teleR = a.radius || 120;
-    } else if (selfCentered(a)) {
-      s.teleX = ent.x; s.teleY = ent.y; s.teleR = a.radius || a.range || 120;
-    } else {
-      s.teleX = target.x; s.teleY = target.y; s.teleR = a.radius || a.hitRadius || 80;
-    }
+    startWindup(state, ent, chosen, a, target);
     return input;
   }
 
