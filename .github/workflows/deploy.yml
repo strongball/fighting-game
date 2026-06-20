@@ -46,3 +46,18 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Send Line Notification
+        env:
+          LINE_MESSAGING_KEY: ${{ secrets.LINE_MESSAGING_KEY }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          jq -n \
+            --arg to "C3d37554ef8db4ee6ef34302d5656f4c6" \
+            --arg msg "$COMMIT_MSG" \
+            '{to: $to, messages: [{type: "text", text: $msg}]}' | \
+          curl -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $LINE_MESSAGING_KEY" \
+            -d @-
+
