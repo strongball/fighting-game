@@ -124,6 +124,16 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
       };
     },
   },
+  regen_hot: {
+    apply: (p, _k, data) => {
+      const cur = p.effects.regen_hot;
+      p.effects.regen_hot = {
+        remaining: Math.max(cur ? cur.remaining : 0, data.duration || 7),
+        amountPerSec: data.amountPerSec || 10,
+        tickTimer: cur ? cur.tickTimer : 1.0,
+      };
+    },
+  },
 };
 
 // 淨化清單：由 cleanseable 旗標自動推導 → 新增可淨化效果無需再改 cleanse。

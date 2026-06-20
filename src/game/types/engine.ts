@@ -4,7 +4,7 @@
 // 呼叫 step() 推進，並把（精簡後的）快照廣播給加入者。對應 entities/factories.ts
 // 的 createInitialState。
 
-import type { Player, Projectile, Zone, Fx, Destructible, EntityId } from './entities';
+import type { Player, Projectile, Zone, Fx, Destructible, EntityId, DropItem } from './entities';
 
 export type GamePhase = 'playing' | 'gameover';
 export type GameMode = 'ffa' | 'boss';
@@ -33,6 +33,7 @@ export interface GameState {
   zones: Zone[];
   fx: Fx[];
   destructibles: Destructible[];
+  items: DropItem[];
   time: number;
   winner: EntityId | null;
   winnerTeam: number;

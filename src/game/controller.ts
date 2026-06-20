@@ -185,7 +185,7 @@ function createController(): GameController {
   }
 
   function emptyView() {
-    return { players: {}, projectiles: [], zones: [], fx: [], destructibles: [], phase: 'playing', winner: null, time: 0 };
+    return { players: {}, projectiles: [], zones: [], fx: [], destructibles: [], items: [], phase: 'playing', winner: null, time: 0 };
   }
 
   // ---------- 迴圈生命週期 ----------
@@ -315,6 +315,7 @@ function createController(): GameController {
     view.zones = snap.zones;
     view.fx = snap.fx;
     view.destructibles = snap.destructibles || [];
+    view.items = snap.items || [];
 
     // 預測自身移動
     if (localSelf) {

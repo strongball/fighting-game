@@ -13,6 +13,8 @@ const KEY_MAPS = {
     KeyL: 'skill2',
     Semicolon: 'ultimate',
     Space: 'evade',
+    KeyU: 'item1',
+    KeyI: 'item2',
   },
   'arrows-asdf': {
     ArrowUp: 'up',
@@ -24,6 +26,8 @@ const KEY_MAPS = {
     KeyD: 'skill2',
     KeyF: 'ultimate',
     Space: 'evade',
+    KeyQ: 'item1',
+    KeyE: 'item2',
   },
   'wasd-ijkl': {
     KeyW: 'up', ArrowUp: 'up',
@@ -35,12 +39,14 @@ const KEY_MAPS = {
     KeyL: 'skill2',
     KeyI: 'ultimate',
     Space: 'evade',
+    KeyU: 'item1',
+    KeyO: 'item2',
   },
 };
 
 export function createInput(controlScheme = 'wasd-jkl') {
-  const keyboardKeys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false };
-  const touchKeys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, aim: null };
+  const keyboardKeys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false };
+  const touchKeys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false, aim: null };
   let enabled = false;
   let currentScheme = controlScheme;
   let keyMap = KEY_MAPS[currentScheme];
@@ -121,10 +127,12 @@ export function createInput(controlScheme = 'wasd-jkl') {
         skill2: keyboardKeys.skill2 || touchKeys.skill2,
         ultimate: keyboardKeys.ultimate || touchKeys.ultimate,
         evade: keyboardKeys.evade || touchKeys.evade,
+        item1: keyboardKeys.item1 || touchKeys.item1,
+        item2: keyboardKeys.item2 || touchKeys.item2,
         aim: touchKeys.aim, // 人類玩家以移動方向轉向；魔王 AI 則合成 aim 角度
       };
     },
   };
 }
 
-export const EMPTY_INPUT = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, aim: null };
+export const EMPTY_INPUT = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false, aim: null };

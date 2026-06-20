@@ -430,6 +430,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     entities.syncProjectiles(state.projectiles, dt);
     entities.syncZones(state.zones, dt);
     entities.syncDestructibles(state.destructibles || [], dt, { x: fx, z: fz });
+    entities.syncItems(state.items || [], dt);
     updateDecorationFade(sceneMgr.themeGroup, { x: fx, z: fz }, dt);
     atmosphere.update(dt);
     particles.update(dt);

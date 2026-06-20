@@ -376,6 +376,26 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 .hud-evade-wrap {
   flex-shrink: 0;
 }
+.hud-items-wrap {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+.chip.item-slot {
+  width: 54px;
+  height: 38px;
+}
+.chip.item-slot .item-count {
+  position: absolute;
+  right: 4px;
+  bottom: 6px;
+  z-index: 3;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffd166;
+  text-shadow: 0 1px 1px #000;
+}
 .chip.evade-circle {
   width: 36px;
   height: 36px;
@@ -590,7 +610,7 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 
 /* 機制提示卡 */
 .hud-mech {
-  position: absolute; right: 16px; top: 200px;
+  position: absolute; left: 16px; top: 200px;
   width: 240px;
   background: linear-gradient(180deg, rgba(20, 14, 8, 0.92), rgba(12, 8, 6, 0.94));
   border: 1px solid rgba(255, 180, 60, 0.5);
@@ -947,14 +967,14 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   transform: scale(0.9) !important;
 }
 .mbtn-key {
-  font-size: 7px;
+  font-size: 9px;
   opacity: 0.45;
   text-transform: uppercase;
   margin-bottom: 1px;
   font-family: monospace;
 }
 .mbtn-name {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.2;
   text-align: center;
   max-width: 90%;
@@ -964,7 +984,7 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   text-shadow: 0 1px 2px #000;
 }
 .mbtn-cd {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
   color: #fff;
   text-shadow: 0 1px 3px #000;
@@ -983,38 +1003,50 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 
 /* Arc positioning (Tight layout) */
 .mbtn-basic {
-  right: 35px;
-  bottom: 35px;
-  width: 64px;
-  height: 64px;
+  right: 75px;
+  bottom: 45px;
+  width: 70px;
+  height: 70px;
 }
 .mbtn-basic .mbtn-name {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
 }
 .mbtn-evade {
-  right: 125px;
-  bottom: 25px;
-  width: 42px;
-  height: 42px;
+  right: 166px;
+  bottom: 32px;
+  width: 52px;
+  height: 52px;
 }
 .mbtn-ultimate {
-  right: 120px;
-  bottom: 85px;
-  width: 42px;
-  height: 42px;
+  right: 48px;
+  bottom: 131px;
+  width: 52px;
+  height: 52px;
 }
 .mbtn-skill2 {
-  right: 88px;
-  bottom: 130px;
-  width: 42px;
-  height: 42px;
+  right: 111px;
+  bottom: 135px;
+  width: 52px;
+  height: 52px;
 }
 .mbtn-skill1 {
-  right: 35px;
-  bottom: 120px;
-  width: 42px;
-  height: 42px;
+  right: 159px;
+  bottom: 94px;
+  width: 52px;
+  height: 52px;
+}
+.mbtn-item1 {
+  right: 111px;
+  bottom: 198px;
+  width: 52px;
+  height: 52px;
+}
+.mbtn-item2 {
+  right: 48px;
+  bottom: 198px;
+  width: 52px;
+  height: 52px;
 }
 
 .mbtn.no-mana {
@@ -1089,7 +1121,8 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   
   .hud-mech {
     top: 110px;
-    right: 12px;
+    left: 12px;
+    right: auto;
     width: 160px;
   }
   .hud-mech-title {

@@ -106,6 +106,10 @@ export interface Player {
   scale?: number;
   aiState?: Record<string, any>;
 
+  // 藥水背包系統
+  itemHp: number; // 0..3
+  itemMp: number; // 0..3
+
   // 本地暫存（不入 snapshot）
   _chronoHist?: Array<{ x: number; y: number; hp: number }>;
   _healAccum?: number;
@@ -180,3 +184,18 @@ export interface Destructible {
   crashStun?: number;
   [key: string]: any;
 }
+
+/** 掉落的藥水實體。 */
+export interface DropItem {
+  id: number;
+  x: number; y: number;
+  kind: 'heal' | 'mana';
+  lifetime: number;
+  maxLifetime: number;
+  radius: number;
+  color: string;
+  warningTime?: number;
+  maxWarningTime?: number;
+  [key: string]: any;
+}
+

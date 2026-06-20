@@ -7,6 +7,7 @@ import { applyHeal } from './heal.ts';
 import { applyEffect } from './effects.ts';
 import { recordDamage, recordKill, recordDeath } from './stats.ts';
 import { isAlly, isEnemy } from './team.ts';
+import { spawnDropFromMinion } from '../systems/items.ts';
 import type { GameState, Player, EntityId } from '../types';
 
 // ── 天賦（被動）系統導覽 ────────────────────────────────────────────
@@ -242,6 +243,9 @@ export function dealDamage(
     recordDeath(state, target);
     if (target.effects && target.effects.weaken) spreadCurse(state, target);
     addFx(state, { type: 'death', x: target.x, y: target.y, color: '#ffffff', life: 0.5, radius: PLAYER_RADIUS * 2 });
+    if (state.mode === 'boss' && (target.isMinion || target.isSummon)) {
+      spawnDropFromMinion(state, target.x, target.y);
+    }
     // 闖關 Boss 擊破：全場慢動作 + 巨型爆閃 + 「BOSS DOWN」橫幅
     if (target.isBoss && state.mode === 'boss') {
       state.timeFreeze = { scale: 0.3, remaining: 0.8 };

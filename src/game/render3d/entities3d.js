@@ -29,6 +29,7 @@ export function createEntityLayer(scene, particles, opts = {}) {
   const projMap = new Map(); // id -> { group, core, halo, kind }
   const zoneMap = new Map(); // id -> { group, disc, ring, totalDelay }
   const destMap = new Map(); // id -> { group, body, geo, mat }
+  const itemMap = new Map(); // id -> { group, mesh, geo, mat, ... }
   const _v = new THREE.Vector3();
 
   function syncDestructibles(list, dt, focus) {
@@ -76,6 +77,110 @@ export function createEntityLayer(scene, particles, opts = {}) {
         scene.remove(m.group);
         m.geo.dispose(); m.mat.dispose();
         destMap.delete(id);
+      }
+    }
+  }
+
+  function syncItems(list, dt) {
+    const seen = new Set();
+    for (const item of list || []) {
+      seen.add(item.id);
+      let e = itemMap.get(item.id);
+      if (!e) {
+        const g = new THREE.Group();
+        const color = new THREE.Color(item.color);
+        
+        let geo;
+        if (item.kind === 'heal') {
+          geo = new THREE.OctahedronGeometry(9, 0);
+        } else {
+          geo = new THREE.TetrahedronGeometry(9, 0);
+        }
+        
+        const mat = new THREE.MeshStandardMaterial({
+          color: color,
+          roughness: 0.2,
+          metalness: 0.8,
+          emissive: color,
+          emissiveIntensity: 0.8,
+          transparent: true,
+          opacity: 1.0,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.castShadow = true;
+        g.add(mesh);
+        
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 0.35,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const glow = new THREE.Mesh(new THREE.SphereGeometry(item.kind === 'heal' ? 14 : 12, 8, 8), glowMat);
+        g.add(glow);
+
+        const warnRingMat = new THREE.MeshBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 0.6,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        });
+        const warnRing = new THREE.Mesh(ringGeo, warnRingMat);
+        warnRing.rotation.x = -Math.PI / 2;
+        warnRing.position.y = 0.5;
+        warnRing.scale.setScalar(item.radius * 2);
+        g.add(warnRing);
+        
+        scene.add(g);
+        
+        e = { group: g, mesh, geo, mat, glow, glowMat, warnRing, warnRingMat, baseColor: color, time: Math.random() * 10 };
+        itemMap.set(item.id, e);
+      }
+      
+      e.time += dt;
+      setVecFromWorld(_v, item.x, item.y, 0);
+      
+      if (item.warningTime > 0) {
+        e.mesh.visible = false;
+        e.glow.visible = false;
+        e.warnRing.visible = true;
+        
+        e.group.position.set(_v.x, 0, _v.z);
+        const ratio = Math.max(0, item.warningTime / (item.maxWarningTime || 1.5));
+        e.warnRing.scale.setScalar(item.radius * (1 + ratio * 2));
+        e.warnRingMat.opacity = 0.3 + 0.5 * Math.sin(e.time * 20);
+      } else {
+        e.mesh.visible = true;
+        e.glow.visible = true;
+        e.warnRing.visible = false;
+        
+        const floatY = 16 + 4 * Math.sin(e.time * 2.5);
+        e.group.position.set(_v.x, floatY, _v.z);
+        e.mesh.rotation.y = e.time * 1.5;
+        e.mesh.rotation.x = e.time * 0.7;
+        
+        if (item.lifetime < 3) {
+          const blink = Math.floor(e.time * 15) % 2 === 0;
+          e.mat.opacity = blink ? 0.3 : 1.0;
+          e.glowMat.opacity = blink ? 0.1 : 0.4;
+        } else {
+          e.mat.opacity = 1.0;
+          e.glowMat.opacity = 0.35;
+        }
+      }
+    }
+    
+    for (const [id, e] of itemMap) {
+      if (!seen.has(id)) {
+        scene.remove(e.group);
+        e.geo.dispose();
+        e.mat.dispose();
+        e.glowMat.dispose();
+        e.warnRingMat.dispose();
+        itemMap.delete(id);
       }
     }
   }
@@ -236,8 +341,12 @@ export function createEntityLayer(scene, particles, opts = {}) {
   function clear() {
     for (const e of projMap.values()) disposeProj(e);
     for (const e of zoneMap.values()) disposeZone(e);
-    projMap.clear(); zoneMap.clear();
+    for (const e of itemMap.values()) {
+      scene.remove(e.group);
+      e.geo.dispose(); e.mat.dispose(); e.glowMat.dispose(); e.warnRingMat.dispose();
+    }
+    projMap.clear(); zoneMap.clear(); itemMap.clear();
   }
 
-  return { syncProjectiles, syncZones, syncDestructibles, clear };
+  return { syncProjectiles, syncZones, syncDestructibles, syncItems, clear };
 }

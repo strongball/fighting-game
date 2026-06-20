@@ -10,6 +10,7 @@ import { ARENA, PLAYER_RADIUS } from '../constants.js';
 import { uid } from '../entities/math.ts';
 import { addFx } from '../entities/fx.ts';
 import { applyEffect } from '../entities/effects.ts';
+import { spawnDropFromPillar } from './items.ts';
 import type { GameState, Destructible, Projectile } from '../types';
 
 const STUN_ON_CRASH = 0.6;
@@ -53,6 +54,7 @@ export function damageDestructible(state: GameState, obj: Destructible, dmg: num
   if (obj.hp <= 0) {
     obj.hp = 0;
     addFx(state, { type: 'death', x: obj.x, y: obj.y, color: obj.color, life: 0.5, radius: obj.r * 1.6 });
+    spawnDropFromPillar(state, obj.x, obj.y);
   }
 }
 

@@ -67,13 +67,19 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
   const skillsContainerD = el('div', 'hud-skills-container', selfDesktop);
   const skillsD = el('div', 'hud-skills', skillsContainerD);
   const evadeWrapD = el('div', 'hud-evade-wrap', skillsContainerD);
+  const itemsWrapD = el('div', 'hud-items-wrap', skillsContainerD);
   const keys = getSkillKeys(controlScheme);
+  const itemKeys = getItemKeys(controlScheme);
   const chip = {
     basic: skillChip(keys.basic, skillsD),
     skill1: skillChip(keys.skill1, skillsD),
     skill2: skillChip(keys.skill2, skillsD),
     ultimate: skillChip(keys.ultimate, skillsD),
     evade: skillChip('Space', evadeWrapD, 'evade-circle'),
+  };
+  const itemChips = {
+    item1: itemChip(itemKeys.item1, itemsWrapD),
+    item2: itemChip(itemKeys.item2, itemsWrapD),
   };
 
   // 自身狀態 (行動版，左上，極簡)
@@ -110,6 +116,8 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
       skill2: mobileButton('skill2', 'L', mobileButtonsZone),
       ultimate: mobileButton('ultimate', 'Ult', mobileButtonsZone),
       evade: mobileButton('evade', '閃避', mobileButtonsZone),
+      item1: mobileButton('item1', '🍎', mobileButtonsZone),
+      item2: mobileButton('item2', '💧', mobileButtonsZone),
     };
     
     // 搖桿事件處理
@@ -308,6 +316,30 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
       setStyle(btn.root, 'background', 'rgba(25, 30, 40, 0.75)');
       setStyle(btn.root, 'boxShadow', 'none');
       btn.root.classList.remove('ult-pulse');
+    }
+  }
+
+  function updateMobileItemButton(btn, kind, count, isBossMode) {
+    if (!isBossMode) {
+      setStyle(btn.root, 'display', 'none');
+      return;
+    }
+    setStyle(btn.root, 'display', 'flex');
+    const icon = kind === 'heal' ? '🍎' : '💧';
+    setText(btn.name, `${icon} x${count}`);
+    
+    const ready = count > 0;
+    btn.root.classList.toggle('ready', ready);
+    
+    const color = kind === 'heal' ? '#ff4d4d' : '#3aa0ff';
+    if (ready) {
+      setStyle(btn.root, 'borderColor', color);
+      setStyle(btn.root, 'background', `radial-gradient(circle, ${hexA(color, 0.45)} 0%, rgba(45, 55, 72, 0.8) 100%)`);
+      setStyle(btn.root, 'boxShadow', `0 0 10px ${hexA(color, 0.4)}, 0 4px 12px rgba(0,0,0,0.5)`);
+    } else {
+      setStyle(btn.root, 'borderColor', 'rgba(255,255,255,0.15)');
+      setStyle(btn.root, 'background', 'rgba(25, 30, 40, 0.75)');
+      setStyle(btn.root, 'boxShadow', 'none');
     }
   }
 
@@ -520,6 +552,8 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
         setChip(chip.skill2, c.skill2, me.cd.skill2,  me.mana);
         setUltChip(chip.ultimate, c.ultimate, me.ult || 0, me.cd.ultimate);
         setChip(chip.evade, c.evade, me.cd.evade, me.mana);
+        updateItemChip(itemChips.item1, 'heal', me.itemHp || 0, state.mode === 'boss');
+        updateItemChip(itemChips.item2, 'mana', me.itemMp || 0, state.mode === 'boss');
       } else {
         setStyle(selfDesktop, 'display', 'none');
         setStyle(selfMobile, 'display', '');
@@ -557,6 +591,8 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
               hooks.input.setTouchAction('skill2', false);
               hooks.input.setTouchAction('ultimate', false);
               hooks.input.setTouchAction('evade', false);
+              hooks.input.setTouchAction('item1', false);
+              hooks.input.setTouchAction('item2', false);
             }
           }
         }
@@ -567,6 +603,8 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
           updateMobileButton(mBtns.skill2, c.skill2, me.cd.skill2, me.mana, me.charId);
           updateMobileUltButton(mBtns.ultimate, c.ultimate, me.ult || 0, me.cd.ultimate);
           updateMobileButton(mBtns.evade, c.evade, me.cd.evade, me.mana, me.charId);
+          updateMobileItemButton(mBtns.item1, 'heal', me.itemHp || 0, state.mode === 'boss');
+          updateMobileItemButton(mBtns.item2, 'mana', me.itemMp || 0, state.mode === 'boss');
         }
       }
 
@@ -820,11 +858,53 @@ function skillChip(key, parent, extraClass = '') {
   const cool    = el('i', 'cool', root);         // 冷卻遮罩 (從頂部向下)
   const label   = el('span', 'chip-label', root); // 按鍵 + 技能名
   const cdBar   = el('b', 'cd-bar', root);        // 底部進度條
-  const cdSub   = el('s', 'cd-sub', root);        // 冷卻秒數 / 能量 %
+  const cdSub   = el('s', 'cd-sub', root);        // 慢速/冷卻秒數 / 能量 %
   const manaHint = el('u', 'mana-hint', root);    // 魔力不足提示
   cdSub.style.display = 'none';
   manaHint.style.display = 'none';
   return { root, label, cool, cdBar, cdSub, manaHint, key };
+}
+
+function getItemKeys(controlScheme) {
+  if (controlScheme === 'arrows-asdf') {
+    return { item1: 'Q', item2: 'E' };
+  }
+  if (controlScheme === 'wasd-ijkl') {
+    return { item1: 'U', item2: 'O' };
+  }
+  return { item1: 'U', item2: 'I' };
+}
+
+function itemChip(key, parent) {
+  const root = el('div', 'chip item-slot', parent);
+  const label = el('span', 'chip-label', root);
+  const countLabel = el('s', 'item-count', root);
+  setText(label, key);
+  return { root, label, countLabel, key };
+}
+
+function updateItemChip(chip, kind, count, isBossMode) {
+  if (!isBossMode) {
+    setStyle(chip.root, 'display', 'none');
+    return;
+  }
+  setStyle(chip.root, 'display', 'block');
+  const name = kind === 'heal' ? '🍎 生命' : '💧 魔力';
+  const color = kind === 'heal' ? '#ff4d4d' : '#3aa0ff';
+  
+  if (count > 0) {
+    chip.root.classList.add('ready');
+    setText(chip.label, `${chip.key} ${name}`);
+    setText(chip.countLabel, `x${count}`);
+    chip.countLabel.style.display = 'block';
+    setStyle(chip.root, 'borderColor', color);
+  } else {
+    chip.root.classList.remove('ready');
+    setText(chip.label, `${chip.key} 空`);
+    setText(chip.countLabel, '');
+    chip.countLabel.style.display = 'none';
+    setStyle(chip.root, 'borderColor', 'rgba(255,255,255,0.08)');
+  }
 }
 
 function el(tag, cls, parent) {

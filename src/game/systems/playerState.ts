@@ -52,6 +52,10 @@ export function tickPassiveRecovery(state: GameState, p: Player, talent: any, dt
     if (p.shieldTime <= 0) p.shield = 0;
   }
 
+  if (p.alive && p.hp < p.maxHp) {
+    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.02 * dt);
+  }
+
   p.mana = Math.min(p.maxMana, p.mana + MANA_REGEN * dt);
   p.ult = Math.min(ULT_MAX, (p.ult || 0) + ULT_REGEN * dt);
   if (state.flags && state.flags.freeMana) {

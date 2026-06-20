@@ -38,12 +38,36 @@ export function quitBossRun(state) {
 
 // ---- 進入第 n 關 ----
 export function startBossRound(state, round) {
+  const isNewRound = round > state.round;
   state.round = round;
   state.zones = []; state.projectiles = []; state.fx = [];
   state.tethers = [];
   state.destructibles = [];
   clearBossSide(state);
   reviveAndHealAll(state);
+
+  if (state.mode === 'boss') {
+    const humans = teamPlayers(state);
+    humans.forEach((p) => {
+      if (p.itemHp == null) p.itemHp = 0;
+      if (p.itemMp == null) p.itemMp = 0;
+
+      if (round === 1 && !isNewRound) {
+        // Initial game start: exactly 1 of each
+        p.itemHp = 1;
+        p.itemMp = 1;
+      } else if (isNewRound) {
+        // Advancing to next round: carry over and add 1
+        p.itemHp = Math.min(3, p.itemHp + 1);
+        p.itemMp = Math.min(3, p.itemMp + 1);
+      } else {
+        // Retry same round: make sure they have at least 1
+        p.itemHp = Math.max(1, p.itemHp);
+        p.itemMp = Math.max(1, p.itemMp);
+      }
+    });
+  }
+
   if (!state.stats || round === 1) initRunStats(state);
   else ensureAllPlayerStats(state);
   recordRoundStart(state);

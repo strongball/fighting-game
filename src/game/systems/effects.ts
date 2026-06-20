@@ -44,6 +44,12 @@ export function tickStatusEffects(state: GameState, p: Player, dt: number) {
         effect.remaining = 0;
         addFx(state, { type: 'hit', x: p.x, y: p.y, color: '#9fe8ff', life: 0.4, radius: PLAYER_RADIUS * 2.5, vfx: 'mage_iceshard' });
       }
+    } else if (kind === 'regen_hot') {
+      effect.tickTimer -= dt;
+      if (effect.tickTimer <= 0) {
+        effect.tickTimer += 1.0;
+        applyHeal(state, p, effect.amountPerSec, { burst: true });
+      }
     }
 
     if (effect.remaining <= 0) delete p.effects[kind];

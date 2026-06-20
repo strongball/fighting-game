@@ -15,6 +15,7 @@ import { updateProjectiles } from './systems/projectiles.ts';
 import { checkWin } from './systems/win.ts';
 import { updateZones } from './systems/zones.ts';
 import { tickDestructibles } from './systems/destructibles.ts';
+import { tickDropItems, useHpPotion, useMpPotion } from './systems/items.ts';
 import type { GameState, Input } from './types';
 
 export { applyMovement, speedOf };
@@ -57,6 +58,26 @@ export function step(state: GameState, inputs: Record<string, Input>, dt: number
 
     const scripted = processScripted(state, p, dt); // 衝鋒/躍擊進行中接管移動
     if (!scripted) {
+      // 處理藥水使用輸入（僅限人類玩家）
+      if (!p.aiId) {
+        if (p.itemHp == null) p.itemHp = 0;
+        if (p.itemMp == null) p.itemMp = 0;
+        if (!p._lastInput) p._lastInput = {};
+        
+        const item1Pressed = !!input.item1 && !p._lastInput.item1;
+        const item2Pressed = !!input.item2 && !p._lastInput.item2;
+        
+        if (item1Pressed && p.itemHp > 0) {
+          useHpPotion(state, p);
+        }
+        if (item2Pressed && p.itemMp > 0) {
+          useMpPotion(state, p);
+        }
+        
+        p._lastInput.item1 = !!input.item1;
+        p._lastInput.item2 = !!input.item2;
+      }
+
       applyMovement(p, input, dt);
 
       processTrail(state, p, dt); // 移動留痕 (冰霜足跡)
@@ -69,6 +90,7 @@ export function step(state: GameState, inputs: Record<string, Input>, dt: number
   updateProjectiles(state, dt);
   updateZones(state, dt);
   tickDestructibles(state, dt);
+  tickDropItems(state, dt);
   updateFx(state, dt);
   // 清除已死亡的玩家召喚物 (避免累積；一般玩家死亡保留供結算)
   for (const id of Object.keys(state.players)) {

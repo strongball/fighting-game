@@ -11,6 +11,7 @@ import type { Player, EffectSpec, EntityId } from './entities';
 export interface Input {
   up: boolean; down: boolean; left: boolean; right: boolean;
   basic: boolean; skill1: boolean; skill2: boolean; ultimate: boolean; evade: boolean;
+  item1: boolean; item2: boolean;
   /** 魔王 AI 合成的瞄準角度；人類玩家為 null（以移動方向轉向）。 */
   aim: number | null;  /** 允許以 slot 字串動態索引（casting.ts 的 input[slot]）。 */
   [key: string]: boolean | number | null;}

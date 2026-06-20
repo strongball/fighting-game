@@ -30,6 +30,8 @@ export function makePlayer(id: EntityId, name: string, charId: number, x: number
     suppressTarget: null, suppressStacks: 0,
     ownerId: null,
     summonLife: 0,
+    itemHp: 0,
+    itemMp: 0,
   };
 }
 
@@ -88,6 +90,7 @@ export function createInitialState(
     zones: [],
     fx: [],
     destructibles: [],
+    items: [],
     time: 0,
     winner: null,
     winnerTeam: 0,
@@ -138,3 +141,19 @@ export function makeZone(owner: EntityId, x: number, y: number, opt: Record<stri
     vfx: opt.vfx || null,
   };
 }
+
+export function makeDropItem(kind: 'heal' | 'mana', x: number, y: number, opt: Record<string, any> = {}): any {
+  return {
+    id: uid(),
+    x,
+    y,
+    kind,
+    lifetime: opt.lifetime || 12,
+    maxLifetime: opt.lifetime || 12,
+    radius: opt.radius || 15,
+    color: kind === 'heal' ? '#ff4d4d' : '#3aa0ff',
+    warningTime: opt.warningTime != null ? opt.warningTime : 1.5,
+    maxWarningTime: opt.warningTime != null ? opt.warningTime : 1.5,
+  };
+}
+
