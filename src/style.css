@@ -138,17 +138,31 @@ input:focus { outline: none; border-color: var(--accent); }
 code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--accent2); font-size: 15px; letter-spacing: 1px; }
 .hint { color: var(--dim); font-size: 13px; margin: 12px 0; line-height: 1.6; }
 
+/* 選角區：左右兩欄合為一個固定高度區塊。
+   左欄角色格在區塊內捲動(細捲軸)、右欄詳情面板固定於區塊內，不會黏在視窗上緣。 */
+.char-select {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
 .char-grid {
+  flex: 1;
+  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
   gap: 10px;
+  align-content: start;
+  max-height: clamp(440px, 78vh, 680px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 .char-card {
-  text-align: left;
+  text-align: center;
   background: var(--panel2);
   border: 2px solid transparent;
   border-radius: 12px;
-  padding: 10px;
+  padding: 10px 8px;
   cursor: pointer;
   color: var(--text);
   transition: border 0.12s, transform 0.06s, background 0.12s;
@@ -190,6 +204,77 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 .char-skills { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
 .char-skills span { font-size: 10.5px; color: #b9c7d4; background: #0e1722; padding: 2px 5px; border-radius: 5px; }
 .char-skills span.ult { color: #1a1206; background: linear-gradient(#ffe27a, #f5a623); font-weight: 700; }
+
+/* 選角詳情面板：選定角色的完整技能說明 (文字來源：角色圖鑑.md)
+   右欄，固定於 .char-select 區塊內；內容過長才在面板內捲動(細捲軸)。 */
+.char-detail {
+  flex: 0 0 304px;
+  width: 304px;
+  min-height: clamp(440px, 78vh, 680px);
+  background: var(--panel2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+/* 角色格的細緻捲軸 (WebKit)；詳情面板隨內容自然展開、不需捲軸 */
+.char-grid::-webkit-scrollbar { width: 8px; }
+.char-grid::-webkit-scrollbar-track { background: transparent; }
+.char-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.char-grid:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.24);
+  background-clip: padding-box;
+}
+.char-detail-head { display: flex; align-items: center; gap: 12px; }
+.char-detail-art {
+  width: 52px; height: 52px; flex: 0 0 52px;
+  border-radius: 8px; display: grid; place-items: center; overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 38%, var(--char-color), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.16));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.char-detail-art img { width: 52px; height: 52px; object-fit: contain; display: block; }
+.char-detail-art span { font-size: 20px; color: #0b1118; }
+.char-detail-title { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.char-detail-name { font-weight: 700; font-size: 18px; }
+.char-detail-stats { font-size: 12px; color: var(--dim); }
+.char-detail-desc { font-size: 12.5px; color: #c8d2dd; line-height: 1.5; margin: 10px 0 0; }
+
+.skill-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.skill-row { display: flex; gap: 10px; align-items: flex-start; }
+.skill-key {
+  flex: 0 0 auto; min-width: 34px; height: 26px; padding: 0 8px;
+  display: inline-grid; place-items: center;
+  font-weight: 700; font-size: 13px; color: #cfe0ff;
+  background: #0e1722; border: 1px solid #2a3a52; border-radius: 6px;
+}
+.skill-body { flex: 1; min-width: 0; }
+.skill-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.skill-name { font-weight: 700; font-size: 13.5px; color: var(--text); }
+.skill-tag {
+  font-size: 10.5px; color: #b9c7d4;
+  background: #0e1722; border: 1px solid #243049;
+  padding: 1px 7px; border-radius: 999px;
+}
+.skill-tag.ult { color: #1a1206; background: linear-gradient(#ffe27a, #f5a623); border-color: transparent; font-weight: 700; }
+.skill-explain { font-size: 12px; color: var(--dim); line-height: 1.5; margin-top: 3px; }
+
+/* 窄螢幕：改為上下堆疊；角色格自行捲動，讓下方詳情面板仍靠近、不必捲整頁 */
+@media (max-width: 760px) {
+  .char-select { flex-direction: column; }
+  .char-grid { max-height: 46vh; }
+  .char-detail {
+    flex: none;
+    width: auto;
+    min-height: 0;
+  }
+}
 
 .control-scheme-selector { display: flex; gap: 10px; margin-bottom: 14px; }
 .control-scheme-selector .btn { flex: 1; }
