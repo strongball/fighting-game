@@ -1,7 +1,7 @@
 import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
-import { modelConfig } from './model.ts';
+import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { loadVfx } from './vfx.ts';
 
 const data = {
@@ -52,4 +52,4 @@ const data = {
     ultimate: { name: '瘴氣風暴', type: 'zone', range: 140, radius: 120, dmg: 30, lifetime: 5, tick: 0.5, delay: 0.8, count: 6, scatter: 260, stagger: 0.16, effect: BURN(14, 3), cd: 16, windup: 1.0, telegraph: 'circle', color: '#6abf2f', vfx: 'boss_lizard_ult' },
   };
 
-export default new BaseBoss(data, { aiProfile, modelConfig, loadVfx });
+export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

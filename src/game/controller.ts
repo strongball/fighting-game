@@ -166,12 +166,12 @@ function createController(): GameController {
   }
 
   // ---------- 開始闖關模式 (全員 team 1 協同打 BOSS；固定 R1 起) ----------
-  function startBossGame() {
+  function startBossGame(round = 1) {
     if (role !== 'host') return;
     const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId, team: 1 }));
     gameState = createInitialState(arr, gameFlags, { mode: 'boss' });
     for (const id of Object.keys(gameState.players)) inputs[id] = { ...EMPTY_INPUT };
-    startBossRound(gameState, 1);
+    startBossRound(gameState, round);
     net.broadcast({ t: 'start', state: gameState, lobby });
     beginLoop();
   }
@@ -516,7 +516,7 @@ function createController(): GameController {
   }
 
   // ---------- 開發者：直接進入闖關模式 (?dev=true&boss=true) ----------
-  function devStartBoss(charId?: number) {
+  function devStartBoss(charId?: number, round = 1) {
     myName = 'Dev Player';
     role = 'host';
     selfId = 'dev-' + Math.random().toString(36).slice(2, 9);
@@ -526,7 +526,7 @@ function createController(): GameController {
     lobby = [{ id: selfId, name: myName, charId: me, controlScheme: selectedControlScheme, isHost: true, team: 1 }];
     for (let i = 1; i <= 2; i++) lobby.push({ id: 'dev-' + i, name: '隊友 ' + i, charId: all[Math.floor(Math.random() * all.length)], controlScheme: 'wasd-jkl', isHost: false, team: 1 });
     selectedChar = me; selectedTeam = 1;
-    startBossGame();
+    startBossGame(round);
   }
 
   function bossRetry() {

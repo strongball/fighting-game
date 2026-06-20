@@ -130,7 +130,7 @@ export interface GameController {
   startGame(): void;
   startBossGame(): void;
   devStartGame(charId?: number): void;
-  devStartBoss(charId?: number): void;
+  devStartBoss(charId?: number, round?: number): void;
   returnToLobby(): void;
   bossRetry(): void;
   bossQuit(): void;

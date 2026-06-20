@@ -1,7 +1,7 @@
 import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
-import { modelConfig } from './model.ts';
+import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './action.ts';
 
 const data = {
@@ -52,4 +52,4 @@ const data = {
     ultimate: { name: '安魂彌撒', type: 'zone', range: 0, radius: 240, dmg: 28, lifetime: 4, tick: 0.5, follow: true, healPerMinion: 30, effect: SLOW(0.6, 0.6), cd: 18, windup: 1.0, telegraph: 'circle', color: '#9d7dff', vfx: 'boss_necro_ult' },
   };
 
-export default new BaseBoss(data, { aiProfile, modelConfig });
+export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon });

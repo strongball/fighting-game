@@ -1,7 +1,7 @@
 import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
-import { modelConfig } from './model.ts';
+import { modelConfig, buildModel } from './model.ts';
 
 const data = {
     id: 104, round: 5, name: '廢墟古代巨兵', subtitle: '機關核心',
@@ -62,4 +62,4 @@ const data = {
     ultimate: { name: '核心過載', type: 'zone', range: 0, radius: 260, dmg: 70, lifetime: 0.6, tick: 0.6, delay: 1.2, knockback: 300, effect: STUN(0.6), requiresPartsDown: true, cd: 18, windup: 1.2, telegraph: 'circle', color: '#9fe8ff', vfx: 'boss_titan_ult' },
   };
 
-export default new BaseBoss(data, { aiProfile, modelConfig });
+export default new BaseBoss(data, { aiProfile, modelConfig, buildModel });

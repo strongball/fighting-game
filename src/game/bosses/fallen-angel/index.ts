@@ -1,7 +1,7 @@
 import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
-import { modelConfig } from './model.ts';
+import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './action.ts';
 import { tetherAllPairs } from '../phaseHooks.ts';
 
@@ -58,4 +58,4 @@ const data = {
     ultimate: { name: '光暗審判', type: 'light_dark', dmg: 80, radius: 1200, cd: 19, windup: 1.4, telegraph: 'self', color: '#ffe9a8', vfx: 'boss_angel_ult' },
   };
 
-export default new BaseBoss(data, { aiProfile, modelConfig });
+export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon });

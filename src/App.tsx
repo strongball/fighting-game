@@ -46,8 +46,10 @@ export function App() {
     const isDev = devModeParam === 'true' || envDev === 'true';
     if (isDev) {
       const bossParam = params.get('boss');
+      const roundParam = params.get('bossRound');
       const charId = roleParam ? parseInt(roleParam, 10) : undefined;
-      if (bossParam === 'true') setTimeout(() => controller.devStartBoss(charId), 100);
+      const bossRound = roundParam ? parseInt(roundParam, 10) : undefined;
+      if (bossParam === 'true') setTimeout(() => controller.devStartBoss(charId, bossRound), 100);
       else setTimeout(() => controller.devStartGame(charId), 100);
     }
   }, [controller]);
