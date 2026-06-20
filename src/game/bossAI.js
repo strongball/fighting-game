@@ -166,20 +166,15 @@ export function computeBossInput(state, ent, dt) {
     return boss.computeInput(state, ent, dt, { computeProfileInput });
   }
 
-  return computeProfileInput(PROFILES[ent.aiId] || PROFILES.minion, state, ent, dt);
+  const ch = getCharacter(ent.charId);
+  const profile = (ch && ch.aiProfile) || PROFILES[ent.aiId] || PROFILES.minion;
+  return computeProfileInput(profile, state, ent, dt);
 }
 
 function computeProfileInput(profile, state, ent, dt) {
   const input = mkInput();
   const s = ent.aiState || (ent.aiState = {});
-  let prof = profile || PROFILES.minion;
-  if (ent.charId === -2) {
-    prof = {
-      ...prof,
-      range: 480,
-      kite: 360,
-    };
-  }
+  const prof = profile || PROFILES.minion;
   const pickTarget = typeof prof.pickTarget === 'function'
     ? prof.pickTarget
     : PICK_TARGETS[prof.pickTarget] || nearestTarget;

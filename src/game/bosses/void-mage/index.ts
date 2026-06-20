@@ -2,8 +2,18 @@ import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
+import { applyEffect } from '../../entities/effects.ts';
+import { addFx } from '../../entities/fx.ts';
+import { teamPlayers } from '../lifecycle.ts';
 import './action.ts';
-import { scrambleAll } from '../phaseHooks.ts';
+
+const scrambleAll = (duration = 4) => (state: any, boss: any) => {
+  for (const p of teamPlayers(state)) {
+    if (!p.alive) continue;
+    applyEffect(p, 'scramble', { duration, color: '#b14fd8' }, boss.id);
+    addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#b14fd8', life: 0.4, radius: 40 });
+  }
+};
 
 const data = {
     id: 107, round: 8, name: '虛空大魔導', subtitle: '時空扭曲者',

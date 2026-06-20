@@ -2,7 +2,19 @@ import { BaseBoss } from '../BaseBoss.ts';
 import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
-import { burnNearby } from '../phaseHooks.ts';
+import { applyEffect } from '../../entities/effects.ts';
+import { addFx } from '../../entities/fx.ts';
+import { teamPlayers } from '../lifecycle.ts';
+
+const burnNearby = (radius = 360, dmg = 8, duration = 4) => (state: any, boss: any) => {
+  for (const p of teamPlayers(state)) {
+    if (!p.alive) continue;
+    const dx = p.x - boss.x, dy = p.y - boss.y;
+    if (dx * dx + dy * dy > radius * radius) continue;
+    applyEffect(p, 'burn', { duration, dmg, tick: 0.5, color: '#ff5a1f' }, boss.id);
+  }
+  addFx(state, { type: 'ultimate', x: boss.x, y: boss.y, facing: boss.facing, color: '#ff5a1f', life: 0.6, radius: radius });
+};
 
 const data = {
     id: 102, round: 3, name: '熔岩鐵衛', subtitle: '烈焰重裝兵',

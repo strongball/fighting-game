@@ -5,7 +5,7 @@
 //   checkBossRound(state, dt)  回合階段機 (intro→fighting→cleared→下一關 / failed / victory)
 //   startBossRound(state, n)   進入第 n 關 (生成魔王 + 部位、滿血全隊、過場橫幅)
 
-import { getBossForRound } from './bosses.js';
+import { getBossForRound, BOSS_COUNT } from './bosses.js';
 import {
   BOSS_TEAM,
   PLAYER_TEAM,
@@ -122,7 +122,7 @@ export function checkBossRound(state, dt) {
       state.roundTimer = 3.0;
       clearBossSide(state);
       reviveAndHealAll(state);
-      state.banner = { text: 'ROUND ' + state.round + ' 擊破！', sub: state.round >= 10 ? '全部魔王已討伐' : '準備迎戰下一位魔王…', life: 3.0 };
+      state.banner = { text: 'ROUND ' + state.round + ' 擊破！', sub: state.round >= BOSS_COUNT ? '全部魔王已討伐' : '準備迎戰下一位魔王…', life: 3.0 };
       return;
     }
     if (!anyAlive) {
@@ -143,7 +143,7 @@ export function checkBossRound(state, dt) {
     if (state.banner) state.banner.life -= dt;
     state.roundTimer -= dt;
     if (state.roundTimer <= 0) {
-      if (state.round >= 10) {
+      if (state.round >= BOSS_COUNT) {
         state.roundPhase = 'victory';
         state.bossResult = 'victory';
         state.phase = 'gameover';

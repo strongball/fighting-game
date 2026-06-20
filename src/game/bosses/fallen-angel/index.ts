@@ -3,7 +3,21 @@ import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './action.ts';
-import { tetherAllPairs } from '../phaseHooks.ts';
+import { addFx } from '../../entities/fx.ts';
+import { teamPlayers } from '../lifecycle.ts';
+
+const tetherAllPairs = (opts: any = {}) => (state: any, boss: any) => {
+  if (!state.tethers) state.tethers = [];
+  const humans = teamPlayers(state).filter((p: any) => p.alive);
+  for (let i = 0; i + 1 < humans.length; i += 2) {
+    state.tethers.push({
+      a: humans[i].id, b: humans[i + 1].id,
+      minGap: opts.minGap || 220, dmg: opts.dmg || 18, tick: 0.5, tickTimer: 0.5,
+      remaining: opts.duration || 12,
+    });
+  }
+  addFx(state, { type: 'ultimate', x: boss.x, y: boss.y, facing: boss.facing, color: '#f5d76e', life: 0.7, radius: 220 });
+};
 
 const data = {
     id: 108, round: 9, name: '審判之翼', subtitle: '墮落天使',

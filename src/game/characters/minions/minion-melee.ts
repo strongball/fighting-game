@@ -12,6 +12,7 @@ export const meleeMinion = {
   color: '#8d9aa8',
   shape: 'circle',
   maxHp: 60, maxMana: 0, speed: 120,
+  aiProfile: { range: 60, slots: ['basic'], pickTarget: 'nearestTarget' },
   // 程序化建模參數：纖細身形 + 小短劍，外觀偏雜兵
   modelConfig: { bulk: 0.95, weapon: 'sword', skinKind: 'metal' },
   // 只有普攻 —— 簡單近戰打擊，低傷低擊退，起手短
