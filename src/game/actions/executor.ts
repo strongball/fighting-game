@@ -8,6 +8,7 @@ import { addFx } from '../entities/fx.ts';
 import { isEnemy } from '../entities/team.ts';
 import { BOSS_TEAM } from '../bossMode.js';
 import { executeBossAction } from '../bosses/actions.ts';
+import { maybeScheduleTemporalEcho } from '../bosses/echoes.ts';
 import { createActionContext, runPostActionEffects } from './context.ts';
 import { ACTION_HANDLERS } from './handlers/index.ts';
 import type { GameState, Player, ActionDef, ActionOpts } from '../types';
@@ -35,4 +36,5 @@ export function executeAction(state: GameState, caster: Player, action: ActionDe
   if (handler) handler(ctx);
   else executeBossAction(state, caster, action, bossActionHelpers());
   runPostActionEffects(ctx);
+  maybeScheduleTemporalEcho(state, caster, action);
 }

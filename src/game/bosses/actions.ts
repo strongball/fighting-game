@@ -14,11 +14,24 @@ export type BossActionHelpers = {
 };
 
 export type BossActionHandler = (state: any, boss: any, action: any, helpers: BossActionHelpers) => void;
+export type BossActionPrepareHandler = (state: any, boss: any, action: any, helpers: BossActionHelpers) => void;
 
 const ACTIONS = new Map<string, BossActionHandler>();
+const PREPARES = new Map<string, BossActionPrepareHandler>();
 
 export function registerBossAction(type: string, handler: BossActionHandler) {
   if (type) ACTIONS.set(type, handler);
+}
+
+export function registerBossActionPrepare(type: string, handler: BossActionPrepareHandler) {
+  if (type) PREPARES.set(type, handler);
+}
+
+export function prepareBossAction(state: any, boss: any, action: any, helpers: BossActionHelpers) {
+  const handler = action && PREPARES.get(action.type);
+  if (!handler) return false;
+  handler(state, boss, action, helpers);
+  return true;
 }
 
 export function executeBossAction(state: any, boss: any, action: any, helpers: BossActionHelpers) {

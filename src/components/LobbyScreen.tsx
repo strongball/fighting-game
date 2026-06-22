@@ -2,11 +2,24 @@
 
 import { useState } from 'react';
 import { CHARACTERS as RAW_CHARACTERS, getCharacter as rawGetCharacter } from '../game/characters.js';
+import { BOSSES as RAW_BOSSES } from '../game/bosses.js';
 import { getCodexEntry, type SkillSlot } from '../utils/characterCodex';
 import type { CharacterMeta, ControlScheme, GameFlags, LobbyView, SkillMeta } from '../types';
 
 const CHARACTERS = RAW_CHARACTERS as unknown as CharacterMeta[];
 const getCharacter = rawGetCharacter as (id: number) => CharacterMeta;
+
+interface BossMeta {
+  id: number;
+  round: number;
+  name: string;
+  subtitle?: string;
+  color: string;
+  shape: string;
+  maxHp: number;
+}
+
+const BOSSES = RAW_BOSSES as unknown as BossMeta[];
 
 function shapeIcon(shape: string) {
   if (shape === 'square') return '■';
@@ -111,19 +124,66 @@ interface LobbyScreenProps {
   onRemoveNpc: () => void;
   onStart: () => void;
   onStartBoss: () => void;
+  onStartBossChallenge: (round: number) => void;
   onLeave: () => void;
 }
 
-export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme, selectedTeam, onSelectChar, onSelectControlScheme, onSelectTeam, onSelectGameFlags, onAddNpc, onRemoveNpc, onStart, onStartBoss, onLeave }: LobbyScreenProps) {
+export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme, selectedTeam, onSelectChar, onSelectControlScheme, onSelectTeam, onSelectGameFlags, onAddNpc, onRemoveNpc, onStart, onStartBoss, onStartBossChallenge, onLeave }: LobbyScreenProps) {
   const { players, selfId, isHost, roomCode, gameFlags } = lobby;
   const [copied, setCopied] = useState(false);
+  const [bossPickerOpen, setBossPickerOpen] = useState(false);
+  const [selectedBossRound, setSelectedBossRound] = useState(BOSSES[0]?.round ?? 1);
   const skillDisplay = getSkillDisplay(selectedControlScheme);
+  const selectedBoss = BOSSES.find((boss) => boss.round === selectedBossRound) ?? BOSSES[0];
 
   function copyRoom() {
     if (!roomCode) return;
     navigator.clipboard?.writeText(roomCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
+  }
+
+  if (bossPickerOpen) {
+    return (
+      <section id="screen-boss-select" className="screen active">
+        <div className="panel wide boss-picker-panel">
+          <div className="lobby-head">
+            <div>
+              <h2>Boss 挑戰模式</h2>
+              <p className="hint">選擇一位 Boss 單獨挑戰，擊破後立即完成。</p>
+            </div>
+            <button className="btn ghost" onClick={() => setBossPickerOpen(false)}>返回大廳</button>
+          </div>
+
+          <div className="boss-select-grid boss-picker-grid">
+            {BOSSES.map((boss) => (
+              <button
+                key={boss.id}
+                type="button"
+                className={'boss-select-card' + (boss.round === selectedBossRound ? ' selected' : '')}
+                onClick={() => setSelectedBossRound(boss.round)}
+                aria-pressed={boss.round === selectedBossRound}
+              >
+                <span className="boss-select-round">ROUND {boss.round}</span>
+                <span className="boss-select-icon" style={{ color: boss.color }}>{shapeIcon(boss.shape)}</span>
+                <span className="boss-select-name">{boss.name}</span>
+                <span className="boss-select-sub">{boss.subtitle || '未知威脅'} · HP {boss.maxHp}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="boss-picker-actions">
+            <div>
+              <span className="boss-picker-label">目前選擇</span>
+              <strong>{selectedBoss?.name || `ROUND ${selectedBossRound}`}</strong>
+            </div>
+            <button className="btn big boss-challenge-start" onClick={() => onStartBossChallenge(selectedBossRound)}>
+              🎯 開始挑戰
+            </button>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -267,7 +327,8 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
             {isHost
               ? <>
                   <button className="btn primary big" onClick={onStart}>開始遊戲</button>
-                  <button className="btn big boss-start" onClick={onStartBoss}>⚔️ 闖關模式（10 魔王協同）</button>
+                  <button className="btn big boss-start" onClick={onStartBoss}>⚔️ 闖關模式（全 Boss 協同）</button>
+                  <button className="btn big boss-challenge-start" onClick={() => setBossPickerOpen(true)}>🎯 Boss 挑戰模式</button>
                 </>
               : <p className="dim">等待房主開始…</p>}
             <p className="status">{status}</p>

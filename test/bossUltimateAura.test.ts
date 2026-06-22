@@ -21,7 +21,7 @@ describe('boss ultimate aura lifecycle', () => {
       addShake: vi.fn(),
     };
     const aura = createBossUltimateAura({ scene, particles, sceneMgr });
-    const boss = { id: 'boss', isBoss: true, alive: true, ultLockInvincible: true, x: 10, y: 20, scale: 1 };
+    const boss = { id: 'boss', isBoss: true, alive: true, desperation: true, ultLockInvincible: true, x: 10, y: 20, scale: 1 };
 
     aura.sync({ boss }, 1 / 60);
     expect(sceneMgr.addFlash).toHaveBeenCalledTimes(1);

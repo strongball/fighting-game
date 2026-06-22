@@ -15,6 +15,7 @@ import { createHud } from './render3d/hud.js';
 import { applyDecorations, updateDecorationFade } from './render3d/decorations.js';
 import { createAtmosphere } from './render3d/atmosphere.js';
 import { createBossUltimateAura } from './render3d/bossUltimateAura.js';
+import { createTimeAnchorLayer } from './render3d/timeAnchors.js';
 import { getBossForRound } from './bosses.js';
 import { createCharacterModel, animateModel, attachSkin } from './render3d/models.js';
 import { computeBossVisualState, createBossPartModel } from './bosses/render3d.ts';
@@ -55,6 +56,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
   const hud = createHud({ stage: sceneMgr.stage, scene, camera, controlScheme, hooks });
   const atmosphere = createAtmosphere(particles);
   const bossUltimateAura = createBossUltimateAura({ scene, particles, sceneMgr });
+  const timeAnchorLayer = createTimeAnchorLayer(scene);
   let appliedThemeRound = -1;
   let appliedThemeMode = '';
   const sfx = getSfxManager();
@@ -436,6 +438,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     fxbus.process(state);
     syncPlayers(state, selfId, dt);
     bossUltimateAura.sync(state.players, dt);
+    timeAnchorLayer.sync(state.timeAnchors || [], state.timeAnchorRitual, dt);
 
     updateHuntMarker(state, dt);
     entities.syncProjectiles(state.projectiles, dt);
@@ -469,5 +472,5 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     hud.render();
   }
 
-  return { render, dispose: () => bossUltimateAura.dispose() };
+  return { render, dispose: () => { bossUltimateAura.dispose(); timeAnchorLayer.dispose(); } };
 }

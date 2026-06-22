@@ -25,6 +25,28 @@ export interface TimeFreeze {
   scale?: number;
 }
 
+export interface TimeAnchor {
+  id: string;
+  ownerId: EntityId;
+  x: number;
+  y: number;
+  radius: number;
+  captureRadius: number;
+  color: string;
+  occupiedBy: EntityId | null;
+  occupancyGrace: number;
+  progress: number;
+}
+
+export interface TimeAnchorRitual {
+  ownerId: EntityId;
+  total: number;
+  remaining: number;
+  progress: number;
+  occupied: number;
+  required: number;
+}
+
 export interface GameState {
   phase: GamePhase;
   mode: GameMode;
@@ -49,6 +71,8 @@ export interface GameState {
   roundTimer: number;
   playerCount: number;
   banner: any | null;
+  timeAnchors: TimeAnchor[];
+  timeAnchorRitual: TimeAnchorRitual | null;
 
   timeFreeze?: TimeFreeze | null;
   stats?: any;

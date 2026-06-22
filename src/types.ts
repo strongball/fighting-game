@@ -43,6 +43,8 @@ export interface GameOverView {
   bossResult?: 'victory' | 'defeat'; // 闖關模式結果
   bossRound?: number;                // 抵達/通關的關卡
   bossStats?: BossRunStats;          // 闖關統計 (僅 boss 模式)
+  bossMode?: 'campaign' | 'challenge';
+  bossName?: string;
 }
 
 export interface BossRoundEntry {
@@ -129,6 +131,7 @@ export interface GameController {
   removeNpc(): void;
   startGame(): void;
   startBossGame(): void;
+  startBossChallenge(round: number): void;
   devStartGame(charId?: number): void;
   devStartBoss(charId?: number, round?: number): void;
   returnToLobby(): void;

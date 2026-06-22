@@ -12,7 +12,7 @@ import { drawHUD } from './render2d/hud.js';
 import { createParticleSystem } from './render2d/particles.js';
 import { createBossUltimateAura2d } from './render2d/bossUltimateAura.js';
 import { drawBar, seeded, shade, sx, sy } from './render2d/utils.js';
-import { drawFloor, drawZone } from './render2d/world.js';
+import { drawFloor, drawTimeAnchors, drawZone } from './render2d/world.js';
 
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
@@ -406,6 +406,8 @@ export function createRenderer(canvas) {
 
     // 地面區域 (先畫)
     for (const z of state.zones) drawZone(ctx, z, { curDt, addParticle: particles.add });
+    // 時間錨點必須壓在一般地面區域之上，避免安全點被技能圈蓋住。
+    drawTimeAnchors(ctx, state.timeAnchors || [], state.timeAnchorRitual);
 
     // 深度排序的實體 (玩家 + 投射物)
     const drawables = [];

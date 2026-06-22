@@ -5,6 +5,7 @@ import { addFx } from '../entities/fx.ts';
 import { recordRevive } from '../entities/stats.ts';
 import { followBossParts, teamPlayers } from './lifecycle.ts';
 import { tickBossPhases } from './phases.ts';
+import { tickTimeAnchors } from './time-anchors.ts';
 
 const REVIVE_RADIUS = 100;
 const REVIVE_TIME = 3.0;
@@ -30,6 +31,7 @@ export function reviveAndHealAll(state: any) {
 export function tickBossSystems(state: any, dt: number) {
   followBossParts(state);
   tickBossPhases(state, dt);
+  tickTimeAnchors(state, dt);
   tetherTick(state, dt);
   reviveTick(state, dt);
   recordHistory(state);

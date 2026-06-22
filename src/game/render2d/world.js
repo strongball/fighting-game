@@ -23,6 +23,33 @@ export function drawFloor(ctx) {
   ctx.strokeRect(x0, y0, w, h);
 }
 
+export function drawTimeAnchors(ctx, anchors = [], ritual = null) {
+  const now = performance.now() / 1000;
+  for (const anchor of anchors) {
+    const occupied = anchor.occupiedBy != null;
+    const color = occupied ? '#7CFCB2' : '#70e6ff';
+    const radius = anchor.captureRadius || anchor.radius || 120;
+    const urgent = (ritual?.remaining ?? Infinity) <= 1;
+    const pulse = 0.94 + 0.06 * Math.sin(now * (urgent ? 18 : 7));
+    const x = sx(anchor.x), y = sy(anchor.y);
+    ctx.save();
+    ctx.translate(x, y); ctx.scale(1, TILT);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = hexA(color, occupied ? 0.3 : 0.16);
+    ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = occupied ? 7 : 5;
+    ctx.shadowColor = color; ctx.shadowBlur = urgent ? 24 : 14;
+    ctx.beginPath(); ctx.arc(0, 0, radius * pulse, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.font = '900 18px system-ui, sans-serif'; ctx.textAlign = 'center';
+    ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.fillStyle = color;
+    const label = occupied ? '✓ 已鎖定' : '▼ 站這裡';
+    ctx.strokeText(label, x, y - radius * TILT - 18); ctx.fillText(label, x, y - radius * TILT - 18);
+    ctx.restore();
+  }
+}
+
 export function drawZone(ctx, zone, renderCtx) {
   const x = sx(zone.x), y = sy(zone.y);
   if (zone.delay > 0) { drawTelegraph(ctx, zone, x, y); return; }

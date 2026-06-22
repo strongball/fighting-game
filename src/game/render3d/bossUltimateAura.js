@@ -98,19 +98,30 @@ export function createBossUltimateAura({ scene, particles, sceneMgr }) {
     };
   }
 
+  function buildTube(points, color, radius, opacity) {
+    if (points.length < 3) return;
+    const curve = new THREE.CatmullRomCurve3(points);
+    const tubeGeo = new THREE.TubeGeometry(curve, Math.max(4, Math.floor(points.length * 2)), radius, 6, false);
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    });
+    return new THREE.Mesh(tubeGeo, mat);
+  }
+
   function rebuildLightning(e, invincible) {
     disposeObject(e.lightning);
     e.lightning.clear();
-    const boltCount = invincible ? (5 + Math.floor(Math.random() * 3)) : (2 + Math.floor(Math.random() * 2));
+    const boltCount = invincible ? (6 + Math.floor(Math.random() * 4)) : (3 + Math.floor(Math.random() * 3));
     const mainColor = invincible ? 0x88ddff : 0xff7722;
     const glowColor = invincible ? 0xccf0ff : 0xff9933;
     const baseR = e.radius * 0.4;
     const topR = e.radius * 1.2;
     const maxY = e.height * (invincible ? 0.8 : 0.6);
-    const thick = e.radius * (invincible ? 0.18 : 0.10);
+    const tubeR = e.radius * (invincible ? 0.088 : 0.05);
     for (let b = 0; b < boltCount; b++) {
       const angle = Math.random() * Math.PI * 2;
-      const segments = 8 + Math.floor(Math.random() * 4);
+      const segments = 10 + Math.floor(Math.random() * 4);
       const curve = (Math.random() - 0.5) * 1.0;
       const mainPoints = [];
       for (let i = 0; i <= segments; i++) {
@@ -123,42 +134,19 @@ export function createBossUltimateAura({ scene, particles, sceneMgr }) {
         const z = Math.sin(angle + t * curve) * radial;
         mainPoints.push(new THREE.Vector3(x, yLerp, z));
       }
-      const offsets = [-1.5, -0.7, 0, 0.7, 1.5];
-      for (let oi = 0; oi < offsets.length; oi++) {
-        const off = offsets[oi] * thick;
-        const offsetPoints = [];
-        for (let i = 0; i <= segments; i++) {
-          const t = i / segments;
-          const prev = mainPoints[Math.max(0, i - 1)];
-          const next = mainPoints[Math.min(segments, i + 1)];
-          const dx = next.x - prev.x;
-          const dz = next.z - prev.z;
-          const len = Math.hypot(dx, dz) || 1;
-          const nx = -dz / len;
-          const nz = dx / len;
-          offsetPoints.push(new THREE.Vector3(
-            mainPoints[i].x + nx * off,
-            mainPoints[i].y,
-            mainPoints[i].z + nz * off,
-          ));
-        }
-        const geo = new THREE.BufferGeometry().setFromPoints(offsetPoints);
-        const mat = new THREE.LineBasicMaterial({
-          color: oi === 2 ? 0xffffff : mainColor,
-          transparent: true,
-          opacity: oi === 2 ? (invincible ? 0.95 : 0.7) : (invincible ? 0.35 : 0.20),
-          blending: THREE.AdditiveBlending, depthWrite: false,
-        });
-        e.lightning.add(new THREE.Line(geo, mat));
-      }
+      const glow = buildTube(mainPoints, glowColor, tubeR * 3.0, invincible ? 0.30 : 0.15);
+      if (glow) e.lightning.add(glow);
+      const core = buildTube(mainPoints, 0xffffff, tubeR * 0.8, invincible ? 0.90 : 0.70);
+      if (core) e.lightning.add(core);
+      const mid = buildTube(mainPoints, mainColor, tubeR * 1.8, invincible ? 0.50 : 0.30);
+      if (mid) e.lightning.add(mid);
       const branchCount = 1 + Math.floor(Math.random() * 2);
       for (let br = 0; br < branchCount; br++) {
         const splitIdx = 3 + Math.floor(Math.random() * (segments - 4));
-        const tSplit = splitIdx / segments;
         const startP = mainPoints[splitIdx];
-        const outAng = angle + tSplit * curve + (Math.random() - 0.5) * 0.6;
+        const outAng = angle + (splitIdx / segments) * curve + (Math.random() - 0.5) * 0.6;
         const branchLen = e.radius * (0.4 + Math.random() * 0.8);
-        const branchSegs = 4 + Math.floor(Math.random() * 2);
+        const branchSegs = 5 + Math.floor(Math.random() * 2);
         const branchPoints = [new THREE.Vector3(startP.x, startP.y, startP.z)];
         for (let i = 1; i <= branchSegs; i++) {
           const t = i / branchSegs;
@@ -171,13 +159,10 @@ export function createBossUltimateAura({ scene, particles, sceneMgr }) {
             startP.z + Math.sin(outAng) * out + Math.sin(outAng + Math.PI / 2) * jitter,
           ));
         }
-        const bGeo = new THREE.BufferGeometry().setFromPoints(branchPoints);
-        const bMat = new THREE.LineBasicMaterial({
-          color: glowColor,
-          transparent: true, opacity: 0.25 + Math.random() * 0.15,
-          blending: THREE.AdditiveBlending, depthWrite: false,
-        });
-        e.lightning.add(new THREE.Line(bGeo, bMat));
+        const bGlow = buildTube(branchPoints, glowColor, tubeR * 2.0, invincible ? 0.20 : 0.10);
+        if (bGlow) e.lightning.add(bGlow);
+        const bMid = buildTube(branchPoints, mainColor, tubeR * 1.2, invincible ? 0.35 : 0.20);
+        if (bMid) e.lightning.add(bMid);
       }
     }
   }

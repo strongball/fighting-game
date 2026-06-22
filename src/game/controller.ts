@@ -26,6 +26,7 @@ import { createNetwork, makeRoomCode } from './network.js';
 import { createInput, EMPTY_INPUT } from './input.js';
 import { createInitialState } from './entities.js';
 import { CHARACTERS } from './characters.js';
+import { getBossForRound } from './bosses.js';
 import { startBossRound, retryBossRound, quitBossRun } from './bossMode.js';
 import { step, applyMovement } from './simulation.ts';
 import { DT, SNAPSHOT_INTERVAL, INPUT_INTERVAL, MAX_PLAYERS } from './constants.js';
@@ -170,16 +171,21 @@ function createController(): GameController {
     beginLoop();
   }
 
-  // ---------- 開始闖關模式 (全員 team 1 協同打 BOSS；固定 R1 起) ----------
-  function startBossGame(round = 1) {
+  // ---------- Boss 模式（闖關固定 R1；挑戰模式只打指定 Boss） ----------
+  function startBossSession(round: number, bossMode: 'campaign' | 'challenge') {
     if (role !== 'host') return;
     const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId, team: 1 }));
     gameState = createInitialState(arr, gameFlags, { mode: 'boss' });
+    gameState.bossMode = bossMode;
     for (const id of Object.keys(gameState.players)) inputs[id] = { ...EMPTY_INPUT };
     startBossRound(gameState, round);
     net.broadcast({ t: 'start', state: gameState, lobby });
     beginLoop();
   }
+
+  function startBossGame() { startBossSession(1, 'campaign'); }
+
+  function startBossChallenge(round: number) { startBossSession(round, 'challenge'); }
 
   function startFromSnapshot(state: any) {
     lastSnapshot = state;
@@ -193,7 +199,7 @@ function createController(): GameController {
   }
 
   function emptyView() {
-    return { players: {}, projectiles: [], zones: [], fx: [], destructibles: [], items: [], phase: 'playing', winner: null, time: 0 };
+    return { players: {}, projectiles: [], zones: [], fx: [], destructibles: [], items: [], timeAnchors: [], timeAnchorRitual: null, phase: 'playing', winner: null, time: 0 };
   }
 
   // ---------- 房主：精簡快照 (只送加入者「渲染/HUD」需要的欄位) ----------
@@ -379,6 +385,8 @@ function createController(): GameController {
     view.roundPhase = latest.roundPhase; view.banner = latest.banner; view.tethers = latest.tethers;
     view.introDur = latest.introDur; view.roundTimer = latest.roundTimer;
     view.bossWipedRound = latest.bossWipedRound; view.stats = latest.stats;
+    view.timeAnchors = latest.timeAnchors || [];
+    view.timeAnchorRitual = latest.timeAnchorRitual || null;
     // 投射物/區域/特效/可破壞物：生命短、移動快,取最新即可 (插值意義不大)
     view.projectiles = latest.projectiles; view.zones = latest.zones;
     view.fx = latest.fx; view.destructibles = latest.destructibles || [];
@@ -428,14 +436,16 @@ function createController(): GameController {
       .filter((p: any) => !p.ownerId && (!isBoss || p.team === 1))
       .map((p: any) => ({ name: p.name, charId: p.charId, kills: p.kills, team: p.team || 0 }));
     const bossStats = isBoss ? buildBossStats(gameState) : undefined;
-    net.broadcast({ t: 'gameover', winner: winnerName, winnerTeam, players, bossResult, bossRound, bossStats });
-    showGameover({ winnerName, winnerTeam, players, isHost: true, bossResult, bossRound, bossStats } as GameOverView);
+    const bossMode = isBoss ? (gameState.bossMode || 'campaign') : undefined;
+    const bossName = isBoss ? getBossForRound(gameState.round)?.name : undefined;
+    net.broadcast({ t: 'gameover', winner: winnerName, winnerTeam, players, bossResult, bossRound, bossStats, bossMode, bossName });
+    showGameover({ winnerName, winnerTeam, players, isHost: true, bossResult, bossRound, bossStats, bossMode, bossName } as GameOverView);
   }
 
   function joinerGameover(data: any) {
     stopLoop();
     input.disable();
-    showGameover({ winnerName: data.winner, winnerTeam: data.winnerTeam || 0, players: data.players, isHost: false, bossResult: data.bossResult, bossRound: data.bossRound, bossStats: data.bossStats } as GameOverView);
+    showGameover({ winnerName: data.winner, winnerTeam: data.winnerTeam || 0, players: data.players, isHost: false, bossResult: data.bossResult, bossRound: data.bossRound, bossStats: data.bossStats, bossMode: data.bossMode, bossName: data.bossName } as GameOverView);
   }
 
   function buildBossStats(state: any) {
@@ -608,7 +618,7 @@ function createController(): GameController {
     lobby = [{ id: selfId, name: myName, charId: me, controlScheme: selectedControlScheme, isHost: true, team: 1 }];
     for (let i = 1; i <= 2; i++) lobby.push({ id: 'dev-' + i, name: '隊友 ' + i, charId: all[Math.floor(Math.random() * all.length)], controlScheme: 'wasd-jkl', isHost: false, team: 1 });
     selectedChar = me; selectedTeam = 1;
-    startBossGame(round);
+    startBossSession(round, 'campaign');
   }
 
   function bossRetry() {
@@ -668,6 +678,7 @@ function createController(): GameController {
     removeNpc,
     startGame,
     startBossGame,
+    startBossChallenge,
     devStartGame,
     devStartBoss,
     returnToLobby,

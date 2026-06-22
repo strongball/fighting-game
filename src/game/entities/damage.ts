@@ -1,5 +1,6 @@
 import { PLAYER_RADIUS, ULT_MAX, ULT_GAIN_DEAL, ULT_GAIN_TAKE } from '../constants.js';
 import { getCharacter } from '../characters.js';
+import { prepareBossAction } from '../bosses/actions.ts';
 import { applyBossDamageModifiers } from '../bosses/damage.ts';
 import { getBoss } from '../bosses.js';
 import { angleDiff, missingHp } from './math.ts';
@@ -212,7 +213,9 @@ export function dealDamage(
         s.mode = 'windup';
         s.slot = 'ultimate';
 
-        const rawWindup = action.windup != null ? action.windup : 0.5;
+        const rawWindup = target.phaseIdx >= 2 && action.finalPhaseWindup != null
+          ? action.finalPhaseWindup
+          : (action.windup != null ? action.windup : 0.5);
         s.windupT = Math.max(1.0, rawWindup);
         s.totalWindupT = s.windupT;
         s.chainQueue = null;
@@ -220,6 +223,10 @@ export function dealDamage(
         s.preselectedSoulBindPairs = null;
         s.stolenUltimate = null;
         s.safeLeft = null;
+
+        // Custom boss mechanics (such as Round 11 time anchors) must also be
+        // prepared when the global 20% lock forces an ultimate directly.
+        prepareBossAction(state, target, action, {} as any);
 
         // Aim at the nearest player/enemy
         const enemies = [];

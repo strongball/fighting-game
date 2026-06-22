@@ -60,6 +60,9 @@ export function spawnBoss(state: any, round: number) {
 export function clearBossSide(state: any) {
   for (const o of bossSideEntities(state)) delete state.players[o.id];
   state.tethers = [];
+  state.timeAnchors = [];
+  state.timeAnchorRitual = null;
+  state.temporalEchoes = [];
 }
 
 export function followBossParts(state: any) {

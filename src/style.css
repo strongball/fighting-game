@@ -288,6 +288,52 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 .mode-name { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
 .mode-desc { font-size: 11px; color: var(--dim); line-height: 1.4; }
 
+.boss-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.boss-select-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "round round" "icon name" "sub sub";
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 92px;
+  padding: 10px 11px;
+  color: var(--text);
+  text-align: left;
+  background: var(--panel2);
+  border: 1px solid #2b3848;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.boss-select-card:hover:not(:disabled) { border-color: #b05c51; transform: translateY(-1px); }
+.boss-select-card.selected { border-color: #ef7868; background: linear-gradient(145deg, #351d20, #211820); box-shadow: 0 0 0 1px rgba(239,120,104,0.18); }
+.boss-select-card:disabled { cursor: default; opacity: 0.72; }
+.boss-select-round { grid-area: round; color: #ef9b8f; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; }
+.boss-select-icon { grid-area: icon; font-size: 21px; line-height: 1; filter: drop-shadow(0 0 5px currentColor); }
+.boss-select-name { grid-area: name; font-size: 13px; font-weight: 750; }
+.boss-select-sub { grid-area: sub; color: var(--dim); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.boss-picker-panel { max-width: 1060px; }
+.boss-picker-grid { grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); margin-top: 22px; }
+.boss-picker-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  margin-top: 22px; padding-top: 18px; border-top: 1px solid #2b3848;
+}
+.boss-picker-actions > div { display: flex; flex-direction: column; gap: 3px; }
+.boss-picker-label { color: var(--dim); font-size: 11px; }
+.boss-picker-actions strong { font-size: 18px; }
+.boss-picker-actions .btn { min-width: 220px; }
+
+@media (max-width: 600px) {
+  .boss-picker-actions { align-items: stretch; flex-direction: column; }
+  .boss-picker-actions .btn { min-width: 0; width: 100%; }
+}
+
 .lobby-foot { display: flex; gap: 20px; margin-top: 18px; }
 .players { flex: 1; }
 .players h3 { display: flex; align-items: center; gap: 8px; }
@@ -546,6 +592,8 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 /* 大廳：闖關模式按鈕 */
 .btn.boss-start { margin-top: 10px; background: linear-gradient(135deg, #7d2b2b, #b23b3b); color: #fff; border: 1px solid rgba(255,180,120,0.4); }
 .btn.boss-start:hover { background: linear-gradient(135deg, #8f3232, #cf4646); }
+.btn.boss-challenge-start { background: linear-gradient(135deg, #49306d, #7250a6); color: #fff; border: 1px solid rgba(205,175,255,0.45); }
+.btn.boss-challenge-start:hover { background: linear-gradient(135deg, #593982, #865fc0); }
 
 /* 闖關 Boss 登場動畫 overlay */
 .hud-intro {
@@ -1144,4 +1192,3 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
     font-size: 9px;
   }
 }
-

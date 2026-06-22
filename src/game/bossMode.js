@@ -122,7 +122,8 @@ export function checkBossRound(state, dt) {
       state.roundTimer = 3.0;
       clearBossSide(state);
       reviveAndHealAll(state);
-      state.banner = { text: 'ROUND ' + state.round + ' 擊破！', sub: state.round >= BOSS_COUNT ? '全部魔王已討伐' : '準備迎戰下一位魔王…', life: 3.0 };
+      const challengeComplete = state.bossMode === 'challenge';
+      state.banner = { text: 'ROUND ' + state.round + ' 擊破！', sub: challengeComplete ? 'Boss 挑戰完成' : (state.round >= BOSS_COUNT ? '全部魔王已討伐' : '準備迎戰下一位魔王…'), life: 3.0 };
       return;
     }
     if (!anyAlive) {
@@ -143,7 +144,7 @@ export function checkBossRound(state, dt) {
     if (state.banner) state.banner.life -= dt;
     state.roundTimer -= dt;
     if (state.roundTimer <= 0) {
-      if (state.round >= BOSS_COUNT) {
+      if (state.bossMode === 'challenge' || state.round >= BOSS_COUNT) {
         state.roundPhase = 'victory';
         state.bossResult = 'victory';
         state.phase = 'gameover';

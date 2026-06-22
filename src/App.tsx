@@ -116,6 +116,7 @@ export function App() {
             onRemoveNpc={() => controller.removeNpc()}
             onStart={() => controller.startGame()}
             onStartBoss={() => controller.startBossGame()}
+            onStartBossChallenge={(round) => controller.startBossChallenge(round)}
             onLeave={() => controller.leave()}
           />
         );

@@ -20,12 +20,13 @@ function fmtDuration(s: number): string {
 }
 
 export function GameOverScreen({ view, onToLobby, onLeave }: GameOverScreenProps) {
-  const { winnerName, winnerTeam, players, isHost, bossResult, bossRound, bossStats } = view;
+  const { winnerName, winnerTeam, players, isHost, bossResult, bossRound, bossStats, bossMode, bossName } = view;
+  const isBossChallenge = bossMode === 'challenge';
   const sorted = [...players].sort((a, b) => b.kills - a.kills);
   const title = bossResult
     ? (bossResult === 'victory'
-        ? '🏆 全部魔王討伐完成！'
-        : `💀 闖關失敗 — 止步於 ROUND ${bossRound ?? '?'}`)
+        ? (isBossChallenge ? `🎯 Boss 挑戰成功 — ${bossName || `ROUND ${bossRound ?? '?'}`}` : '🏆 全部魔王討伐完成！')
+        : (isBossChallenge ? `💀 Boss 挑戰失敗 — ${bossName || `ROUND ${bossRound ?? '?'}`}` : `💀 闖關失敗 — 止步於 ROUND ${bossRound ?? '?'}`))
     : winnerName
       ? (winnerTeam && winnerTeam > 0 ? `🏆 隊伍 ${winnerTeam} 獲勝！` : `🏆 ${winnerName} 獲勝！`)
       : '平手 — 無人存活';
@@ -36,7 +37,7 @@ export function GameOverScreen({ view, onToLobby, onLeave }: GameOverScreenProps
     <section id="screen-gameover" className="screen active">
       <div className={`panel ${showBossSettle ? 'boss-settle' : ''}`}>
         <h1>{title}</h1>
-        {bossResult && <p className="hint">{bossResult === 'victory' ? '你們擊敗了全部 10 位魔王，傳奇就此誕生。' : '靠近倒地的隊友即可拉起，下次再協力挑戰！'}</p>}
+        {bossResult && <p className="hint">{bossResult === 'victory' ? (isBossChallenge ? `你們成功擊破了${bossName ? `「${bossName}」` : '選定的 Boss'}。` : '你們擊敗了全部魔王，傳奇就此誕生。') : '靠近倒地的隊友即可拉起，下次再協力挑戰！'}</p>}
 
         {showBossSettle ? (
           <BossSettlement stats={bossStats} />

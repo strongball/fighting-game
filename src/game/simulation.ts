@@ -5,6 +5,8 @@ import { EMPTY_INPUT } from './input.js';
 import { computeBossInput } from './bossAI.js';
 import { bossTick, checkBossRound } from './bossMode.js';
 import { castInputActions } from './actions/casting.ts';
+import { executeAction } from './actions/executor.ts';
+import { tickTemporalEchoes } from './bosses/echoes.ts';
 import { processChannel, processScripted, processTrail } from './actions/runtime.ts';
 import { resolveCollisions } from './systems/collisions.ts';
 import { tickStatusEffects } from './systems/effects.ts';
@@ -89,6 +91,7 @@ export function step(state: GameState, inputs: Record<string, Input>, dt: number
   resolveCollisions(state);
   updateProjectiles(state, dt);
   updateZones(state, dt);
+  tickTemporalEchoes(state, dt, executeAction);
   tickDestructibles(state, dt);
   tickDropItems(state, dt);
   updateFx(state, dt);

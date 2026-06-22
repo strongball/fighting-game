@@ -26,7 +26,7 @@ export function createBossUltimateAura2d({ ctx, particles, addShake, addFlash })
 
   function refreshBolts(e, r, invincible) {
     e.bolts = [];
-    const boltCount = invincible ? (4 + Math.floor(Math.random() * 3)) : (2 + Math.floor(Math.random() * 2));
+    const boltCount = invincible ? (6 + Math.floor(Math.random() * 4)) : (3 + Math.floor(Math.random() * 3));
     for (let b = 0; b < boltCount; b++) {
       const pts = [];
       const horzSpread = r * (invincible ? 3.0 : 1.8);
@@ -186,15 +186,15 @@ export function createBossUltimateAura2d({ ctx, particles, addShake, addFlash })
     for (const bolt of e.bolts) {
       const col = invincible ? (bolt.cyan ? '#89f5ff' : '#fff3af') : '#ff6622';
       const shd = invincible ? (bolt.cyan ? '#24d9ff' : '#ffb52e') : '#cc4400';
-      ctx.shadowBlur = invincible ? 18 : 8;
+      ctx.shadowBlur = invincible ? 30 : 15;
       ctx.shadowColor = shd;
-      ctx.lineWidth = invincible ? 10 : 6;
+      ctx.lineWidth = 5;
       ctx.strokeStyle = col;
-      ctx.globalAlpha = invincible ? 0.4 : 0.25;
+      ctx.globalAlpha = invincible ? 0.25 : 0.15;
       ctx.beginPath();
       bolt.pts.forEach((pt, i) => i ? ctx.lineTo(bx + pt.x, bodyCY + pt.y) : ctx.moveTo(bx + pt.x, bodyCY + pt.y));
       ctx.stroke();
-      ctx.lineWidth = invincible ? 4 : 2.5;
+      ctx.lineWidth = 5;
       ctx.strokeStyle = invincible ? '#ffffff' : '#ff8844';
       ctx.shadowBlur = invincible ? 10 : 5;
       ctx.globalAlpha = 0.85;
@@ -204,14 +204,14 @@ export function createBossUltimateAura2d({ ctx, particles, addShake, addFlash })
       ctx.globalAlpha = 1;
       if (bolt.branches) {
         for (const branch of bolt.branches) {
-          ctx.lineWidth = invincible ? 5 : 3;
+          ctx.lineWidth = 5;
           ctx.strokeStyle = col;
-          ctx.shadowBlur = invincible ? 10 : 5;
-          ctx.globalAlpha = invincible ? 0.35 : 0.2;
+          ctx.shadowBlur = invincible ? 20 : 12;
+          ctx.globalAlpha = invincible ? 0.2 : 0.12;
           ctx.beginPath();
           branch.forEach((pt, i) => i ? ctx.lineTo(bx + pt.x, bodyCY + pt.y) : ctx.moveTo(bx + pt.x, bodyCY + pt.y));
           ctx.stroke();
-          ctx.lineWidth = invincible ? 2 : 1.2;
+          ctx.lineWidth = 5;
           ctx.strokeStyle = invincible ? '#ffffff' : '#ff8844';
           ctx.globalAlpha = 0.7;
           ctx.beginPath();

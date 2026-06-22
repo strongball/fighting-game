@@ -105,6 +105,9 @@ export function createInitialState(
     roundTimer: 0,
     playerCount: playersArr.length,
     banner: null,
+    timeAnchors: [],
+    timeAnchorRitual: null,
+    temporalEchoes: [],
   };
 }
 
@@ -157,4 +160,3 @@ export function makeDropItem(kind: 'heal' | 'mana', x: number, y: number, opt: R
     maxWarningTime: opt.warningTime != null ? opt.warningTime : 1.5,
   };
 }
-
