@@ -70,7 +70,7 @@ function createController(): GameController {
   let selectedChar = 0;
   let selectedControlScheme: ControlScheme = 'wasd-jkl';
   let selectedTeam = 0; // 0 = 單人；正數 = 組隊
-  let gameFlags: GameFlags = { freeMana: false, noCooldown: false, noDamage: false };
+  let gameFlags: GameFlags = { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0.5 };
   let lobby: LobbyEntry[] = [];
 
   let gameState: any = null;       // 房主權威狀態
@@ -350,7 +350,8 @@ function createController(): GameController {
     const me = snap.players[selfId as string];
     if (me && me.alive) {
       const tmp = { charId: localSelf.charId, x: localSelf.x, y: localSelf.y, vx: 0, vy: 0, kvx: localSelf.kvx, kvy: localSelf.kvy, facing: localSelf.facing, effects: me.effects };
-      applyMovement(tmp as any, inp, dt);
+      const diff = (lastSnapshot?.flags?.difficulty ?? 0.5) as number;
+      applyMovement(tmp as any, inp, dt, diff);
       localSelf.x = tmp.x; localSelf.y = tmp.y; localSelf.facing = tmp.facing;
       localSelf.kvx = tmp.kvx; localSelf.kvy = tmp.kvy;
     } else if (me) {

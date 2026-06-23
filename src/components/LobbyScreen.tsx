@@ -268,6 +268,24 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
           </button>
         </div>
 
+        <h3>難度{!isHost && <span className="dim">（由房主設定）</span>}</h3>
+        <div className="difficulty-selector">
+          {[
+            { label: '簡單', value: 0, icon: '🌱', desc: '魔王傷害降低、血量減少、攻速變慢' },
+            { label: '普通', value: 0.5, icon: '⚖️', desc: '預設平衡數值，適合初次挑戰' },
+            { label: '困難', value: 1, icon: '💀', desc: '魔王強化，考驗操作與團隊配合' },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              className={'btn diff-btn' + (gameFlags.difficulty === opt.value ? ' active' : '')}
+              onClick={() => isHost && onSelectGameFlags({ ...gameFlags, difficulty: opt.value })}
+              disabled={!isHost}
+            >
+              <span className="diff-icon">{opt.icon}</span>
+              <span className="diff-label">{opt.label}</span>
+            </button>
+          ))}
+        </div>
 
 
         <h3>選擇角色</h3>

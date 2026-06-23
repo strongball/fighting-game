@@ -13,7 +13,7 @@
 //   recover → 施放後短暫停頓 → 回 idle
 // 每個技能 a.windup 控制起手秒數 (越簡單的王越長、破綻越大)。
 
-import { ARENA, PLAYER_RADIUS } from './constants.js';
+import { ARENA, PLAYER_RADIUS, BOSS_PACING, difficultyMult } from './constants.js';
 import { dist, clamp } from './entities/math.ts';
 import { addFx } from './entities/fx.ts';
 import { isEnemy } from './entities/team.ts';
@@ -69,7 +69,7 @@ function startWindup(state, ent, slot, a, target, customWindup = null) {
   let rawWindup = customWindup != null ? customWindup : (a.windup != null ? a.windup : 0.5);
   if (ent.phaseIdx >= 2 && a.finalPhaseWindup != null) rawWindup = a.finalPhaseWindup;
   if (ent.isBoss) {
-    rawWindup = Math.max(ent.desperation ? 0.4 : 1.5, rawWindup);
+    rawWindup = Math.max(ent.desperation ? BOSS_PACING.minWindupDesperation : BOSS_PACING.minWindup, rawWindup);
   }
   s.windupT = rawWindup;
   s.totalWindupT = rawWindup;
@@ -532,6 +532,7 @@ function lowestTarget(state, ent) {
 
 // ---- 主入口 ----
 export function computeBossInput(state, ent, dt) {
+  dt *= difficultyMult(state.flags.difficulty ?? 0.5).bossCd;  // 難易度影響 AI 計時器流速 (越高越慢)
   const input = mkInput();
   const s = ent.aiState || (ent.aiState = {});
 
@@ -547,7 +548,7 @@ export function computeBossInput(state, ent, dt) {
   }
 
   const ch = getCharacter(ent.charId);
-  const profile = (ch && ch.aiProfile) || PROFILES[ent.aiId] || PROFILES.minion;
+  const profile = ent.aiProfile || (ch && ch.aiProfile) || PROFILES[ent.aiId] || PROFILES.minion;
   return computeProfileInput(profile, state, ent, dt);
 }
 
@@ -591,14 +592,14 @@ function computeProfileInput(profile, state, ent, dt) {
         s.recoverT = a.recover;
       } else if (hasChainNext) {
         const nextChain = s.chainQueue[0];
-        s.recoverT = nextChain.delay != null ? nextChain.delay : 0.25;
+        s.recoverT = nextChain.delay != null ? nextChain.delay : BOSS_PACING.chainDelayFallback;
       } else if (ent.desperation) {
-        s.recoverT = 0.08 + Math.random() * 0.07;
+        s.recoverT = BOSS_PACING.desperationRecoverBase + Math.random() * BOSS_PACING.desperationRecoverRandom;
       } else {
         // 破綻窗口：縮短時長 (避免長時間卡住感)；recover 期間 Boss 可走路但減速
-        s.recoverT = heavy ? 0.9 + Math.random() * 0.35
-                   : med   ? 0.6 + Math.random() * 0.25
-                   :         0.3 + Math.random() * 0.25;
+        s.recoverT = heavy ? BOSS_PACING.recoverHeavyBase + Math.random() * BOSS_PACING.recoverHeavyRandom
+                   : med   ? BOSS_PACING.recoverMedBase + Math.random() * BOSS_PACING.recoverMedRandom
+                   :         BOSS_PACING.recoverLightBase + Math.random() * BOSS_PACING.recoverLightRandom;
       }
       s.recoverTotal = s.recoverT;
       s.mode = 'recover';
@@ -628,9 +629,9 @@ function computeProfileInput(profile, state, ent, dt) {
         ent.isCastingLockHpUlt = false;
       }
       // 休息期：一般狀態每 2 招後強制停頓，給玩家喘息
-      if (!hasChainNext && !ent.desperation && s.attackCount >= 2) {
+      if (!hasChainNext && !ent.desperation && s.attackCount >= BOSS_PACING.attacksBeforePause) {
         s.attackCount = 0;
-        s.pauseT = 1.5 + Math.random() * 1.0;
+        s.pauseT = BOSS_PACING.pauseBase + Math.random() * BOSS_PACING.pauseRandom;
         s.mode = 'pause';
         return input;
       }
@@ -708,7 +709,7 @@ function computeProfileInput(profile, state, ent, dt) {
       startWindup(state, ent, chosen, a, target);
       return input;
     }
-    s.idleDelayT = 1.0 + Math.random() * 0.8;
+    s.idleDelayT = BOSS_PACING.idleDelayBase + Math.random() * BOSS_PACING.idleDelayRandom;
     s.idleDelaySlot = chosen;
     input.aim = aimAt(ent, target.x, target.y);
     if (prof.kite && d < prof.kite) moveAway(input, ent, target.x, target.y);
@@ -720,12 +721,12 @@ function computeProfileInput(profile, state, ent, dt) {
   input.aim = aimAt(ent, target.x, target.y);
   const want = prof.range || 80;
   // 一般狀態：偶爾發呆不追擊，讓玩家有喘息空間
-  if (!ent.desperation) {
-    s._loiterT = (s._loiterT || 0) - dt;
-    if (s._loiterT <= 0) {
-      s._loiterT = 0.8 + Math.random() * 1.5;
-      s._loiter = Math.random() < 0.4;
-    }
+    if (!ent.desperation && s.phaseIdx < 2) {
+      s._loiterT = (s._loiterT || 0) - dt;
+      if (s._loiterT <= 0) {
+        s._loiterT = BOSS_PACING.loiterBase + Math.random() * BOSS_PACING.loiterRandom;
+        s._loiter = Math.random() < BOSS_PACING.loiterChance;
+      }
     if (s._loiter) {
       // 發呆時偶爾後退讓出距離
       if (d < want * 0.6) moveAway(input, ent, target.x, target.y);

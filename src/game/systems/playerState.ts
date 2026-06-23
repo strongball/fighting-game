@@ -1,4 +1,4 @@
-import { PLAYER_RADIUS, MANA_REGEN, ULT_MAX, ULT_REGEN, COOLDOWN_MULTIPLIER } from '../constants.js';
+import { PLAYER_RADIUS, MANA_REGEN, ULT_MAX, ULT_REGEN, COOLDOWN_MULTIPLIER, difficultyMult } from '../constants.js';
 import { missingHp } from '../entities/math.ts';
 import { applyHeal } from '../entities/heal.ts';
 import { addFx } from '../entities/fx.ts';
@@ -28,6 +28,7 @@ export function tickCooldowns(state: GameState, p: Player, talent: any, dt: numb
   let cdRate = 1;
   if (talent && talent.id === 'bloodlust') cdRate = 1 + (talent.haste || 0.6) * missingHp(p);
   cdRate /= COOLDOWN_MULTIPLIER;
+  cdRate /= difficultyMult(state.flags.difficulty ?? 0.5).playerCd;
   for (const slot of COOLDOWN_SLOTS) {
     let rate = cdRate;
     if (slot === 'basic' && p.effects.overdrive && p.effects.overdrive.atkSpeed) {

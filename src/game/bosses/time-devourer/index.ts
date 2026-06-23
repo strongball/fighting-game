@@ -38,22 +38,22 @@ const data = {
     floorDecal: { kind: 'rings', color: '#34264d', opacity: 0.16, glow: 0.12 },
   },
   phases: [
-    { hpPct: 0.7, name: '歷史重演', sub: '過去追上了現在', color: '#70e6ff', dmgMult: 1.2, speedMult: 1.05, cdMult: 0.85,
+      { hpPct: 0.7, name: '歷史重演', sub: '過去追上了現在', color: '#70e6ff', dmgMult: 1.0, speedMult: 1.05, cdMult: 0.85,
       tagsOverride: [
         { icon: '👥', text: '技能會在 1.5 秒後重演' },
         { icon: '⏳', text: '終結時仍須全員站位' },
       ] },
-    { hpPct: 0.35, name: '時間盡頭', sub: '歷史加速崩解', color: '#ff6b9f', dmgMult: 1.45, speedMult: 1.1, cdMult: 0.75,
+      { hpPct: 0.35, name: '時間盡頭', sub: '歷史加速崩解', color: '#ff6b9f', dmgMult: 1.15, speedMult: 1.1, cdMult: 0.75,
       tagsOverride: [
         { icon: '⚡', text: '殘影僅延遲 0.8 秒' },
         { icon: '⏱️', text: '紀元終結倒數縮短' },
         { icon: '🔥', text: '20% 將進入限界狂暴' },
       ] },
   ],
-  basic: { name: '斷秒爪', type: 'melee', dmg: 48, range: 210, arc: 1.4, knockback: 180, cd: 1.3, windup: 0.7, telegraph: 'arc', color: '#d6b45f', vfx: 'boss_time_claw' },
-  skill1: { name: '歲蝕吐息', type: 'projectile', dmg: 24, speed: 560, radius: 16, lifetime: 1.7, count: 5, spread: 0.65, knockback: 70, effect: SLOW(1.5, 0.75), cd: 7, windup: 1.1, telegraph: 'line', color: '#70e6ff', vfx: 'boss_time_breath' },
-  skill2: { name: '時針墜落', type: 'zone', range: 260, radius: 100, dmg: 55, lifetime: 0.45, tick: 0.45, delay: 1.2, count: 4, scatter: 330, effect: ROOT(0.5), cd: 10, windup: 1.2, telegraph: 'circle', suppressWindupTelegraph: true, color: '#d06cff' },
-  ultimate: { name: '紀元終結', type: 'time_anchor_ritual', cd: 26, windup: 5, finalPhaseWindup: 3.8, recover: 3, anchorRadius: 95, barrageDelay: 0.8, barrageInterval: 1.1, barrageCount: 3, barrageDmg: 20, telegraph: 'self', color: '#ff6b9f', vfx: 'boss_time_ult' },
+    basic: { name: '斷秒爪', type: 'melee', dmg: 48, range: 340, arc: 1.4, knockback: 180, cd: 1.0, windup: 0.5, telegraph: 'arc', color: '#d6b45f', vfx: 'boss_time_claw' },
+    skill1: { name: '歲蝕吐息', type: 'projectile', dmg: 24, speed: 780, radius: 18, lifetime: 1.7, count: 6, spread: 0.65, knockback: 70, effect: SLOW(1.5, 0.75), cd: 5.3, windup: 0.55, telegraph: 'line', color: '#70e6ff', vfx: 'boss_time_breath' },
+    skill2: { name: '時針墜落', type: 'zone', range: 370, radius: 170, dmg: 55, lifetime: 0.45, tick: 0.45, delay: 1.2, count: 6, scatter: 330, effect: ROOT(0.5), cd: 7.5, windup: 0.6, telegraph: 'circle', suppressWindupTelegraph: true, color: '#d06cff' },
+    ultimate: { name: '紀元終結', type: 'time_anchor_ritual', cd: 19.5, windup: 5, finalPhaseWindup: 3.0, recover: 3, anchorRadius: 110, barrageDelay: 0.8, barrageInterval: 1.1, barrageCount: 3, barrageDmg: 20, telegraph: 'self', color: '#ff6b9f', vfx: 'boss_time_ult' },
 };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

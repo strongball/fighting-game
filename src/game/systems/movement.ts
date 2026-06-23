@@ -1,4 +1,4 @@
-import { ARENA, PLAYER_RADIUS, KNOCKBACK_FRICTION } from '../constants.js';
+import { ARENA, PLAYER_RADIUS, KNOCKBACK_FRICTION, difficultyMult } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import { clamp } from '../entities/math.ts';
 import type { GameState, Player, Input } from '../types';
@@ -8,7 +8,7 @@ import type { GameState, Player, Input } from '../types';
 const BOSS_BASE_SPEED_MULT = 0.65;
 const BOSS_RECOVER_SPEED_MULT = 0.62;
 
-export function speedOf(p: Player): number {
+export function speedOf(p: Player, difficulty = 0.5): number {
   const character = getCharacter(p.charId);
   let speed = character.speed;
   if (p.effects.slow) speed *= p.effects.slow.factor;
@@ -17,7 +17,7 @@ export function speedOf(p: Player): number {
   if (p.effects.rage) speed *= p.effects.rage.speed;
   if (p.effects.overdrive) speed *= p.effects.overdrive.speed;
   if (p.isBoss) {
-    speed *= BOSS_BASE_SPEED_MULT;
+    speed *= BOSS_BASE_SPEED_MULT * difficultyMult(difficulty).bossSpeed;
     if (p.phaseSpeedMult) speed *= p.phaseSpeedMult;
     if ((p.recoverWindow || 0) > 0) speed *= BOSS_RECOVER_SPEED_MULT;
   } else if (character.meleeRole) {
@@ -30,7 +30,7 @@ export function speedOf(p: Player): number {
 const PLAYER_ACCEL = 14;
 const BOSS_ACCEL = 6;
 
-export function applyMovement(p: Player, input: Input, dt: number) {
+export function applyMovement(p: Player, input: Input, dt: number, difficulty = 0.5) {
   const rooted = !!p.effects.root;
   const scrambled = !!p.effects.scramble;
   let targetVx = 0, targetVy = 0;
@@ -43,7 +43,7 @@ export function applyMovement(p: Player, input: Input, dt: number) {
       dx /= l; dy /= l;
       if (input.aim == null && !p.chargeState) p.facing = Math.atan2(dy, dx);
       if (!rooted) {
-        const moveSpeed = p.chargeState ? speedOf(p) * 0.5 : speedOf(p); // 蓄力時減速從 0.35 放寬到 0.5
+        const moveSpeed = p.chargeState ? speedOf(p, difficulty) * 0.5 : speedOf(p, difficulty); // 蓄力時減速從 0.35 放寬到 0.5
         targetVx = dx * moveSpeed;
         targetVy = dy * moveSpeed;
       }

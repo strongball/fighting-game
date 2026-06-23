@@ -1,4 +1,4 @@
-import { PLAYER_RADIUS, ULT_MAX, ULT_GAIN_DEAL, ULT_GAIN_TAKE } from '../constants.js';
+import { PLAYER_RADIUS, ULT_MAX, ULT_GAIN_DEAL, ULT_GAIN_TAKE, difficultyMult } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import { prepareBossAction } from '../bosses/actions.ts';
 import { applyBossDamageModifiers } from '../bosses/damage.ts';
@@ -138,7 +138,8 @@ export function dealDamage(
   // ownerId 可能為 null，先安全取出 phaseOwner（行為等價於原本的內聯 state.players[ownerId]）。
   const phaseOwner = attacker && attacker.ownerId != null ? state.players[attacker.ownerId] : null;
   if (hostile && attacker && (attacker.isBoss || (attacker.isPart && attacker.ownerId)) && (attacker.phaseDmgMult || (phaseOwner && phaseOwner.phaseDmgMult))) {
-    const mult = attacker.isBoss ? (attacker.phaseDmgMult || 1) : (phaseOwner?.phaseDmgMult || 1);
+    let mult = attacker.isBoss ? (attacker.phaseDmgMult || 1) : (phaseOwner?.phaseDmgMult || 1);
+    mult *= difficultyMult(state.flags.difficulty ?? 0.5).bossDmg;
     dmg *= mult;
   }
   if (hostile && attacker.effects && attacker.effects.dmg_reduce) dmg *= 1 - (attacker.effects.dmg_reduce.factor || 0);

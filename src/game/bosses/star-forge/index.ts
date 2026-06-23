@@ -36,24 +36,24 @@ const data = {
     floorDecal: { kind: 'rings', color: '#ffb347', opacity: 0.38, glow: 0.45 },
   },
   phases: [
-    { hpPct: 0.7, name: '星火淬鍊', sub: '群星落入熔爐', color: '#ffb347', dmgMult: 1.25, speedMult: 1.05, cdMult: 0.8,
+      { hpPct: 0.7, name: '星火淬鍊', sub: '群星落入熔爐', color: '#ffb347', dmgMult: 1.0, speedMult: 1.05, cdMult: 0.8,
       tagsOverride: [
         { icon: '☄️', text: '星鐵雨增加至 6 顆' },
         { icon: '🔥', text: '攻擊強化 +25%' },
         { icon: '🔨', text: '翻面後必接巨錘' },
       ] },
-    { hpPct: 0.35, name: '超新星爐心', sub: '萬物皆為鍛材', color: '#fff2c2', dmgMult: 1.55, speedMult: 1.15, cdMult: 0.65,
+      { hpPct: 0.35, name: '超新星爐心', sub: '萬物皆為鍛材', color: '#fff2c2', dmgMult: 1.2, speedMult: 1.15, cdMult: 0.65,
       tagsOverride: [
         { icon: '☄️', text: '星鐵雨增加至 7 顆' },
         { icon: '⏱️', text: '安全半場預警縮短' },
         { icon: '🔥', text: '20% 將進入限界狂暴' },
       ] },
   ],
-  basic: { name: '鑄星錘', type: 'melee', dmg: 60, range: 250, arc: 1.65, knockback: 260, cd: 1.35, windup: 0.8, telegraph: 'arc', color: '#e69a38', vfx: 'boss_star_hammer' },
-  skill1: { name: '引力熔流', type: 'zone', range: 180, radius: 250, dmg: 22, lifetime: 2.6, tick: 0.4, delay: 0.7, pull: 420, effect: SLOW(1.0, 0.55), cd: 10.5, windup: 1.1, telegraph: 'circle', color: '#58cfe0', vfx: 'boss_star_gravity' },
-  skill2: { name: '星鐵雨', type: 'zone', range: 260, radius: 120, dmg: 68, lifetime: 0.45, tick: 0.45, delay: 0.9, count: 4, phaseCount: [4, 6, 7], scatter: 390, stagger: 0.16, cd: 8.5, windup: 1.2, telegraph: 'circle', color: '#e87332', vfx: 'boss_star_rain' },
-  ultimate: { name: '熔爐翻面', type: 'light_dark', dmg: 110, radius: 1200, cd: 19, windup: 1.8, finalPhaseWindup: 1.3, telegraph: 'self', telegraphColor: '#58cfe0', dangerLevel: 'lethal', color: '#e69a38', vfx: 'boss_star_flip',
-    chain: [{ slot: 'basic', windup: 1.0, delay: 0.45 }] },
+    basic: { name: '鑄星錘', type: 'melee', dmg: 60, range: 420, arc: 1.65, knockback: 260, cd: 1.0, windup: 0.5, telegraph: 'arc', color: '#e69a38', vfx: 'boss_star_hammer' },
+    skill1: { name: '引力熔流', type: 'zone', range: 300, radius: 360, dmg: 22, lifetime: 2.6, tick: 0.4, delay: 0.7, pull: 520, effect: SLOW(1.0, 0.55), cd: 7.9, windup: 0.55, telegraph: 'circle', color: '#58cfe0', vfx: 'boss_star_gravity' },
+    skill2: { name: '星鐵雨', type: 'zone', range: 370, radius: 190, dmg: 68, lifetime: 0.45, tick: 0.45, delay: 0.9, count: 4, phaseCount: [4, 6, 7], scatter: 460, stagger: 0.16, cd: 6.4, windup: 0.6, telegraph: 'circle', color: '#e87332', vfx: 'boss_star_rain' },
+    ultimate: { name: '熔爐翻面', type: 'light_dark', dmg: 110, radius: 1200, cd: 14.3, windup: 0.9, finalPhaseWindup: 0.6, telegraph: 'self', telegraphColor: '#58cfe0', dangerLevel: 'lethal', color: '#e69a38', vfx: 'boss_star_flip',
+      chain: [{ slot: 'basic', windup: 0.7, delay: 0.35 }] },
 };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

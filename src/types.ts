@@ -8,6 +8,7 @@ export interface GameFlags {
   freeMana: boolean;
   noCooldown: boolean;
   noDamage: boolean;
+  difficulty: number;  // 0~1, 0=簡單 0.5=普通 1=困難
 }
 
 export interface LobbyEntry {

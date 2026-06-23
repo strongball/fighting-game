@@ -12,7 +12,7 @@ import { GameOverScreen } from './components/GameOverScreen';
 import { AudioSettingsButton } from './components/AudioSettingsButton';
 import type { AppPhase, ControlScheme, GameFlags, GameOverView, LobbyView } from './types';
 
-const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '', gameFlags: { freeMana: false, noCooldown: false, noDamage: false } };
+const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '', gameFlags: { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0.5 } };
 
 export function App() {
   const controller = getController();

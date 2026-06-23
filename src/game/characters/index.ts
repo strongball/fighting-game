@@ -22,7 +22,7 @@ CHARACTERS.forEach((c) => {
       name: '瞬移閃避',
       type: 'blink',
       range: 110,
-      cd: 3.5,
+      cd: 2.5,
       color: c.color,
       vfx: 'evade_blink',
       self: {
@@ -34,7 +34,7 @@ CHARACTERS.forEach((c) => {
       name: '翻滾閃避',
       type: 'dash',
       impulse: 500,
-      cd: 3.5,
+      cd: 2.5,
       color: c.color,
       vfx: 'evade_roll',
       self: {

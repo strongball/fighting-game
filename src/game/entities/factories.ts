@@ -72,7 +72,7 @@ export function spawnPoints(n: number): Array<{ x: number; y: number }> {
 
 export function createInitialState(
   playersArr: Array<{ id: EntityId; name: string; charId: number; team?: number }>,
-  flags: { freeMana?: boolean; noCooldown?: boolean; noDamage?: boolean } = {},
+  flags: { freeMana?: boolean; noCooldown?: boolean; noDamage?: boolean; difficulty?: number } = {},
   opts: { mode?: GameMode; round?: number } = {},
 ): GameState {
   const pts = spawnPoints(playersArr.length);
@@ -96,7 +96,7 @@ export function createInitialState(
     winner: null,
     winnerTeam: 0,
     startCount: playersArr.length,
-    flags: { freeMana: false, noCooldown: false, noDamage: false, ...flags },
+    flags: { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0.5, ...flags },
     round: opts.round || 1,
     bossId: null,
     bossHp: 0,

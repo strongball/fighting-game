@@ -51,7 +51,7 @@ const data = {
     },
 
     phases: [
-      { hpPct: 0.5, name: '規則崩壞', sub: '時空紊亂', color: '#b14fd8', dmgMult: 1.25, cdMult: 0.7,
+      { hpPct: 0.5, name: '規則崩壞', sub: '時空紊亂', color: '#b14fd8', dmgMult: 1.05, cdMult: 0.7,
         onEnter: scrambleAll(4),
         tagsOverride: [
           { icon: '🌀', text: '所有人操作被打亂' },
@@ -60,10 +60,10 @@ const data = {
         ] },
     ],
 
-    basic: { name: '虛空彈', type: 'projectile', dmg: 28, speed: 520, radius: 14, lifetime: 1.6, count: 3, spread: 0.4, knockback: 50, cd: 1.4, windup: 0.4, telegraph: 'line', color: '#c39bff', vfx: 'boss_void_bolt' },
-    skill1: { name: '混沌符咒', type: 'apply_scramble', radius: 320, duration: 2.4, cd: 11, windup: 0.8, telegraph: 'circle', color: '#b14fd8', vfx: 'boss_void_scramble' },
-    skill2: { name: '奇點黑洞', type: 'zone', range: 180, radius: 200, dmg: 30, lifetime: 2.4, tick: 0.4, delay: 0.6, pull: 360, effect: SLOW(1.0, 0.5), cd: 13, windup: 0.7, telegraph: 'circle', color: '#5b2c8e', swapHit: true, vfx: 'boss_void_blackhole' },
-    ultimate: { name: '時光倒流', type: 'time_rewind', rewindSeconds: 3.0, dmg: 90, radius: 150, cd: 20, windup: 1.2, telegraph: 'circle', color: '#a06cff', vfx: 'boss_void_ult' },
+    basic: { name: '虛空彈', type: 'projectile', dmg: 28, speed: 760, radius: 14, lifetime: 1.6, count: 5, spread: 0.5, knockback: 50, cd: 1.1, windup: 0.35, telegraph: 'line', color: '#c39bff', vfx: 'boss_void_bolt' },
+    skill1: { name: '混沌符咒', type: 'apply_scramble', radius: 480, duration: 2.4, cd: 8.3, windup: 0.5, telegraph: 'circle', color: '#b14fd8', vfx: 'boss_void_scramble' },
+    skill2: { name: '奇點黑洞', type: 'zone', range: 280, radius: 300, dmg: 30, lifetime: 2.4, tick: 0.4, delay: 0.6, pull: 500, effect: SLOW(1.0, 0.5), cd: 9.8, windup: 0.5, telegraph: 'circle', color: '#5b2c8e', swapHit: true, vfx: 'boss_void_blackhole' },
+    ultimate: { name: '時光倒流', type: 'time_rewind', rewindSeconds: 3.0, dmg: 90, radius: 260, cd: 15.0, windup: 0.6, telegraph: 'circle', color: '#a06cff', vfx: 'boss_void_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

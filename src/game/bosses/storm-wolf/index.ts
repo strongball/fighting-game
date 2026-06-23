@@ -38,12 +38,12 @@ const data = {
     ],
 
     phases: [
-      { hpPct: 0.6, name: '雷霆奔流', sub: '速度暴漲', color: '#7ec8ff', speedMult: 1.3, dmgMult: 1.2, cdMult: 0.8,
+      { hpPct: 0.6, name: '雷霆奔流', sub: '速度暴漲', color: '#7ec8ff', speedMult: 1.3, dmgMult: 1.0, cdMult: 0.8,
         tagsOverride: [
           { icon: '⚡', text: '速度大幅提升' },
           { icon: '🎯', text: '撲擊更頻繁' },
         ] },
-      { hpPct: 0.3, name: '狂雷狼神', sub: '撕咬之怒', color: '#aef5ff', speedMult: 1.7, cdMult: 0.45, dmgMult: 1.4,
+      { hpPct: 0.3, name: '狂雷狼神', sub: '撕咬之怒', color: '#aef5ff', speedMult: 1.7, cdMult: 0.45, dmgMult: 1.15,
         tagsOverride: [
           { icon: '🔥', text: '極致暴怒 — 攻擊 +40%' },
           { icon: '⚡', text: '冷卻幾乎清零' },
@@ -51,11 +51,11 @@ const data = {
         ] },
     ],
 
-    basic: { name: '雷爪連擊', type: 'melee', dmg: 28, range: 120, arc: 1.0, knockback: 100, cd: 0.75, windup: 0.2, telegraph: 'arc', color: '#aee3ff', vfx: 'boss_wolf_claw' },
-    skill1: { name: '迅雷撲擊', type: 'leap', range: 420, dur: 0.35, dmg: 70, radius: 110, knockback: 200, effect: STUN(0.4), cd: 7, windup: 0.3, telegraph: 'line', color: '#7ec8ff', targetLowest: true, vfx: 'boss_wolf_pounce',
-      chain: [{ slot: 'basic', windup: 0.15, delay: 0.2 }, { slot: 'basic', windup: 0.15, delay: 0.2 }] },
-    skill2: { name: '暴風咆哮', type: 'buff', radius: 260, duration: 6, effect: { kind: 'rage', duration: 6, speed: 1.5, dmg: 1.4 }, cd: 14, windup: 0.5, telegraph: 'self', color: '#cfe8ff', knockbackAura: 260, vfx: 'boss_wolf_howl' },
-    ultimate: { name: '雷霆亂舞', type: 'multiblink', count: 5, dmg: 60, knockback: 160, effect: STUN(0.3), cd: 19, windup: 0.6, telegraph: 'self', color: '#aee3ff', targetLowest: true, vfx: 'boss_wolf_ult' },
+    basic: { name: '雷爪連擊', type: 'melee', dmg: 28, range: 230, arc: 1.0, knockback: 100, cd: 0.6, windup: 0.15, telegraph: 'arc', color: '#aee3ff', vfx: 'boss_wolf_claw' },
+    skill1: { name: '迅雷撲擊', type: 'leap', range: 580, dur: 0.35, dmg: 70, radius: 170, knockback: 200, effect: STUN(0.4), cd: 5.3, windup: 0.2, telegraph: 'line', color: '#7ec8ff', targetLowest: true, vfx: 'boss_wolf_pounce',
+      chain: [{ slot: 'basic', windup: 0.1, delay: 0.15 }, { slot: 'basic', windup: 0.1, delay: 0.15 }] },
+    skill2: { name: '暴風咆哮', type: 'buff', radius: 400, duration: 6, effect: { kind: 'rage', duration: 6, speed: 1.5, dmg: 1.4 }, cd: 10.5, windup: 0.35, telegraph: 'self', color: '#cfe8ff', knockbackAura: 400, vfx: 'boss_wolf_howl' },
+    ultimate: { name: '雷霆亂舞', type: 'multiblink', count: 9, dmg: 60, knockback: 160, effect: STUN(0.3), cd: 14.3, windup: 0.4, telegraph: 'self', color: '#aee3ff', targetLowest: true, vfx: 'boss_wolf_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

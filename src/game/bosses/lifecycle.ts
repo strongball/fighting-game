@@ -1,4 +1,4 @@
-import { ARENA } from '../constants.js';
+import { ARENA, difficultyMult } from '../constants.js';
 import { makeBoss } from '../entities/factories.ts';
 import { getBossForRound } from '../bosses.js';
 import { initBossPhase } from './phases.ts';
@@ -27,7 +27,7 @@ export function spawnBoss(state: any, round: number) {
   const data = getBossForRound(round);
   if (!data) return null;
   const n = Math.max(1, teamPlayers(state).filter((p) => p.alive).length || state.playerCount || 1);
-  const hpScale = Math.max(0.35, n / 4);
+  const hpScale = Math.max(0.35, n / 4) * difficultyMult(state.flags.difficulty ?? 0.5).bossHp;
   state._hpScale = hpScale;
   const cx = ARENA.width / 2, cy = ARENA.height * 0.3;
   const id = 'boss-' + round;

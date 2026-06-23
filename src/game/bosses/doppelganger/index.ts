@@ -40,13 +40,13 @@ const data = {
     },
 
     phases: [
-      { hpPct: 0.66, name: '鏡像進化', sub: '虛空覺醒', color: '#cfcfff', dmgMult: 1.2, speedMult: 1.1, cdMult: 0.85,
+      { hpPct: 0.66, name: '鏡像進化', sub: '虛空覺醒', color: '#cfcfff', dmgMult: 1.0, speedMult: 1.1, cdMult: 0.85,
         tagsOverride: [
           { icon: '🪞', text: '鏡像更頻繁出現' },
           { icon: '🎭', text: '更常使用你的大招' },
           { icon: '⚡', text: '攻擊強化 +20%' },
         ] },
-      { hpPct: 0.33, name: '終焉之姿', sub: '萬象崩解', color: '#ffffff', dmgMult: 1.55, speedMult: 1.3, cdMult: 0.5,
+      { hpPct: 0.33, name: '終焉之姿', sub: '萬象崩解', color: '#ffffff', dmgMult: 1.25, speedMult: 1.3, cdMult: 0.5,
         tagsOverride: [
           { icon: '💥', text: '攻擊大幅強化 +55%' },
           { icon: '⚡', text: '出招幾乎無冷卻' },
@@ -54,11 +54,11 @@ const data = {
         ] },
     ],
 
-    basic: { name: '虛空裂斬', type: 'melee', dmg: 44, range: 190, arc: 1.3, knockback: 200, cd: 1.4, windup: 0.4, telegraph: 'arc', color: '#ffffff', vfx: 'boss_doppel_slash' },
-    skill1: { name: '鏡像複製', type: 'mirror_players', cd: 24, once: true, windup: 1.0, telegraph: 'self', color: '#cfcfff', vfx: 'boss_doppel_mirror' },
-    skill2: { name: '竊取絕技', type: 'steal_ultimate', cd: 12, windup: 0.8, telegraph: 'self', color: '#b0b0ff', vfx: 'boss_doppel_steal',
-      chain: [{ slot: 'basic', windup: 0.25, delay: 0.2 }] },
-    ultimate: { name: '終焉之刻', type: 'zone', range: 0, radius: 320, dmg: 60, lifetime: 1.2, tick: 0.3, delay: 1.4, knockback: 200, effect: STUN(0.5), cd: 22, windup: 1.4, telegraph: 'circle', color: '#ffffff', vfx: 'boss_doppel_ult' },
+    basic: { name: '虛空裂斬', type: 'melee', dmg: 44, range: 320, arc: 1.3, knockback: 200, cd: 1.1, windup: 0.35, telegraph: 'arc', color: '#ffffff', vfx: 'boss_doppel_slash' },
+    skill1: { name: '鏡像複製', type: 'mirror_players', cd: 18, once: true, windup: 0.6, telegraph: 'self', color: '#cfcfff', vfx: 'boss_doppel_mirror' },
+    skill2: { name: '竊取絕技', type: 'steal_ultimate', cd: 9.0, windup: 0.5, telegraph: 'self', color: '#b0b0ff', vfx: 'boss_doppel_steal',
+      chain: [{ slot: 'basic', windup: 0.2, delay: 0.15 }] },
+    ultimate: { name: '終焉之刻', type: 'zone', range: 0, radius: 470, dmg: 60, lifetime: 1.2, tick: 0.3, delay: 1.4, knockback: 200, effect: STUN(0.5), cd: 16.5, windup: 0.7, telegraph: 'circle', color: '#ffffff', vfx: 'boss_doppel_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

@@ -80,7 +80,7 @@ export function step(state: GameState, inputs: Record<string, Input>, dt: number
         p._lastInput.item2 = !!input.item2;
       }
 
-      applyMovement(p, input, dt);
+      applyMovement(p, input, dt, state.flags.difficulty ?? 0.5);
 
       processTrail(state, p, dt); // 移動留痕 (冰霜足跡)
 

@@ -55,12 +55,12 @@ const data = {
     },
 
     phases: [
-      { hpPct: 0.6, name: '光明之翼', sub: '聖光綻放', color: '#fff2b0', dmgMult: 1.2, cdMult: 0.8,
+      { hpPct: 0.6, name: '光明之翼', sub: '聖光綻放', color: '#fff2b0', dmgMult: 1.0, cdMult: 0.8,
         tagsOverride: [
           { icon: '✨', text: '出招更頻繁' },
           { icon: '🔗', text: '綁定範圍變大' },
         ] },
-      { hpPct: 0.3, name: '審判降臨', sub: '靈魂審判', color: '#d8b3ff', dmgMult: 1.5, cdMult: 0.55,
+      { hpPct: 0.3, name: '審判降臨', sub: '靈魂審判', color: '#d8b3ff', dmgMult: 1.2, cdMult: 0.55,
         onEnter: tetherAllPairs({ minGap: 240, dmg: 14, duration: 16 }),
         tagsOverride: [
           { icon: '🔗', text: '全員兩兩自動綁定' },
@@ -68,10 +68,10 @@ const data = {
         ] },
     ],
 
-    basic: { name: '聖劍光弧', type: 'melee', dmg: 40, range: 180, arc: 1.4, knockback: 180, cd: 1.6, windup: 0.5, telegraph: 'arc', color: '#fff2b0', vfx: 'boss_angel_slash' },
-    skill1: { name: '靈魂綁定', type: 'soul_bind', count: 2, minGap: 200, dmg: 18, duration: 6, cd: 15, windup: 0.9, telegraph: 'self', color: '#d8b3ff', vfx: 'boss_angel_bind' },
-    skill2: { name: '審判光柱', type: 'zone', range: 190, radius: 110, dmg: 60, lifetime: 0.5, tick: 0.5, delay: 1.0, count: 3, scatter: 240, stagger: 0.2, cd: 12, windup: 1.0, telegraph: 'circle', color: '#fff7d6', vfx: 'boss_angel_judgment' },
-    ultimate: { name: '光暗審判', type: 'light_dark', dmg: 80, radius: 1200, cd: 21, windup: 1.4, telegraph: 'self', color: '#ffe9a8', vfx: 'boss_angel_ult' },
+    basic: { name: '聖劍光弧', type: 'melee', dmg: 40, range: 310, arc: 1.4, knockback: 180, cd: 1.2, windup: 0.35, telegraph: 'arc', color: '#fff2b0', vfx: 'boss_angel_slash' },
+    skill1: { name: '靈魂綁定', type: 'soul_bind', count: 2, minGap: 200, dmg: 22, duration: 6, cd: 11.3, windup: 0.5, telegraph: 'self', color: '#d8b3ff', vfx: 'boss_angel_bind' },
+    skill2: { name: '審判光柱', type: 'zone', range: 300, radius: 200, dmg: 60, lifetime: 0.5, tick: 0.5, delay: 1.0, count: 4, scatter: 360, stagger: 0.2, cd: 8.0, windup: 0.6, telegraph: 'circle', color: '#fff7d6', vfx: 'boss_angel_judgment' },
+    ultimate: { name: '光暗審判', type: 'light_dark', dmg: 80, radius: 1200, cd: 15.8, windup: 0.7, telegraph: 'self', color: '#ffe9a8', vfx: 'boss_angel_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

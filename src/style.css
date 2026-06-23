@@ -288,6 +288,14 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 .mode-name { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
 .mode-desc { font-size: 11px; color: var(--dim); line-height: 1.4; }
 
+.difficulty-selector { display: flex; gap: 10px; margin-bottom: 14px; }
+.diff-btn { flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px 14px; justify-content: center; }
+.diff-btn:disabled { opacity: 0.7; cursor: default; }
+.diff-btn.active { border-color: var(--accent2); background: #2a2010; }
+.diff-btn.active .diff-label { color: var(--accent2); font-weight: 700; }
+.diff-icon { font-size: 18px; }
+.diff-label { font-size: 14px; }
+
 .boss-select-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));

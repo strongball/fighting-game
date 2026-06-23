@@ -16,7 +16,7 @@ export interface GameFlags {
   freeMana: boolean;
   noCooldown: boolean;
   noDamage: boolean;
-  [key: string]: boolean;
+  difficulty: number;  // 0~1, 0=簡單 0.5=普通 1=困難
 }
 
 /** 慢動作：擊破魔王時觸發，縮放 dt 但以實際 dt 倒數 remaining。 */
