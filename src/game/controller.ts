@@ -164,7 +164,7 @@ function createController(): GameController {
 
   // ---------- 開始遊戲 ----------
   function hostStart() {
-    const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId, team: p.team || 0 }));
+    const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId, team: p.team || 0, isNpc: p.isNpc }));
     gameState = createInitialState(arr, gameFlags);
     for (const id of Object.keys(gameState.players)) inputs[id] = { ...EMPTY_INPUT };
     net.broadcast({ t: 'start', state: gameState, lobby });
@@ -174,7 +174,7 @@ function createController(): GameController {
   // ---------- Boss 模式（闖關固定 R1；挑戰模式只打指定 Boss） ----------
   function startBossSession(round: number, bossMode: 'campaign' | 'challenge') {
     if (role !== 'host') return;
-    const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId, team: 1 }));
+    const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId, team: 1, isNpc: p.isNpc }));
     gameState = createInitialState(arr, gameFlags, { mode: 'boss' });
     gameState.bossMode = bossMode;
     for (const id of Object.keys(gameState.players)) inputs[id] = { ...EMPTY_INPUT };
@@ -598,6 +598,7 @@ function createController(): GameController {
         charId: randomChar,
         controlScheme: 'wasd-jkl',
         isHost: false,
+        isNpc: true,
         team: 0,
       });
     }
@@ -617,7 +618,7 @@ function createController(): GameController {
     const all = Array.from({ length: CHARACTERS.length }, (_, i) => i);
     const me = (charId !== undefined && charId >= 0 && charId < CHARACTERS.length) ? charId : all[Math.floor(Math.random() * all.length)];
     lobby = [{ id: selfId, name: myName, charId: me, controlScheme: selectedControlScheme, isHost: true, team: 1 }];
-    for (let i = 1; i <= 2; i++) lobby.push({ id: 'dev-' + i, name: '隊友 ' + i, charId: all[Math.floor(Math.random() * all.length)], controlScheme: 'wasd-jkl', isHost: false, team: 1 });
+    for (let i = 1; i <= 2; i++) lobby.push({ id: 'dev-' + i, name: '隊友 ' + i, charId: all[Math.floor(Math.random() * all.length)], controlScheme: 'wasd-jkl', isHost: false, isNpc: true, team: 1 });
     selectedChar = me; selectedTeam = 1;
     startBossSession(round, 'campaign');
   }

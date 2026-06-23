@@ -3,6 +3,7 @@
 import { getCharacter } from './characters.js';
 import { EMPTY_INPUT } from './input.js';
 import { computeBossInput } from './bossAI.js';
+import { computeNpcInput } from './npcAI.ts';
 import { bossTick, checkBossRound } from './bossMode.js';
 import { castInputActions } from './actions/casting.ts';
 import { executeAction } from './actions/executor.ts';
@@ -43,8 +44,11 @@ export function step(state: GameState, inputs: Record<string, Input>, dt: number
       if (state.mode === 'boss') input = state.roundPhase === 'fighting' ? computeBossInput(state, p, dt) : EMPTY_INPUT;
       else input = computeBossInput(state, p, dt); // FFA 召喚物 AI
     } else if (state.mode === 'boss' && state.roundPhase !== 'fighting') {
-      // 闖關 intro/cleared/wiped：人類玩家輸入凍結 (登場動畫期間不能動)
+      // 闖關 intro/cleared/wiped：人類玩家與 NPC 輸入皆凍結 (登場動畫期間不能動)
       input = EMPTY_INPUT;
+    } else if (p.isNpc) {
+      // 大廳加入的電腦玩家：以決策樹 AI 計算輸入取代鍵盤 (host-only 運算)
+      input = computeNpcInput(state, p, dt);
     }
     const character = getCharacter(p.charId);
     const talent = character.talent;

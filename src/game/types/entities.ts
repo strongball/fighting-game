@@ -102,6 +102,8 @@ export interface Player {
   isSummon?: boolean;
   isBoss?: boolean; isMinion?: boolean; isFake?: boolean; isPart?: boolean; isMirror?: boolean;
   aiId?: string | null;
+  isNpc?: boolean;            // 大廳加入的電腦玩家 (決策樹 AI 控制，見 npcAI.ts)
+  npcAI?: Record<string, any>; // NPC AI 的暫存腦狀態 (目標/走位節流，不入 snapshot)
   partId?: string | null;
   bossRound?: number;
   scale?: number;
