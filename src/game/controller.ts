@@ -40,6 +40,17 @@ import type {
   LobbyView,
 } from '../types';
 
+// ---------- 加入者效能量測 (?perf=1) ----------
+// 量化加入者卡頓來源：每包大小 (含 fx / projectiles 佔比)、反序列化處理、buildView 插值耗時、
+// 掉幀、插值緩衝枯竭 (holds)。每秒 console 印一行；未開啟時所有量測碼皆跳過、正常路徑零成本。
+const PERF = typeof location !== 'undefined' && new URLSearchParams(location.search).get('perf') === '1';
+function makePerf() {
+  return { last: 0, snaps: 0, bytes: 0, fxBytes: 0, projBytes: 0, worstBytes: 0,
+           recvMs: 0, builds: 0, buildMs: 0, worstBuildMs: 0, frames: 0, holds: 0,
+           // 房主端：logicTick 實際觸發率 / step() 呼叫率 / 快照廣播率 — 證明 tick 是否被渲染擠掉頻
+           ticks: 0, steps: 0, snapsOut: 0 };
+}
+
 function createController(): GameController {
   // ---------- 事件匯流排 (Controller → React) ----------
   const listeners: { [K in keyof ControllerEvents]: Set<ControllerEvents[K]> } = {
@@ -94,6 +105,7 @@ function createController(): GameController {
   let lastRender = 0;
   let logicTimer: ReturnType<typeof setInterval> | null = null;
   let rafId: number | null = null;
+  const perf = PERF ? makePerf() : null;
 
   // ---------- 大廳 ----------
   function addToLobby(entry: LobbyEntry) {
@@ -284,16 +296,24 @@ function createController(): GameController {
     const inp = input.get();
 
     if (role === 'host') {
+      if (perf) perf.ticks++; // logicTick 實際觸發次數 (setInterval 在主執行緒忙時會漂移)
       inputs[selfId as string] = inp;
       accumulator += dt;
       let guard = 0;
-      while (accumulator >= DT && guard < 8) { step(gameState, inputs, DT); accumulator -= DT; guard++; }
+      while (accumulator >= DT && guard < 8) { step(gameState, inputs, DT); accumulator -= DT; guard++; if (perf) perf.steps++; }
 
       snapAcc += dt;
       // 快照走「不可靠 / 不排序」通道 (broadcastSnapshot)：state 是 latest-wins,允許掉包/亂序,
       // 藉此避開可靠通道的 head-of-line blocking (一包延遲卡住後續全部) — 偶發大卡頓的根因。
       // 帶 seq 讓加入者丟棄後到的舊包。
-      if (snapAcc >= SNAPSHOT_INTERVAL) { snapAcc = 0; net.broadcastSnapshot({ t: 'state', seq: snapSeq++, snapshot: serializeSnapshot(gameState) }); }
+      // 保留餘數 (snapAcc -=，不要歸零)：setInterval 在 host 渲染壓力下會抖動，歸零會把累積的
+      // 餘數丟掉，使快照率掉到 tick 率以下。減去 interval 可讓下一個短 tick 補送，維持接近 30Hz。
+      if (snapAcc >= SNAPSHOT_INTERVAL) {
+        snapAcc -= SNAPSHOT_INTERVAL;
+        if (snapAcc > SNAPSHOT_INTERVAL) snapAcc = SNAPSHOT_INTERVAL; // 長時間背景後限制追趕，避免連續爆送
+        net.broadcastSnapshot({ t: 'state', seq: snapSeq++, snapshot: serializeSnapshot(gameState) });
+        if (perf) perf.snapsOut++;
+      }
 
       if (gameState.phase === 'gameover' && !gameoverSent) hostGameover();
     } else {
@@ -312,6 +332,37 @@ function createController(): GameController {
     lastRender = performance.now();
     if (role === 'host') { if (gameState) renderer.render(gameState, selfId); }
     else { const v = buildView(); if (v) renderer.render(v, selfId); } // 每幀重建插值視圖
+    if (perf) reportPerf();
+  }
+
+  // 每秒彙整一行 (加入者欄位最有意義；房主只有 fps)。重點看 avgPkt 與 fx 佔比、buildAvg、holds/s。
+  function reportPerf() {
+    if (!perf) return;
+    perf.frames++;
+    const now = performance.now();
+    if (perf.last === 0) { perf.last = now; return; }
+    if (now - perf.last < 1000) return;
+    const secs = (now - perf.last) / 1000;
+    const r1 = (x: number) => (x / secs).toFixed(0);
+    if (role === 'host') {
+      // tickHz 應 ≈30；若被渲染擠到 ~17，快照率 (snapOutHz) 跟著腰斬 → 全場加入者卡
+      console.log(
+        `[perf host] fps=${r1(perf.frames)} tickHz=${r1(perf.ticks)} stepHz=${r1(perf.steps)} snapOutHz=${r1(perf.snapsOut)}`,
+      );
+    } else {
+      const n = perf.snaps || 1;
+      const kb = (b: number) => (b / 1024).toFixed(1);
+      console.log(
+        `[perf joiner] fps=${r1(perf.frames)} snaps/s=${r1(perf.snaps)} ` +
+        `avgPkt=${kb(perf.bytes / n)}KB (fx=${kb(perf.fxBytes / n)} proj=${kb(perf.projBytes / n)}) worstPkt=${kb(perf.worstBytes)}KB ` +
+        `recvAvg=${(perf.recvMs / n).toFixed(2)}ms buildAvg=${(perf.buildMs / (perf.builds || 1)).toFixed(2)}ms ` +
+        `buildWorst=${perf.worstBuildMs.toFixed(1)}ms holds/s=${r1(perf.holds)}`,
+      );
+    }
+    perf.last = now;
+    perf.snaps = perf.bytes = perf.fxBytes = perf.projBytes = perf.worstBytes = 0;
+    perf.recvMs = perf.builds = perf.buildMs = perf.worstBuildMs = perf.frames = perf.holds = 0;
+    perf.ticks = perf.steps = perf.snapsOut = 0;
   }
 
   // ---------- 渲染迴圈 ----------
@@ -325,9 +376,18 @@ function createController(): GameController {
 
   // ---------- 加入者：快照緩衝 + 自身預測 + 遠端插值 ----------
   function receiveSnapshot(snap: any, seq?: number) {
+    const t0 = perf ? performance.now() : 0;
     // 不可靠通道可能後到舊包 / 重複：以 seq 丟棄非最新者 (沒帶 seq 的舊路徑則照收)
     if (seq != null) { if (seq <= lastSnapSeq) return; lastSnapSeq = seq; }
     lastSnapshot = snap;
+    if (perf) {
+      // stringify 僅近似封包 byte 數 (PeerJS 已 parse 成物件，拿不到原始 bytes)；分項看 fx/proj 佔比
+      const s = JSON.stringify(snap); perf.snaps++; perf.bytes += s.length;
+      if (s.length > perf.worstBytes) perf.worstBytes = s.length;
+      perf.fxBytes += snap.fx ? JSON.stringify(snap.fx).length : 0;
+      perf.projBytes += snap.projectiles ? JSON.stringify(snap.projectiles).length : 0;
+      perf.recvMs += performance.now() - t0;
+    }
     const recv = performance.now() / 1000;
     snapBuf.push({ recv, snap });
     // 只保留最近約 1 秒,避免無限成長
@@ -378,6 +438,7 @@ function createController(): GameController {
   function buildView() {
     const latest = lastSnapshot;
     if (!latest) return null;
+    const t0 = perf ? performance.now() : 0;
     if (!view) view = emptyView();
     // 頂層 (HUD / 過場動畫 / 動態物件) 一律取最新快照
     view.phase = latest.phase; view.winner = latest.winner; view.time = latest.time;
@@ -395,6 +456,8 @@ function createController(): GameController {
 
     const rt = performance.now() / 1000 - INTERP_DELAY;
     const pair = findBracket(rt);
+    // hold = 緩衝枯竭 (rt 找不到夾住的兩包，只能定格最新)；數值高代表掉包/抖動 > 100ms 緩衝
+    if (perf && pair && pair.a === pair.b) perf.holds++;
     const next: Record<string, any> = {};
     for (const id of Object.keys(latest.players)) {
       const sp = latest.players[id];
@@ -419,6 +482,7 @@ function createController(): GameController {
       next[id] = vp;
     }
     view.players = next;
+    if (perf) { perf.builds++; const d = performance.now() - t0; perf.buildMs += d; if (d > perf.worstBuildMs) perf.worstBuildMs = d; }
     return view;
   }
 
