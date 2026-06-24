@@ -110,6 +110,10 @@ function createController(): GameController {
   const input = createInput();
   let renderer: ReturnType<typeof createRenderer> | null = null;
   let canvasEl: HTMLCanvasElement | null = null;
+  // 視角模式（本機視覺/操作，不進網路協定）：0=一般遠景 1=近景第三人稱 2=第一人稱，V 循環
+  let viewMode = 0;
+  let crosshairEl: HTMLDivElement | null = null;
+  let chaseBound = false;
 
   let role: 'host' | 'joiner' | null = null;
   let selfId: string | null = null;
@@ -286,6 +290,7 @@ function createController(): GameController {
     wantLoop = false;
     if (logicTimer) { clearInterval(logicTimer); logicTimer = null; }
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    applyViewMode(0); // 離開戰鬥時回到一般遠景視角
   }
 
   // ---------- 邏輯/網路迴圈（固定步、不依賴畫面更新）----------
@@ -333,8 +338,12 @@ function createController(): GameController {
   function draw() {
     if (!renderer) return;
     lastRender = performance.now();
-    if (role === 'host') { if (gameState) renderer.render(gameState, selfId); }
-    else { const v = buildView(); if (v) renderer.render(v, selfId); } // 每幀重建插值視圖
+    const view = input.getView ? input.getView() : null;
+    let rendered: any = null;
+    if (role === 'host') { rendered = gameState; if (rendered) renderer.render(rendered, selfId, view); }
+    else { rendered = buildView(); if (rendered) renderer.render(rendered, selfId, view); } // 每幀重建插值視圖
+    // 全滅「重來/離開」面板出現時自動解除滑鼠鎖定，讓玩家點得到按鈕（否則游標被鎖住看不見）
+    if (rendered && rendered.roundPhase === 'wiped' && document.pointerLockElement) document.exitPointerLock();
     if (perf) reportPerf();
   }
 
@@ -724,6 +733,7 @@ function createController(): GameController {
       onBossQuit: bossQuit,
       input,
     });
+    bindViewControls();
     maybeStartLoop();
   }
 
@@ -733,6 +743,58 @@ function createController(): GameController {
     renderer?.dispose?.();
     renderer = null;
     canvasEl = null;
+  }
+
+  // ---------- 視角模式：V 循環（0 遠景 → 1 近景三人稱 → 2 第一人稱）、滑鼠鎖定控視角、準心 ----------
+  function ensureCrosshair() {
+    if (crosshairEl || !canvasEl) return;
+    const host = canvasEl.parentElement || document.body;
+    const el = document.createElement('div');
+    el.className = 'chase-crosshair';
+    el.style.display = 'none';
+    el.innerHTML = '<div class="chase-cross-dot"></div>';
+    host.appendChild(el);
+    crosshairEl = el;
+  }
+
+  function selfFacing(): number {
+    const me: any = role === 'host' ? (gameState && gameState.players[selfId as string]) : localSelf;
+    return me && typeof me.facing === 'number' ? me.facing : 0;
+  }
+
+  function applyViewMode(mode: number) {
+    mode = ((mode % 3) + 3) % 3;
+    if (mode === viewMode) return;
+    const wasNormal = viewMode === 0;
+    viewMode = mode;
+    if (mode !== 0) {
+      ensureCrosshair();
+      // 由遠景進入時以自身朝向初始化視角；近景預設稍俯視、第一人稱平視（模式間切換則保留視角）
+      if (wasNormal) input.setLook(selfFacing(), mode === 1 ? -0.35 : 0);
+      input.setViewMode(mode);
+      if (crosshairEl) crosshairEl.style.display = 'flex';
+      if (!document.pointerLockElement) canvasEl?.requestPointerLock?.();
+    } else {
+      input.setViewMode(0);
+      if (crosshairEl) crosshairEl.style.display = 'none';
+      if (document.pointerLockElement) document.exitPointerLock();
+    }
+  }
+
+  function bindViewControls() {
+    if (chaseBound) return;
+    chaseBound = true;
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyV' && running && !e.repeat) { e.preventDefault(); applyViewMode(viewMode + 1); }
+    });
+    // 視角模式下若滑鼠未鎖定，點「畫布」重新鎖定（限定 canvas，避免點選單/按鈕時誤搶游標）
+    window.addEventListener('mousedown', (e) => {
+      if (viewMode !== 0 && running && !document.pointerLockElement && e.target === canvasEl) canvasEl?.requestPointerLock?.();
+    });
+    // 鎖定被解除（Esc/切窗）時更新準心提示樣式
+    document.addEventListener('pointerlockchange', () => {
+      if (crosshairEl) crosshairEl.classList.toggle('unlocked', viewMode !== 0 && !document.pointerLockElement);
+    });
   }
 
   return {

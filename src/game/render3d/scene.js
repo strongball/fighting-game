@@ -163,6 +163,10 @@ export function createSceneManager(canvas) {
   let curFocusX = 0, curFocusZ = 0;
   function setCameraFocus(x, z) { focusX = x; focusZ = z; }
 
+  // 視角模式相機：1=近景第三人稱（後上方環繞、看向角色）、2=第一人稱（眼睛）。依視角 yaw(水平) / pitch(+ 仰視)
+  let camMode = 0, camYaw = 0, camPitch = 0;
+  function setCameraMode(mode, yaw, pitch) { camMode = mode | 0; if (camMode) { camYaw = yaw || 0; camPitch = (typeof pitch === 'number') ? pitch : 0; } }
+
   function update(dt) {
     time += dt;
     // 震動衰減
@@ -185,24 +189,45 @@ export function createSceneManager(canvas) {
     const cFX = Math.max(-MARGIN_X, Math.min(MARGIN_X, curFocusX));
     const cFZ = Math.max(-MARGIN_Z, Math.min(MARGIN_Z, curFocusZ));
 
-    // 鏡頭：基準位置 + 焦點偏移 + 極輕微 idle 浮動 + 震動位移
-    _v.copy(camBase);
-    _v.x += cFX; _v.z += cFZ;
-    _v.y += Math.sin(time * 0.5) * 6;
-    _v.z += Math.sin(time * 0.37) * 5;
-    let lookX = cFX, lookY = camTarget.y, lookZ = cFZ;
-    // 登場動畫推近：覆寫焦點朝 Boss
-    if (introStrength > 0) {
-      const cx = introTargetX, cz = introTargetZ;
-      _v.x += (cx - _v.x) * introStrength * 0.65;
-      _v.y += (260 - _v.y) * introStrength * 0.55;
-      _v.z += ((cz + 360) - _v.z) * introStrength * 0.65;
-      lookX = cx * introStrength + lookX * (1 - introStrength);
-      lookY = 60 * introStrength;
-      lookZ = cz * introStrength + lookZ * (1 - introStrength);
+    if (camMode === 2) {
+      // 第一人稱：眼睛在頭部，朝 yaw/pitch 看出去（pitch+ = 仰視）
+      const EYE_Y = 36, cp = Math.cos(camPitch);
+      camera.position.set(curFocusX, EYE_Y, curFocusZ);
+      camera.lookAt(
+        curFocusX + Math.cos(camYaw) * cp * 200,
+        EYE_Y + Math.sin(camPitch) * 200,
+        curFocusZ + Math.sin(camYaw) * cp * 200,
+      );
+    } else if (camMode === 1) {
+      // 近景第三人稱：相機在角色「後上方」、看向胸口；pitch+ = 仰視（相機下降、視線朝上），含地面下限避免穿地
+      const TARGET_Y = 46, DIST = 235, cp = Math.cos(camPitch);
+      const camY = Math.max(16, TARGET_Y - Math.sin(camPitch) * DIST);
+      camera.position.set(
+        curFocusX - Math.cos(camYaw) * cp * DIST,
+        camY,
+        curFocusZ - Math.sin(camYaw) * cp * DIST,
+      );
+      camera.lookAt(curFocusX, TARGET_Y, curFocusZ);
+    } else {
+      // 鏡頭：基準位置 + 焦點偏移 + 極輕微 idle 浮動 + 震動位移
+      _v.copy(camBase);
+      _v.x += cFX; _v.z += cFZ;
+      _v.y += Math.sin(time * 0.5) * 6;
+      _v.z += Math.sin(time * 0.37) * 5;
+      let lookX = cFX, lookY = camTarget.y, lookZ = cFZ;
+      // 登場動畫推近：覆寫焦點朝 Boss
+      if (introStrength > 0) {
+        const cx = introTargetX, cz = introTargetZ;
+        _v.x += (cx - _v.x) * introStrength * 0.65;
+        _v.y += (260 - _v.y) * introStrength * 0.55;
+        _v.z += ((cz + 360) - _v.z) * introStrength * 0.65;
+        lookX = cx * introStrength + lookX * (1 - introStrength);
+        lookY = 60 * introStrength;
+        lookZ = cz * introStrength + lookZ * (1 - introStrength);
+      }
+      camera.position.copy(_v);
+      camera.lookAt(lookX, lookY, lookZ);
     }
-    camera.position.copy(_v);
-    camera.lookAt(lookX, lookY, lookZ);
     if (shakeMag > 0) {
       // 取相機座標系的 right / up
       _right.setFromMatrixColumn(camera.matrixWorld, 0);
@@ -223,7 +248,7 @@ export function createSceneManager(canvas) {
 
   return {
     scene, camera, renderer, stage,
-    resize, update, render, addShake, addFlash, setBloom, setIntroFocus, setCameraFocus, dispose,
+    resize, update, render, addShake, addFlash, setBloom, setIntroFocus, setCameraFocus, setCameraMode, dispose,
     applyTheme, themeGroup,
     get time() { return time; },
     get theme() { return activeTheme; },

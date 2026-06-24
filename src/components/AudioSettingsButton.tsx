@@ -8,19 +8,41 @@ import {
   updateAudioSettings,
   type AudioSettings,
 } from '../utils/audioSettings';
+import {
+  getViewSettings,
+  subscribeViewSettings,
+  updateViewSettings,
+  type ViewSettings,
+} from '../utils/viewSettings';
 
 export function AudioSettingsButton() {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<AudioSettings>(getAudioSettings());
+  const [viewCfg, setViewCfg] = useState<ViewSettings>(getViewSettings());
 
   useEffect(() => subscribeAudioSettings(setSettings), []);
+  useEffect(() => subscribeViewSettings(setViewCfg), []);
+
+  // ESC 開/關設定（戰鬥中也能用；開啟時解除滑鼠鎖定，讓游標可操作面板）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Escape') return;
+      setOpen((v) => {
+        const next = !v;
+        if (next && document.pointerLockElement) document.exitPointerLock();
+        return next;
+      });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <>
       <button
         className="settings-fab"
-        title="音效設定"
-        aria-label="音效設定"
+        title="設定（Esc）"
+        aria-label="設定"
         onClick={() => setOpen((v) => !v)}
       >
         ⚙
@@ -30,7 +52,7 @@ export function AudioSettingsButton() {
         <div className="settings-overlay" onClick={() => setOpen(false)}>
           <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
             <div className="settings-head">
-              <h3>音效設定</h3>
+              <h3>設定</h3>
               <button className="settings-close" aria-label="關閉" onClick={() => setOpen(false)}>
                 ✕
               </button>
@@ -49,6 +71,12 @@ export function AudioSettingsButton() {
               muted={settings.sfxMuted}
               onVolume={(v) => updateAudioSettings({ sfxVolume: v, sfxMuted: false })}
               onToggleMute={() => updateAudioSettings({ sfxMuted: !settings.sfxMuted })}
+            />
+            <SensitivityRow
+              sensitivity={viewCfg.sensitivity}
+              invertY={viewCfg.invertY}
+              onSensitivity={(v) => updateViewSettings({ sensitivity: v })}
+              onToggleInvert={() => updateViewSettings({ invertY: !viewCfg.invertY })}
             />
             <FullscreenRow />
           </div>
@@ -89,6 +117,43 @@ function VolumeRow({ label, volume, muted, onVolume, onToggleMute }: VolumeRowPr
           step={0.01}
           value={volume}
           onChange={(e) => onVolume(Number(e.target.value))}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface SensitivityRowProps {
+  sensitivity: number;
+  invertY: boolean;
+  onSensitivity: (v: number) => void;
+  onToggleInvert: () => void;
+}
+
+function SensitivityRow({ sensitivity, invertY, onSensitivity, onToggleInvert }: SensitivityRowProps) {
+  return (
+    <div className="settings-row">
+      <div className="settings-row-top">
+        <span className="settings-label">滑鼠靈敏度<span style={{ color: '#7b8a97', fontSize: '11px', marginLeft: '6px' }}>視角用</span></span>
+        <span className="settings-pct">{sensitivity.toFixed(1)}×</span>
+      </div>
+      <div className="settings-row-ctrl">
+        <button
+          className="settings-mute"
+          style={{ fontSize: '11px', fontWeight: 700 }}
+          aria-label={invertY ? '取消反轉 Y 軸' : '反轉 Y 軸'}
+          title={invertY ? '上下已反轉（點按恢復）' : '上下正常（點按反轉）'}
+          onClick={onToggleInvert}
+        >
+          {invertY ? 'Y反' : 'Y正'}
+        </button>
+        <input
+          type="range"
+          min={0.2}
+          max={3}
+          step={0.1}
+          value={sensitivity}
+          onChange={(e) => onSensitivity(Number(e.target.value))}
         />
       </div>
     </div>

@@ -1232,3 +1232,26 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
     font-size: 9px;
   }
 }
+
+/* ---------- 第一人稱準心 + 提示 ---------- */
+.chase-crosshair {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.chase-cross-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  outline: 2px solid rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.7), 0 0 3px #fff;
+  transition: opacity 0.15s;
+}
+.chase-crosshair.unlocked .chase-cross-dot {
+  opacity: 0.3;
+}

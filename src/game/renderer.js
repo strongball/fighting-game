@@ -57,6 +57,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
   const atmosphere = createAtmosphere(particles);
   const bossUltimateAura = createBossUltimateAura({ scene, particles, sceneMgr });
   const timeAnchorLayer = createTimeAnchorLayer(scene);
+  let hideSelf = false; // 第一人稱(mode 2)時藏自身模型
   let appliedThemeRound = -1;
   let appliedThemeMode = '';
   const sfx = getSfxManager();
@@ -141,7 +142,8 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
       if (!p.alive && !downed) { e.group.visible = false; e.wasHidden = true; continue; }
       // 從隱藏(死亡/重生)轉可見：位置直接對齊，避免從舊位置滑入
       if (e.wasHidden) { e.rx = p.x; e.ry = p.y; e.spd = 0; e.wasHidden = false; }
-      e.group.visible = true;
+      // 第一人稱時藏起自身模型（避免相機卡在自己身體內）
+      e.group.visible = !(hideSelf && p.id === selfId);
 
       // ---- 渲染端位置插值 ----
       // 邏輯/網路 30Hz 更新 p.x/p.y，但畫面以 ~60fps 繪製；直接設位置會出現 30Hz 階梯抖動。
@@ -486,11 +488,12 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     huntMarker.userData.mat.emissiveIntensity = 2.4 + 1.0 * (0.5 + 0.5 * Math.sin(huntPhase * 6));
   }
 
-  function render(state, selfId) {
+  function render(state, selfId, view) {
     const now = performance.now();
     let dt = lastT ? (now - lastT) / 1000 : 0;
     lastT = now;
     if (dt > 0.05) dt = 0.05;
+    hideSelf = !!(view && view.mode === 2); // 第一人稱藏自身模型
 
     if (sceneMgr.resize()) hud.resize();
 
@@ -554,6 +557,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     }
     sceneMgr.setIntroFocus(introStr, bossSx, bossSz);
     sceneMgr.setCameraFocus(fx, fz);
+    sceneMgr.setCameraMode(view ? (view.mode | 0) : 0, view ? view.yaw : 0, view ? view.pitch : 0);
     sceneMgr.update(dt);
     hud.update(state, selfId);
 
