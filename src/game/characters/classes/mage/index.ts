@@ -5,9 +5,10 @@ import { drawMageTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { attachSkinGear } from './gear.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 1, name: '法師', color: '#3498db', shape: 'circle', sprite: characterSprite('mage', '#3498db', true, drawMageTexture),
+    id: 'mage', order: 1, evadeType: 'blink', name: '法師', color: '#3498db', shape: 'circle', sprite: characterSprite('mage', '#3498db', true, drawMageTexture),
     maxHp: 170, maxMana: 140, speed: 158,
     desc: '遠程爆發法師，全靠瞄準。飛彈不再追蹤、寒冰矛凍結起手、烈焰吐息近身爆發，大招天降流星（落點預警可閃避）單體灌爆。脆皮且極耗魔，落空就斷魔。',
     role: '後排 · 遠程爆發',

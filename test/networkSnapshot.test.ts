@@ -5,7 +5,7 @@ import { createInitialState, makeDropItem } from '../src/game/entities/factories
 describe('network snapshot serialization', () => {
   it('syncs persistent renderer state needed by joiners', () => {
     const state: any = createInitialState([
-      { id: 'p0', name: 'Host Player', charId: 0, team: 1 },
+      { id: 'p0', name: 'Host Player', charId: 'warrior', team: 1 },
     ], {}, { mode: 'boss' });
     state.timeAnchors = [{
       id: 'anchor-1',

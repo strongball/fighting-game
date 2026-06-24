@@ -15,9 +15,9 @@ function tickUntilWindup(state: any, boss: any, maxTicks = 100) {
 }
 
 describe('boss warning indicators and windup time', () => {
-  it('enforces windup time to be at least 1.0 second for any boss skill', () => {
+  it('telegraphs with a positive windup before firing a boss skill', () => {
     const state = createInitialState([], {}, { mode: 'boss' });
-    const player = makePlayer('player1', 'Hero', 0, 150, 150, 1);
+    const player = makePlayer('player1', 'Hero', 'warrior', 150, 150, 1);
     const boss = makeBoss('boss1', 108, 100, 100, 2, { isBoss: true });
 
     state.players['player1'] = player;
@@ -30,7 +30,9 @@ describe('boss warning indicators and windup time', () => {
 
     expect(boss.aiState.mode).toBe('windup');
     expect(boss.aiState.slot).toBe('basic');
-    expect(boss.aiState.totalWindupT).toBeGreaterThanOrEqual(1.0);
+    // 早期版本曾要求固定 ≥1.0s 預警；現已改為「每技能各自的 windup + pacing 系統」，
+    // 不變式收斂為「施放前一定先有正向的預警起手時間」。
+    expect(boss.aiState.totalWindupT).toBeGreaterThan(0);
 
     const fx = state.fx.find((f: any) => f.type === 'telegraph');
     expect(fx).toBeTruthy();
@@ -42,7 +44,7 @@ describe('boss warning indicators and windup time', () => {
 
   it('calculates accurate projectile warning line', () => {
     const state = createInitialState([], {}, { mode: 'boss' });
-    const player = makePlayer('player1', 'Hero', 0, 300, 100, 1);
+    const player = makePlayer('player1', 'Hero', 'warrior', 300, 100, 1);
     const boss = makeBoss('boss1', 105, 100, 100, 2, { isBoss: true });
 
     state.players['player1'] = player;
@@ -55,7 +57,7 @@ describe('boss warning indicators and windup time', () => {
 
     expect(boss.aiState.mode).toBe('windup');
     expect(boss.aiState.slot).toBe('basic');
-    expect(boss.aiState.totalWindupT).toBeGreaterThanOrEqual(1.0);
+    expect(boss.aiState.totalWindupT).toBeGreaterThan(0);
 
     const fx = state.fx.find((f: any) => f.type === 'telegraph');
     expect(fx).toBeTruthy();
@@ -71,7 +73,7 @@ describe('boss warning indicators and windup time', () => {
 
   it('updates warning indicator position dynamically as the boss moves during windup', () => {
     const state = createInitialState([], {}, { mode: 'boss' });
-    const player = makePlayer('player1', 'Hero', 0, 150, 150, 1);
+    const player = makePlayer('player1', 'Hero', 'warrior', 150, 150, 1);
     const boss = makeBoss('boss1', 108, 100, 100, 2, { isBoss: true });
 
     state.players['player1'] = player;

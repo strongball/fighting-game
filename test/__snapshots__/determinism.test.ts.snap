@@ -54,7 +54,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
         "alive": false,
         "cd": {
           "basic": 0,
-          "evade": 1.5,
+          "evade": 0.5,
           "skill1": 3.476,
           "skill2": 0,
           "ultimate": 0,
@@ -146,7 +146,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
   "trail": [
     {
       "counts": {
-        "fx": 13,
+        "fx": 14,
         "projectiles": 5,
         "zones": 0,
       },
@@ -156,7 +156,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 2.119,
+            "evade": 1.119,
             "skill1": 7.619,
             "skill2": 9.619,
             "ultimate": 0,
@@ -176,7 +176,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.171,
-            "evade": 2.738,
+            "evade": 1.738,
             "skill1": 4.952,
             "skill2": 7.143,
             "ultimate": 0,
@@ -196,7 +196,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.007,
-            "evade": 3.357,
+            "evade": 2.357,
             "skill1": 6.286,
             "skill2": 8.667,
             "ultimate": 0,
@@ -294,7 +294,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.312,
-            "evade": 0.69,
+            "evade": 0,
             "skill1": 6.19,
             "skill2": 8.19,
             "ultimate": 0,
@@ -314,7 +314,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.457,
-            "evade": 1.31,
+            "evade": 0.31,
             "skill1": 3.524,
             "skill2": 5.714,
             "ultimate": 0,
@@ -334,7 +334,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.292,
-            "evade": 1.929,
+            "evade": 0.929,
             "skill1": 4.857,
             "skill2": 7.238,
             "ultimate": 0,
@@ -356,7 +356,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 2.548,
+            "evade": 1.548,
             "skill1": 9.19,
             "skill2": 10.762,
             "ultimate": 0,
@@ -378,7 +378,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 3.167,
+            "evade": 2.167,
             "skill1": 5.524,
             "skill2": 10.286,
             "ultimate": 0,
@@ -479,7 +479,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 0.5,
+            "evade": 0,
             "skill1": 3.429,
             "skill2": 5.81,
             "ultimate": 0,
@@ -502,7 +502,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.096,
-            "evade": 1.119,
+            "evade": 0.119,
             "skill1": 7.762,
             "skill2": 9.333,
             "ultimate": 0,
@@ -525,7 +525,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.171,
-            "evade": 1.738,
+            "evade": 0.738,
             "skill1": 4.095,
             "skill2": 8.857,
             "ultimate": 0,
@@ -547,7 +547,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.122,
-            "evade": 2.317,
+            "evade": 1.317,
             "skill1": 4.384,
             "skill2": 8.336,
             "ultimate": 0,
@@ -671,7 +671,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.457,
-            "evade": 0.31,
+            "evade": 0,
             "skill1": 2.667,
             "skill2": 7.429,
             "ultimate": 0,
@@ -693,7 +693,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.409,
-            "evade": 0.748,
+            "evade": 0,
             "skill1": 2.814,
             "skill2": 6.767,
             "ultimate": 0,
@@ -1021,7 +1021,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.026,
-            "evade": 3.071,
+            "evade": 2.071,
             "skill1": 0,
             "skill2": 1.048,
             "ultimate": 0,
@@ -1169,7 +1169,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.312,
-            "evade": 1.643,
+            "evade": 0.643,
             "skill1": 0,
             "skill2": 0,
             "ultimate": 0,
@@ -1189,7 +1189,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.457,
-            "evade": 2.262,
+            "evade": 1.262,
             "skill1": 3.524,
             "skill2": 0,
             "ultimate": 0,
@@ -1209,7 +1209,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.292,
-            "evade": 2.881,
+            "evade": 1.881,
             "skill1": 4.857,
             "skill2": 0,
             "ultimate": 0,
@@ -1231,7 +1231,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 3.5,
+            "evade": 2.5,
             "skill1": 0.619,
             "skill2": 2.19,
             "ultimate": 0,
@@ -1311,7 +1311,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 0.214,
+            "evade": 0,
             "skill1": 0,
             "skill2": 0,
             "ultimate": 0,
@@ -1331,7 +1331,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 0.833,
+            "evade": 0,
             "skill1": 2.095,
             "skill2": 0,
             "ultimate": 0,
@@ -1351,7 +1351,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -1371,7 +1371,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.096,
-            "evade": 2.071,
+            "evade": 1.071,
             "skill1": 0,
             "skill2": 0.762,
             "ultimate": 0,
@@ -1393,7 +1393,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.171,
-            "evade": 2.69,
+            "evade": 1.69,
             "skill1": 4.095,
             "skill2": 0.286,
             "ultimate": 0,
@@ -1413,7 +1413,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.062,
-            "evade": 3.272,
+            "evade": 2.272,
             "skill1": 3.949,
             "skill2": 0,
             "ultimate": 0,
@@ -1490,7 +1490,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -1510,7 +1510,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.382,
-            "evade": 0.643,
+            "evade": 0,
             "skill1": 0,
             "skill2": 0,
             "ultimate": 0,
@@ -1530,7 +1530,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.457,
-            "evade": 1.262,
+            "evade": 0.262,
             "skill1": 2.667,
             "skill2": 0,
             "ultimate": 0,
@@ -1550,7 +1550,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.403,
-            "evade": 1.54,
+            "evade": 0.54,
             "skill1": 2.217,
             "skill2": 0,
             "ultimate": 0,
@@ -1572,7 +1572,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
     },
     {
       "counts": {
-        "fx": 22,
+        "fx": 23,
         "projectiles": 2,
         "zones": 2,
       },
@@ -1622,7 +1622,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -1760,7 +1760,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -1848,7 +1848,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
     },
     {
       "counts": {
-        "fx": 9,
+        "fx": 11,
         "projectiles": 2,
         "zones": 2,
       },
@@ -1898,7 +1898,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -2039,7 +2039,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -2180,7 +2180,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -2200,7 +2200,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.096,
-            "evade": 3.024,
+            "evade": 2.024,
             "skill1": 7.762,
             "skill2": 0,
             "ultimate": 8.476,
@@ -2321,7 +2321,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -2341,7 +2341,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.382,
-            "evade": 1.595,
+            "evade": 0.595,
             "skill1": 6.333,
             "skill2": 0,
             "ultimate": 7.048,
@@ -2365,7 +2365,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.457,
-            "evade": 2.214,
+            "evade": 1.214,
             "skill1": 0,
             "skill2": 3.857,
             "ultimate": 4.429,
@@ -2387,7 +2387,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.403,
-            "evade": 2.7,
+            "evade": 1.7,
             "skill1": 2.199,
             "skill2": 1.969,
             "ultimate": 2.481,
@@ -2462,7 +2462,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -2482,7 +2482,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 0.167,
+            "evade": 0,
             "skill1": 4.905,
             "skill2": 0,
             "ultimate": 5.619,
@@ -2505,7 +2505,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 0.786,
+            "evade": 0,
             "skill1": 0,
             "skill2": 2.429,
             "ultimate": 3,
@@ -2527,7 +2527,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 0.988,
+            "evade": 0,
             "skill1": 0.487,
             "skill2": 0.256,
             "ultimate": 0.769,
@@ -2602,7 +2602,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -2740,7 +2740,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -2877,7 +2877,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -3013,7 +3013,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -3100,7 +3100,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
     },
     {
       "counts": {
-        "fx": 4,
+        "fx": 5,
         "projectiles": 0,
         "zones": 0,
       },
@@ -3150,7 +3150,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -3170,7 +3170,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.382,
-            "evade": 2.548,
+            "evade": 1.548,
             "skill1": 10.619,
             "skill2": 0,
             "ultimate": 0,
@@ -3289,7 +3289,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -3309,7 +3309,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 1.119,
+            "evade": 0.119,
             "skill1": 9.19,
             "skill2": 0,
             "ultimate": 0,
@@ -3353,7 +3353,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0,
-            "evade": 2.357,
+            "evade": 1.357,
             "skill1": 1.142,
             "skill2": 6.416,
             "ultimate": 7.952,
@@ -3428,7 +3428,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -3492,7 +3492,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": true,
           "cd": {
             "basic": 0.121,
-            "evade": 0.922,
+            "evade": 0,
             "skill1": 0,
             "skill2": 4.982,
             "ultimate": 6.518,
@@ -3567,7 +3567,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -3708,7 +3708,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -3849,7 +3849,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -3990,7 +3990,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -4131,7 +4131,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,
@@ -4272,7 +4272,7 @@ exports[`simulation determinism (golden regression) > matches the golden behavio
           "alive": false,
           "cd": {
             "basic": 0,
-            "evade": 1.5,
+            "evade": 0.5,
             "skill1": 3.476,
             "skill2": 0,
             "ultimate": 0,

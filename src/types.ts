@@ -14,7 +14,7 @@ export interface GameFlags {
 export interface LobbyEntry {
   id: string;
   name: string;
-  charId: number;
+  charId: string; // 角色 slug（穩定唯一 id），見 game/characters/index.ts
   controlScheme: ControlScheme;
   isHost: boolean;
   isNpc?: boolean;
@@ -31,7 +31,7 @@ export interface LobbyView {
 
 export interface GameOverPlayer {
   name: string;
-  charId: number;
+  charId: string; // 角色 slug
   kills: number;
   team?: number;
 }
@@ -59,7 +59,7 @@ export interface BossRoundEntry {
 export interface BossPlayerStats {
   id: string;
   name: string;
-  charId: number;
+  charId: string; // 角色 slug
   dmgDealt: number;
   dmgTaken: number;
   healing: number;
@@ -95,7 +95,8 @@ export interface TalentMeta {
 }
 
 export interface CharacterMeta {
-  id: number;
+  id: string; // 角色 slug（穩定唯一 id）
+  order?: number; // 大廳顯示順序；也是「角色圖鑑.md」的對照 id
   name: string;
   color: string;
   shape: 'square' | 'triangle' | 'circle';
@@ -128,7 +129,7 @@ export interface GameController {
   on<K extends keyof ControllerEvents>(event: K, fn: ControllerEvents[K]): () => void;
   createRoom(name: string): void;
   joinRoom(name: string, code: string): void;
-  selectChar(charId: number): void;
+  selectChar(charId: string): void;
   selectControlScheme(scheme: ControlScheme): void;
   selectTeam(team: number): void;
   selectGameFlags(flags: GameFlags): void;
@@ -137,14 +138,14 @@ export interface GameController {
   startGame(): void;
   startBossGame(): void;
   startBossChallenge(round: number): void;
-  devStartGame(charId?: number): void;
-  devStartBoss(charId?: number, round?: number): void;
+  devStartGame(charId?: string): void;
+  devStartBoss(charId?: string, round?: number): void;
   returnToLobby(): void;
   bossRetry(): void;
   bossQuit(): void;
   leave(): void;
   attachCanvas(canvas: HTMLCanvasElement): void;
   detachCanvas(): void;
-  readonly selectedChar: number;
+  readonly selectedChar: string;
   readonly isHost: boolean;
 }

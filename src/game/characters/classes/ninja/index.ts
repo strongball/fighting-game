@@ -5,9 +5,10 @@ import { drawNinjaTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { attachSkinGear } from './gear.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 7, name: '忍者', color: '#2c3e50', shape: 'triangle', sprite: characterSprite('ninja', '#2c3e50', true, drawNinjaTexture),
+    id: 'ninja', order: 7, evadeType: 'blink', name: '忍者', color: '#2c3e50', shape: 'triangle', sprite: characterSprite('ninja', '#2c3e50', true, drawNinjaTexture),
     maxHp: 200, maxMana: 90, speed: 235,
     desc: '高機動的控制側翼。影縛符遠程定身、影襲瞬移突進並落下煙幕緩速，大招煙影亂舞化身環身刃絞殺敵群。專剋被控制的目標——價值在接控與絞殺，而非隱身偷襲。',
     role: '機動 · 控制/絞殺',

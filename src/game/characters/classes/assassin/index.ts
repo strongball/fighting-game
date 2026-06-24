@@ -4,9 +4,10 @@ import { characterSprite } from '../../textureSprite.ts';
 import { drawAssassinTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 2, name: '刺客', color: '#9b59b6', shape: 'triangle', sprite: characterSprite('assassin', '#9b59b6', true, drawAssassinTexture), meleeRole: true,
+    id: 'assassin', order: 2, evadeType: 'blink', name: '刺客', color: '#9b59b6', shape: 'triangle', sprite: characterSprite('assassin', '#9b59b6', true, drawAssassinTexture), meleeRole: true,
     maxHp: 190, maxMana: 70, speed: 240,
     desc: '單體爆發突進手。影襲標記目標、印記引爆灌出致命一擊，得手後隱身重置。需隊友控場開路，專點脆皮核心；被抓住就脆。',
     role: '突進 · 單體爆發',

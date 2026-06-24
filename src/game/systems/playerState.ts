@@ -1,7 +1,6 @@
 import { PLAYER_RADIUS, MANA_REGEN, ULT_MAX, ULT_REGEN, COOLDOWN_MULTIPLIER, difficultyMult } from '../constants.js';
-import { missingHp } from '../entities/math.ts';
-import { applyHeal } from '../entities/heal.ts';
 import { addFx } from '../entities/fx.ts';
+import { getTalentHooks } from '../characters/talents/registry';
 import type { GameState, Player } from '../types';
 
 const COOLDOWN_SLOTS = ['basic', 'skill1', 'skill2', 'ultimate', 'evade'];
@@ -21,13 +20,14 @@ export function tickCharacterTimers(state: GameState, p: Player, character: any,
     p._chronoHist.push({ x: p.x, y: p.y, hp: p.hp });
     if (p._chronoHist.length > 130) p._chronoHist.shift();
   }
-  if (talent && talent.id === 'iaido') p.iaiTimer = (p.iaiTimer || 0) + dt;
+  getTalentHooks(talent?.id)?.onTimers?.(state, p, dt, talent); // 例：iaido 計時累積
   if (typeof character.tick === 'function') character.tick(state, p, dt);
 }
 
 export function tickCooldowns(state: GameState, p: Player, talent: any, dt: number) {
   let cdRate = 1;
-  if (talent && talent.id === 'bloodlust') cdRate = 1 + (talent.haste || 0.6) * missingHp(p);
+  const cooldownRate = getTalentHooks(talent?.id)?.cooldownRate; // 例：bloodlust 失血加速
+  if (cooldownRate) cdRate = cooldownRate(state, p, talent);
   cdRate /= COOLDOWN_MULTIPLIER;
   cdRate /= difficultyMult(state.flags.difficulty ?? 0.5).playerCd;
   for (const slot of COOLDOWN_SLOTS) {
@@ -47,7 +47,7 @@ export function tickPassiveRecovery(state: GameState, p: Player, talent: any, dt
     p.comboTimer -= dt;
     if (p.comboTimer <= 0) p.combo = 0;
   }
-  if (talent && talent.id === 'lifebloom') applyHeal(state, p, (talent.regen || 6) * dt);
+  getTalentHooks(talent?.id)?.onRecovery?.(state, p, dt, talent); // 例：lifebloom 持續回血
 
   if (p.shieldTime > 0) {
     p.shieldTime -= dt;

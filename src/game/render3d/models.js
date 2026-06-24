@@ -77,7 +77,7 @@ function buildAccents(group, reg, o) {
 
 export function createCharacterModel(charId) {
   const ch = getCharacter(charId);
-  const isBoss = ch.id >= 100;
+  const isBoss = typeof ch.id === 'number' && ch.id >= 100;
   const modelDef = isBoss ? ch : getCharacterModelDef(charId);
   const cfg = modelDef?.modelConfig || { bulk: 1, weapon: 'sword' };
   const bossModel = isBoss ? cfg : null; // 魔王程序化建模參數

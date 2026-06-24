@@ -4,7 +4,7 @@ import { applyShield } from '../src/game/entities/shield.ts';
 
 describe('shield visuals', () => {
   it('keeps max shield behavior and emits a white shield popup when shield increases', () => {
-    const state = createInitialState([{ id: 'p0', name: 'Tank', charId: 3 }]);
+    const state = createInitialState([{ id: 'p0', name: 'Tank', charId: 'tank' }]);
     const p = state.players.p0;
 
     expect(applyShield(state, p, 140, 5)).toBe(140);

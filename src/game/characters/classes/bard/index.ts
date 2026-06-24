@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 12, name: '吟遊詩人', color: '#e91e63', shape: 'circle', sprite: characterSprite('bard', '#e91e63', false, drawBardTexture),
+    id: 'bard', order: 12, evadeType: 'dash', name: '吟遊詩人', color: '#e91e63', shape: 'circle', sprite: characterSprite('bard', '#e91e63', false, drawBardTexture),
     maxHp: 190, maxMana: 120, speed: 182,
     desc: '以樂曲與治療增幅全隊的進攻型輔助。激昂戰歌賜予友軍增傷與狂熱、療癒和弦貫穿敵軍並治療路徑上的隊友，大招狂想交響樂擊退周圍敵軍並提供大範圍治療與強力增益。',
     role: '支援 · 增傷/加速',

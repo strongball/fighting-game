@@ -4,7 +4,7 @@
 import { getCharacter as rawGetCharacter } from '../game/characters.js';
 import type { BossPlayerStats, BossRoundEntry, CharacterMeta, GameOverView } from '../types';
 
-const getCharacter = rawGetCharacter as (id: number) => CharacterMeta;
+const getCharacter = rawGetCharacter as (id: string) => CharacterMeta;
 
 interface GameOverScreenProps {
   view: GameOverView;

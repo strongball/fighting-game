@@ -1,9 +1,9 @@
 import { PLAYER_RADIUS, ULT_MAX, ULT_GAIN_DEAL, ULT_GAIN_TAKE, difficultyMult } from '../constants.js';
 import { getCharacter } from '../characters.js';
+import { getTalentHooks, type TalentCtx } from '../characters/talents/registry';
 import { prepareBossAction } from '../bosses/actions.ts';
 import { applyBossDamageModifiers } from '../bosses/damage.ts';
 import { getBoss } from '../bosses.js';
-import { angleDiff, missingHp } from './math.ts';
 import { addFx } from './fx.ts';
 import { applyHeal } from './heal.ts';
 import { applyEffect } from './effects.ts';
@@ -14,18 +14,30 @@ import type { GameState, Player, EntityId } from '../types';
 
 // ── 天賦（被動）系統導覽 ────────────────────────────────────────────
 // 天賦「資料」定義於各角色 characters/classes/<slug>/index.ts 的 talent:{id,...}。
-// 天賦「邏輯」基於效能與決定性，刻意內聯於 hot-path（非事件匯流排），分布於：
-//   • entities/damage.ts   傷害輸出/承受修正、命中副作用（多數天賦集中於此）
-//       - talentDamageMods(): deadeye / lethal / momentum / shadowstrike / suppress / summonbond
-//       - warsongFor(): warsong
-//       - dealDamage 尾段: arcane_flow / bloodlust / momentum / suppress / summonbond / retribution
-//       - spreadCurse(): plague（死亡傳染 weaken）
-//   • systems/playerState.ts  bloodlust(攻速) / lifebloom(持續回血) / iaido(計時累積)
+//
+// 傷害管線的天賦邏輯已改為「與角色 co-located 的 hook registry」（characters/talents/registry.ts）：
+// 各角色 classes/<slug>/talent.ts 內 registerTalent('<id>', { modifyOutgoing/modifyIncoming/
+// onDealt/onAttacked })，本檔在 hot-path 依序查 registry 後呼叫，順序與原內聯一致。
+//   - talentDamageMods(): target.modifyIncoming → attacker.modifyOutgoing →（warsong aura 仍內聯）
+//   - dealDamage onAttacked 區: retribution（受擊反傷）
+//   - dealDamage onDealt 區: 造成傷害後副作用（arcane_flow/bloodlust/momentum/suppress…）
+// 新增「會影響傷害」的天賦＝加一個 talent.ts 註冊 hook，不必再改本檔。
+//
+// 生命週期 hook（playerState / casting）也走 registry：cooldownRate(bloodlust 攻速) /
+// onTimers(iaido 計時) / onRecovery(lifebloom 回血) / onCastResolved(timeprism)。
+//
+// 仍內聯、尚未納入 registry 的天賦邏輯（aura / 跨實體 / 與施放序列緊密耦合）：
+//   • entities/damage.ts   warsongFor()(warsong aura) / spreadCurse()(plague 死亡傳染) /
+//                          summonbond 召喚物命中回主（owner 經召喚物，非攻擊方天賦）
 //   • systems/effects.ts      undeath(DoT 汲取回血，見 dotLifesteal)
-//   • actions/combat.ts       pyromancy(強化 burn，applyEffectFrom) / iaido(outMult 加成)
-//   • actions/casting.ts      iaido(居合就緒判定) / timeprism(施法後自我 haste)
+//   • actions/combat.ts       pyromancy(強化 burn) ；actions/casting.ts iaido 居合就緒判定
 // 註：unbreakable / bulwark 目前僅有資料定義，未見對應減傷邏輯（疑為待補；本次純重構不更動行為）。
 // ──────────────────────────────────────────────────────────────────
+
+// 建立傳給天賦 hook 的情境（注入副作用 helper，避免 talent.ts 反向匯入 entities/* 造成循環）。
+function talentCtx(state: GameState, attacker: Player, target: Player, dmg: number, talent: any): TalentCtx {
+  return { state, attacker, target, dmg, talent, applyHeal, addFx };
+}
 
 function warsongFor(state: GameState, attacker: Player): number {
   let best = 0;
@@ -69,34 +81,14 @@ function talentDamageMods(state: GameState, attacker: Player, target: Player, am
   let dmg = amount;
   if (target && target.alive) {
     const dt = getCharacter(target.charId).talent;
-    if (dt && dt.id === 'summonbond') {
-      let n = 0;
-      for (const other of Object.values(state.players)) if (other.isMinion && other.ownerId === target.id && other.alive) n++;
-      if (n > 0) dmg *= 1 - Math.min(dt.maxStacks || 3, n) * (dt.dr || 0.1);
-    }
+    const th = dt && getTalentHooks(dt.id);
+    if (th?.modifyIncoming) dmg = th.modifyIncoming(talentCtx(state, attacker, target, dmg, dt));
   }
   if (attacker && attacker.alive) {
     const at = getCharacter(attacker.charId).talent;
-    if (at) {
-      if (at.id === 'deadeye') {
-        const d = Math.hypot(target.x - attacker.x, target.y - attacker.y);
-        dmg *= 1 + (at.bonus || 0.5) * Math.min(1, d / (at.range || 520));
-      } else if (at.id === 'lethal') {
-        const behind = Math.abs(angleDiff(Math.atan2(attacker.y - target.y, attacker.x - target.x), target.facing)) > Math.PI - (at.arc || 1.2);
-        if ((attacker.effects && attacker.effects.invis) || behind) dmg *= 1 + (at.bonus || 0.6);
-      } else if (at.id === 'momentum') {
-        const stacks = Math.min(at.maxStacks || 5, attacker.combo || 0);
-        if (stacks > 0) dmg *= 1 + stacks * (at.perStack || 0.1);
-      } else if (at.id === 'shadowstrike') {
-        const effects = target.effects || {};
-        if (effects.stun || effects.root || effects.slow || effects.chill || effects.frozen) dmg *= 1 + (at.bonus || 0.35);
-      } else if (at.id === 'suppress') {
-        if (attacker.suppressTarget === target.id) {
-          const stacks = Math.min(at.maxStacks || 5, attacker.suppressStacks || 0);
-          if (stacks > 0) dmg *= 1 + stacks * (at.perStack || 0.08);
-        }
-      }
-    }
+    const ah = at && getTalentHooks(at.id);
+    if (ah?.modifyOutgoing) dmg = ah.modifyOutgoing(talentCtx(state, attacker, target, dmg, at));
+    // warsong 為 aura（掃描友方 bard），非攻擊方自身天賦，暫留內聯。
     const warsong = warsongFor(state, attacker);
     if (warsong > 0) dmg *= 1 + warsong;
   }
@@ -166,10 +158,11 @@ export function dealDamage(
     if (reflectDamage > 0) dealDamage(state, attacker, reflectDamage, target.id, { noReflect: true, noTalent: true });
   }
   if (!opts.noReflect && hostile) {
-    const targetTalent = getCharacter(target.charId).talent;
-    if (targetTalent && targetTalent.id === 'retribution') {
-      const reflectDamage = dmg * (targetTalent.factor || 0.15);
-      if (reflectDamage > 0) dealDamage(state, attacker, reflectDamage, target.id, { noReflect: true, noTalent: true });
+    const tt = getCharacter(target.charId).talent;
+    const th = tt && getTalentHooks(tt.id);
+    if (th?.onAttacked) {
+      const reflectDamage = th.onAttacked(talentCtx(state, attacker, target, dmg, tt));
+      if (reflectDamage && reflectDamage > 0) dealDamage(state, attacker, reflectDamage, target.id, { noReflect: true, noTalent: true });
     }
   }
 
@@ -303,23 +296,10 @@ export function dealDamage(
   }
   if (!opts.noTalent && hostile) {
     const at = getCharacter(attacker.charId).talent;
-    if (at) {
-      if (at.id === 'arcane_flow') attacker.mana = Math.min(attacker.maxMana, attacker.mana + (at.mana || 8));
-      else if (at.id === 'bloodlust') {
-        const lifesteal = dmg * (at.lifesteal || 0.25) * (0.4 + missingHp(attacker));
-        if (lifesteal > 0) {
-          attacker.hp = Math.min(attacker.maxHp, attacker.hp + lifesteal);
-          addFx(state, { type: 'popup', x: attacker.x, y: attacker.y, color: '#5cffa6', life: 0.7, text: `+${Math.round(lifesteal)}`, kind: 'heal' });
-        }
-      } else if (at.id === 'momentum') {
-        attacker.combo = Math.min(at.maxStacks || 5, (attacker.combo || 0) + 1);
-        attacker.comboTimer = at.window || 2.2;
-      } else if (at.id === 'suppress') {
-        if (attacker.suppressTarget === target.id) attacker.suppressStacks = Math.min(at.maxStacks || 5, (attacker.suppressStacks || 0) + 1);
-        else { attacker.suppressTarget = target.id; attacker.suppressStacks = 1; }
-      }
-    }
+    const ah = at && getTalentHooks(at.id);
+    if (ah?.onDealt) ah.onDealt(talentCtx(state, attacker, target, dmg, at));
   }
+  // summonbond：召喚物命中敵人時回血給主人（owner 經召喚物觸發，非攻擊方自身天賦，暫留內聯）。
   if (hostile && attacker.isMinion && attacker.ownerId) {
     const owner = state.players[attacker.ownerId];
     if (owner && owner.alive) {
@@ -341,7 +321,7 @@ export function dealDamage(
     recordKill(state, attackerId, target);
     recordDeath(state, target);
     if (target.effects && target.effects.weaken) spreadCurse(state, target);
-    const bossDeathVfx = target.isBoss && state.mode === 'boss' ? getBoss(target.charId)?.data?.deathVfx : null;
+    const bossDeathVfx = target.isBoss && state.mode === 'boss' ? getBoss(target.charId as number)?.data?.deathVfx : null;
     if (!bossDeathVfx) {
       addFx(state, { type: 'death', x: target.x, y: target.y, color: '#ffffff', life: 0.5, radius: PLAYER_RADIUS * 2 });
     }

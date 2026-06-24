@@ -5,9 +5,10 @@ import { drawHealerTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { attachSkinGear } from './gear.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 5, name: '治療師', color: '#ecf0f1', shape: 'circle', sprite: characterSprite('healer', '#ecf0f1', true, drawHealerTexture),
+    id: 'healer', order: 5, evadeType: 'dash', name: '治療師', color: '#ecf0f1', shape: 'circle', sprite: characterSprite('healer', '#ecf0f1', true, drawHealerTexture),
     maxHp: 200, maxMana: 140, speed: 170,
     desc: '團隊續航核心。治癒之觸為全隊回血淨化、聖光環跟身治療並灼傷踏入的敵人，大招生命匯流逆轉團戰。單打靠天賦自療與風箏苟活、輸出極低。',
     role: '支援 · 團隊核心',

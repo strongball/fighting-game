@@ -7,9 +7,12 @@ import type { Player, EffectKind, EntityId } from '../types';
 import { applyShield } from './shield.ts';
 
 type EffectApply = (p: Player, kind: string, data: any, srcId?: EntityId) => void;
+/** HUD 顯示中繼資料（頭頂/角落狀態列的圖示與名稱）；省略代表此效果不在狀態列顯示（如 heal/shield/regen_hot）。 */
+export interface EffectHud { icon: string; name: string; buff: boolean; }
 interface EffectDef {
   apply?: EffectApply;      // 缺省 → genericApply
   cleanseable?: boolean;    // debuff = true（會被 cleanse 清除）；增益省略
+  hud?: EffectHud;          // 狀態列顯示中繼資料（與邏輯 co-located，新增效果只改這一處）
 }
 
 // 通用衰減型效果（slow/stun/haste/rage/overdrive/frozen/evading/invis…）的缺省寫入。
@@ -24,7 +27,7 @@ const genericApply: EffectApply = (p, kind, data) => {
 };
 
 const EFFECT_DEFS: Record<string, EffectDef> = {
-  // ---- 即時型（直接改 hp/shield，不留存於 effects）----
+  // ---- 即時型（直接改 hp/shield，不留存於 effects；不在狀態列顯示，故無 hud）----
   heal: { apply: (p, _k, data) => { p.hp = Math.min(p.maxHp, p.hp + data.amount); } },
   shield: {
     apply: (p, _k, data) => {
@@ -35,6 +38,7 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
   // ---- DoT / 控場（可淨化）----
   burn: {
     cleanseable: true,
+    hud: { icon: '🔥', name: '燃燒', buff: false },
     apply: (p, _k, data, srcId) => {
       const cur = p.effects.burn;
       const tick = data.tick || 0.5;
@@ -49,6 +53,7 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
   },
   bleed: {
     cleanseable: true,
+    hud: { icon: '🩸', name: '流血', buff: false },
     apply: (p, _k, data, srcId) => {
       const cur = p.effects.bleed;
       const tick = data.tick || 0.5;
@@ -64,6 +69,7 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
   },
   mark: {
     cleanseable: true,
+    hud: { icon: '🎯', name: '標記', buff: false },
     apply: (p, _k, data, srcId) => {
       const cur = p.effects.mark;
       p.effects.mark = {
@@ -75,6 +81,7 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
   },
   chill: {
     cleanseable: true,
+    hud: { icon: '❄️', name: '冰寒', buff: false },
     apply: (p, _k, data, srcId) => {
       const cur = p.effects.chill;
       const max = data.max || 4;
@@ -91,6 +98,7 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
   },
   weaken: {
     cleanseable: true,
+    hud: { icon: '💀', name: '衰弱', buff: false },
     apply: (p, _k, data) => {
       const cur = p.effects.weaken;
       p.effects.weaken = { remaining: Math.max(cur ? cur.remaining : 0, data.duration || 3), factor: Math.max(cur ? cur.factor : 0, data.factor || 0.15) };
@@ -98,6 +106,7 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
   },
   dmg_reduce: {
     cleanseable: true,
+    hud: { icon: '🔻', name: '弱化', buff: false },
     apply: (p, _k, data) => {
       const cur = p.effects.dmg_reduce;
       p.effects.dmg_reduce = { remaining: Math.max(cur ? cur.remaining : 0, data.duration || 3), factor: Math.max(cur ? cur.factor : 0, data.factor || 0.25) };
@@ -105,17 +114,19 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
   },
   root: {
     cleanseable: true,
+    hud: { icon: '🌿', name: '定身', buff: false },
     apply: (p, _k, data) => { p.effects.root = { remaining: data.duration || 1 }; },
   },
 
   // ---- 走 genericApply、但仍可淨化（slow/stun/frozen）----
-  slow: { cleanseable: true },
-  stun: { cleanseable: true },
-  frozen: { cleanseable: true },
+  slow: { cleanseable: true, hud: { icon: '🐢', name: '緩速', buff: false } },
+  stun: { cleanseable: true, hud: { icon: '💫', name: '暈眩', buff: false } },
+  frozen: { cleanseable: true, hud: { icon: '🧊', name: '冰凍', buff: false } },
 
   // ---- 增益（不被淨化）----
-  reflect: { apply: (p, _k, data) => { p.effects.reflect = { remaining: data.duration || 5, factor: data.factor || 0.35 }; } },
+  reflect: { hud: { icon: '🪞', name: '反射', buff: true }, apply: (p, _k, data) => { p.effects.reflect = { remaining: data.duration || 5, factor: data.factor || 0.35 }; } },
   protect: {
+    hud: { icon: '🛡', name: '護體', buff: true },
     apply: (p, _k, data) => {
       const cur = p.effects.protect;
       p.effects.protect = {
@@ -124,6 +135,13 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
       };
     },
   },
+  // ---- 走 genericApply 的增益：僅 HUD 顯示中繼資料（無 apply → genericApply；無 cleanseable）----
+  haste:     { hud: { icon: '⚡', name: '加速', buff: true } },
+  lifesteal: { hud: { icon: '🩸', name: '吸血', buff: true } },
+  rage:      { hud: { icon: '🔥', name: '狂暴', buff: true } },
+  overdrive: { hud: { icon: '⚡', name: '超載', buff: true } },
+  invis:     { hud: { icon: '👻', name: '隱身', buff: true } },
+  evading:   { hud: { icon: '💨', name: '無敵', buff: true } },
   regen_hot: {
     apply: (p, _k, data) => {
       const cur = p.effects.regen_hot;
@@ -138,6 +156,12 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
 
 // 淨化清單：由 cleanseable 旗標自動推導 → 新增可淨化效果無需再改 cleanse。
 const CLEANSEABLE = Object.keys(EFFECT_DEFS).filter((k) => EFFECT_DEFS[k].cleanseable);
+
+// HUD 狀態列查表：與效果邏輯 co-located（單一事實來源）→ 新增效果只改 EFFECT_DEFS 一處，
+// 不必再同步維護 render3d/hud.js 的第二份 icon/name 表。回傳 null = 不在狀態列顯示。
+export function getEffectHud(kind: string): EffectHud | null {
+  return EFFECT_DEFS[kind]?.hud || null;
+}
 
 export function applyEffect(p: Player, kind: EffectKind, data?: any, srcId?: EntityId) {
   if (kind === 'cleanse') {

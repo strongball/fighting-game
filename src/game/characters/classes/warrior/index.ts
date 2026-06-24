@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 0, name: '戰士', color: '#e74c3c', shape: 'square', sprite: characterSprite('warrior', '#e74c3c', true, drawWarriorTexture), meleeRole: true,
+    id: 'warrior', order: 0, evadeType: 'dash', name: '戰士', color: '#e74c3c', shape: 'square', sprite: characterSprite('warrior', '#e74c3c', true, drawWarriorTexture), meleeRole: true,
     maxHp: 300, maxMana: 60, speed: 175,
     desc: '前排錨點。突刺開團、鉤索拉人，大招化身不動堡壘為全隊套上護盾並震懾敵群。傷害不高，價值在保護與控制。',
     role: '前排 · 開團/保護',

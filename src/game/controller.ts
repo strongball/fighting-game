@@ -6,9 +6,13 @@
 // 並保留「rAF 超過 60ms 未跑就後備 draw()」的機制（勿用 document.hidden 包住渲染）。
 //
 // ── 架構 ───────────────────────────────────────────────────────────
-// 單例（getController）。內部以閉包變數持有可變狀態（role/gameState/inputs/view…）：
-// 刻意不拆成多檔，因狀態高度互相纏繞、且只有一個實例；分區以下列段落註解標示。
-//   事件匯流排 / 大廳 / 連線回呼(host+joiner) / 開始遊戲 / 遊戲迴圈 / 預測插值 / 結算 / 開發者模式
+// 單例（getController）。核心（連線/大廳/開始/遊戲迴圈/結算）高度共用閉包狀態，留在本檔；
+// 自成一格、低耦合的關注點已抽到 ./controller/ 與 ./network/ 子模組，各自獨立演進：
+//   ./network/snapshot.ts     網路快照序列化（宣告式欄位 manifest）
+//   ./controller/prediction.ts 加入者快照緩衝 / 自身預測 / 遠端插值
+//   ./controller/camera.ts     視角模式 / 滑鼠鎖定 / 準心
+//   ./controller/bossStats.ts  闖關結算統計
+// 本檔仍含段落：事件匯流排 / 大廳 / 連線回呼(host+joiner) / 開始遊戲 / 遊戲迴圈 / 結算 / 開發者模式
 //
 // host-authoritative P2P 星狀拓撲。線路訊息以 `t` 判別（型別見 game/types/network.ts）：
 //   hello   加入者→房主：自我介紹(name/charId/team)
@@ -28,7 +32,11 @@ import { createInitialState } from './entities.js';
 import { CHARACTERS } from './characters.js';
 import { getBossForRound } from './bosses.js';
 import { startBossRound, retryBossRound, quitBossRun } from './bossMode.js';
-import { step, applyMovement } from './simulation.ts';
+import { step } from './simulation.ts';
+import { serializeNetworkSnapshot } from './network/snapshot';
+import { buildBossStats } from './controller/bossStats';
+import { createPrediction } from './controller/prediction';
+import { createCamera } from './controller/camera';
 import { DT, SNAPSHOT_INTERVAL, INPUT_INTERVAL, MAX_PLAYERS } from './constants.js';
 import type {
   ControllerEvents,
@@ -40,42 +48,9 @@ import type {
   LobbyView,
 } from '../types';
 
-export function serializeNetworkPlayer(p: any) {
-  return {
-    id: p.id, name: p.name, charId: p.charId,
-    x: p.x, y: p.y, facing: p.facing, kvx: p.kvx, kvy: p.kvy,
-    hp: p.hp, maxHp: p.maxHp, mana: p.mana, maxMana: p.maxMana,
-    alive: p.alive, shield: p.shield, shieldTime: p.shieldTime, kills: p.kills,
-    effects: p.effects, cd: p.cd, ult: p.ult, team: p.team, chargeState: p.chargeState,
-    // 魔王/召喚物/部位渲染旗標
-    isBoss: p.isBoss, isPart: p.isPart, isMinion: p.isMinion, isFake: p.isFake, isMirror: p.isMirror,
-    ownerId: p.ownerId, partId: p.partId, partColor: p.partColor, scale: p.scale, reviveProg: p.reviveProg,
-    // HUD/渲染額外線索：破綻窗口、相位機制覆寫、倒地判定 (aiId)、引導光束 (channel)
-    aiId: p.aiId, channel: p.channel, recoverWindow: p.recoverWindow, recoverHeavy: p.recoverHeavy,
-    phaseTagsOverride: p.phaseTagsOverride,
-  };
-}
-
-export function serializeNetworkSnapshot(state: any) {
-  const players: Record<string, any> = {};
-  for (const id of Object.keys(state.players)) players[id] = serializeNetworkPlayer(state.players[id]);
-  return {
-    phase: state.phase, winner: state.winner, winnerTeam: state.winnerTeam, time: state.time,
-    mode: state.mode, round: state.round, bossId: state.bossId,
-    bossHp: state.bossHp, bossMaxHp: state.bossMaxHp,
-    roundPhase: state.roundPhase, roundTimer: state.roundTimer, introDur: state.introDur,
-    banner: state.banner, tethers: state.tethers, bossWipedRound: state.bossWipedRound,
-    // 全滅面板只需要重打次數；不送整包 stats (會持續累積、且只在結算才完整用到)
-    stats: state.stats ? { _retryCount: state.stats._retryCount || 0 } : null,
-    players,
-    // 投射物/區域/特效/可破壞物仍是渲染必需，原樣帶上 (數量少、生命短)
-    projectiles: state.projectiles, zones: state.zones, fx: state.fx,
-    destructibles: state.destructibles || [],
-    items: state.items || [],
-    timeAnchors: state.timeAnchors || [],
-    timeAnchorRitual: state.timeAnchorRitual || null,
-  };
-}
+// 網路快照序列化已抽到 ./network/snapshot.ts（宣告式欄位 manifest）。
+// 此處 re-export 維持既有引用點（含 test/networkSnapshot.test.ts）不需改動。
+export { serializeNetworkPlayer, serializeNetworkSnapshot } from './network/snapshot';
 
 // ---------- 加入者效能量測 (?perf=1) ----------
 // 量化加入者卡頓來源：每包大小 (含 fx / projectiles 佔比)、反序列化處理、buildView 插值耗時、
@@ -110,16 +85,12 @@ function createController(): GameController {
   const input = createInput();
   let renderer: ReturnType<typeof createRenderer> | null = null;
   let canvasEl: HTMLCanvasElement | null = null;
-  // 視角模式（本機視覺/操作，不進網路協定）：0=一般遠景 1=近景第三人稱 2=第一人稱，V 循環
-  let viewMode = 0;
-  let crosshairEl: HTMLDivElement | null = null;
-  let chaseBound = false;
 
   let role: 'host' | 'joiner' | null = null;
   let selfId: string | null = null;
   let myName = '';
   let roomCode = '';
-  let selectedChar = 0;
+  let selectedChar: string = CHARACTERS[0]?.id ?? 'warrior'; // 角色 slug（穩定唯一 id）
   let selectedControlScheme: ControlScheme = 'wasd-jkl';
   let selectedTeam = 0; // 0 = 單人；正數 = 組隊
   let gameFlags: GameFlags = { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0.5 };
@@ -127,16 +98,6 @@ function createController(): GameController {
 
   let gameState: any = null;       // 房主權威狀態
   const inputs: Record<string, any> = {}; // 房主：playerId -> input
-
-  // 加入者用
-  let lastSnapshot: any = null;
-  let view: any = null;
-  let localSelf: any = null;       // 本機自身移動預測
-  // 快照時間緩衝：加入者在「最新快照之前 INTERP_DELAY 秒」的時間點,於兩個快照之間插值，
-  // 讓遠端角色在 60fps 下完全滑順、且能吸收網路抖動 / 單包遺失 (緩衝內仍有資料可插)。
-  const INTERP_DELAY = 0.10; // 渲染落後最新快照約 100ms
-  let snapBuf: { recv: number; snap: any }[] = []; // recv = performance.now()/1000
-  let lastSnapSeq = -1;            // 丟棄 unreliable 通道後到的舊/重複快照
 
   let running = false;
   let wantLoop = false;            // 想啟動迴圈但等待 canvas 掛上
@@ -147,6 +108,16 @@ function createController(): GameController {
   let logicTimer: ReturnType<typeof setInterval> | null = null;
   let rafId: number | null = null;
   const perf = PERF ? makePerf() : null;
+
+  // 加入者：快照緩衝 / 自身預測 / 遠端插值（狀態自成一格，見 ./controller/prediction.ts）
+  const prediction = createPrediction({ getSelfId: () => selfId, perf });
+  // 視角模式 / 滑鼠鎖定 / 準心（見 ./controller/camera.ts）
+  const camera = createCamera({
+    input,
+    getCanvasEl: () => canvasEl,
+    isRunning: () => running,
+    getSelfFacing: () => selfFacing(),
+  });
 
   // ---------- 大廳 ----------
   function addToLobby(entry: LobbyEntry) {
@@ -173,11 +144,11 @@ function createController(): GameController {
     net.on('onData', (from: string, data: any) => {
       if (data.t === 'hello') {
         if (lobby.length >= MAX_PLAYERS) { net.sendTo(from, { t: 'full' }); return; }
-        addToLobby({ id: from, name: data.name, charId: data.charId | 0, controlScheme: data.controlScheme || 'wasd-jkl', isHost: false, team: data.team | 0 });
+        addToLobby({ id: from, name: data.name, charId: data.charId ?? CHARACTERS[0]?.id, controlScheme: data.controlScheme || 'wasd-jkl', isHost: false, team: data.team | 0 });
         broadcastLobby();
       } else if (data.t === 'select') {
         const p = lobby.find((x) => x.id === from);
-        if (p) { p.charId = data.charId | 0; if (data.controlScheme) p.controlScheme = data.controlScheme; if (data.team != null) p.team = data.team | 0; broadcastLobby(); }
+        if (p) { if (data.charId != null) p.charId = data.charId; if (data.controlScheme) p.controlScheme = data.controlScheme; if (data.team != null) p.team = data.team | 0; broadcastLobby(); }
       } else if (data.t === 'input') {
         inputs[from] = data.input;
       }
@@ -203,7 +174,7 @@ function createController(): GameController {
     net.on('onData', (_from: string, data: any) => {
       if (data.t === 'lobby') { lobby = data.players; if (data.gameFlags) gameFlags = data.gameFlags; renderLobby(); }
       else if (data.t === 'start') { lobby = data.lobby; startFromSnapshot(data.state); }
-      else if (data.t === 'state') { receiveSnapshot(data.snapshot, data.seq); }
+      else if (data.t === 'state') { prediction.receiveSnapshot(data.snapshot, data.seq); }
       else if (data.t === 'gameover') { joinerGameover(data); }
       else if (data.t === 'tolobby') { lobby = data.players; stopLoop(); input.disable(); emit('phase', 'lobby'); renderLobby(); }
       else if (data.t === 'full') { alert('房間已滿（上限 ' + MAX_PLAYERS + ' 人）'); window.location.reload(); }
@@ -241,18 +212,8 @@ function createController(): GameController {
   function startBossChallenge(round: number) { startBossSession(round, 'challenge'); }
 
   function startFromSnapshot(state: any) {
-    lastSnapshot = state;
-    view = emptyView();
-    // 以初始狀態種子化快照緩衝,讓第一個 'state' 到達前就有遠端角色可插值
-    snapBuf = [{ recv: performance.now() / 1000, snap: state }];
-    lastSnapSeq = -1;
-    const me = state.players[selfId as string];
-    localSelf = me ? { x: me.x, y: me.y, facing: me.facing, kvx: 0, kvy: 0, charId: me.charId } : null;
+    prediction.initFromSnapshot(state);
     beginLoop();
-  }
-
-  function emptyView() {
-    return { players: {}, projectiles: [], zones: [], fx: [], destructibles: [], items: [], timeAnchors: [], timeAnchorRitual: null, phase: 'playing', winner: null, time: 0 };
   }
 
   // ---------- 房主：精簡快照 (只送加入者「渲染/HUD」需要的欄位) ----------
@@ -290,7 +251,7 @@ function createController(): GameController {
     wantLoop = false;
     if (logicTimer) { clearInterval(logicTimer); logicTimer = null; }
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    applyViewMode(0); // 離開戰鬥時回到一般遠景視角
+    camera.reset(); // 離開戰鬥時回到一般遠景視角
   }
 
   // ---------- 邏輯/網路迴圈（固定步、不依賴畫面更新）----------
@@ -327,7 +288,7 @@ function createController(): GameController {
     } else {
       inputAcc += dt;
       if (inputAcc >= INPUT_INTERVAL) { inputAcc = 0; net.sendToHost({ t: 'input', input: inp }); }
-      tickSelfPrediction(inp, dt); // 自身固定步預測；遠端插值改在 draw() 以 60fps 進行
+      prediction.tickSelfPrediction(inp, dt); // 自身固定步預測；遠端插值改在 draw() 以 60fps 進行
     }
 
     // 後備渲染：若 requestAnimationFrame 因分頁被視為隱藏而暫停，
@@ -341,7 +302,7 @@ function createController(): GameController {
     const view = input.getView ? input.getView() : null;
     let rendered: any = null;
     if (role === 'host') { rendered = gameState; if (rendered) renderer.render(rendered, selfId, view); }
-    else { rendered = buildView(); if (rendered) renderer.render(rendered, selfId, view); } // 每幀重建插值視圖
+    else { rendered = prediction.buildView(); if (rendered) renderer.render(rendered, selfId, view); } // 每幀重建插值視圖
     // 全滅「重來/離開」面板出現時自動解除滑鼠鎖定，讓玩家點得到按鈕（否則游標被鎖住看不見）
     if (rendered && rendered.roundPhase === 'wiped' && document.pointerLockElement) document.exitPointerLock();
     if (perf) reportPerf();
@@ -386,118 +347,6 @@ function createController(): GameController {
     rafId = requestAnimationFrame(renderLoop);
   }
 
-  // ---------- 加入者：快照緩衝 + 自身預測 + 遠端插值 ----------
-  function receiveSnapshot(snap: any, seq?: number) {
-    const t0 = perf ? performance.now() : 0;
-    // 不可靠通道可能後到舊包 / 重複：以 seq 丟棄非最新者 (沒帶 seq 的舊路徑則照收)
-    if (seq != null) { if (seq <= lastSnapSeq) return; lastSnapSeq = seq; }
-    lastSnapshot = snap;
-    if (perf) {
-      // stringify 僅近似封包 byte 數 (PeerJS 已 parse 成物件，拿不到原始 bytes)；分項看 fx/proj 佔比
-      const s = JSON.stringify(snap); perf.snaps++; perf.bytes += s.length;
-      if (s.length > perf.worstBytes) perf.worstBytes = s.length;
-      perf.fxBytes += snap.fx ? JSON.stringify(snap.fx).length : 0;
-      perf.projBytes += snap.projectiles ? JSON.stringify(snap.projectiles).length : 0;
-      perf.recvMs += performance.now() - t0;
-    }
-    const recv = performance.now() / 1000;
-    snapBuf.push({ recv, snap });
-    // 只保留最近約 1 秒,避免無限成長
-    const cut = recv - 1.0;
-    while (snapBuf.length > 2 && snapBuf[0].recv < cut) snapBuf.shift();
-    // 自身位置校正 (server reconciliation)：把預測拉回權威值,死亡則直接對齊
-    if (localSelf && snap.players[selfId as string]) {
-      const me = snap.players[selfId as string];
-      const blend = me.alive ? 0.2 : 1;
-      localSelf.x += (me.x - localSelf.x) * blend;
-      localSelf.y += (me.y - localSelf.y) * blend;
-      localSelf.kvx = me.kvx; localSelf.kvy = me.kvy;
-    }
-  }
-
-  // 自身移動固定步預測 (與輸入同頻;遠端不在此處)
-  function tickSelfPrediction(inp: any, dt: number) {
-    const snap = lastSnapshot;
-    if (!snap || !localSelf) return;
-    const me = snap.players[selfId as string];
-    if (me && me.alive) {
-      const tmp = { charId: localSelf.charId, x: localSelf.x, y: localSelf.y, vx: 0, vy: 0, kvx: localSelf.kvx, kvy: localSelf.kvy, facing: localSelf.facing, effects: me.effects };
-      const diff = (lastSnapshot?.flags?.difficulty ?? 0.5) as number;
-      applyMovement(tmp as any, inp, dt, diff);
-      localSelf.x = tmp.x; localSelf.y = tmp.y; localSelf.facing = tmp.facing;
-      localSelf.kvx = tmp.kvx; localSelf.kvy = tmp.kvy;
-    } else if (me) {
-      localSelf.x = me.x; localSelf.y = me.y;
-    }
-  }
-
-  // 找出夾住 renderTime 的兩個快照 (供線性插值)；緩衝不足/枯竭時夾在端點 (hold)
-  function findBracket(rt: number): { a: any; b: any; alpha: number } | null {
-    if (snapBuf.length === 0) return null;
-    let i = -1;
-    for (let k = 0; k < snapBuf.length; k++) { if (snapBuf[k].recv <= rt) i = k; else break; }
-    if (i < 0) return { a: snapBuf[0].snap, b: snapBuf[0].snap, alpha: 0 };          // rt 比最舊還舊
-    if (i >= snapBuf.length - 1) {                                                    // rt 超過最新 → hold 最新
-      const last = snapBuf[snapBuf.length - 1].snap; return { a: last, b: last, alpha: 0 };
-    }
-    const A = snapBuf[i], B = snapBuf[i + 1];
-    const span = B.recv - A.recv;
-    const alpha = span > 1e-6 ? (rt - A.recv) / span : 0;
-    return { a: A.snap, b: B.snap, alpha: Math.max(0, Math.min(1, alpha)) };
-  }
-
-  // 每幀 (60fps) 由 draw() 呼叫：頂層欄位取最新快照,遠端玩家在時間緩衝內插值,自身用預測值
-  function buildView() {
-    const latest = lastSnapshot;
-    if (!latest) return null;
-    const t0 = perf ? performance.now() : 0;
-    if (!view) view = emptyView();
-    // 頂層 (HUD / 過場動畫 / 動態物件) 一律取最新快照
-    view.phase = latest.phase; view.winner = latest.winner; view.time = latest.time;
-    view.mode = latest.mode; view.round = latest.round; view.bossId = latest.bossId;
-    view.bossHp = latest.bossHp; view.bossMaxHp = latest.bossMaxHp;
-    view.roundPhase = latest.roundPhase; view.banner = latest.banner; view.tethers = latest.tethers;
-    view.introDur = latest.introDur; view.roundTimer = latest.roundTimer;
-    view.bossWipedRound = latest.bossWipedRound; view.stats = latest.stats;
-    view.timeAnchors = latest.timeAnchors || [];
-    view.timeAnchorRitual = latest.timeAnchorRitual || null;
-    // 投射物/區域/特效/可破壞物：生命短、移動快,取最新即可 (插值意義不大)
-    view.projectiles = latest.projectiles; view.zones = latest.zones;
-    view.fx = latest.fx; view.destructibles = latest.destructibles || [];
-    view.items = latest.items || [];
-
-    const rt = performance.now() / 1000 - INTERP_DELAY;
-    const pair = findBracket(rt);
-    // hold = 緩衝枯竭 (rt 找不到夾住的兩包，只能定格最新)；數值高代表掉包/抖動 > 100ms 緩衝
-    if (perf && pair && pair.a === pair.b) perf.holds++;
-    const next: Record<string, any> = {};
-    for (const id of Object.keys(latest.players)) {
-      const sp = latest.players[id];
-      const vp = view.players[id] || {};
-      Object.assign(vp, sp); // 快照已精簡 → 直接覆蓋所有渲染欄位 (含 x/y/facing,下方再覆寫)
-      if (id === selfId && localSelf) {
-        vp.x = localSelf.x; vp.y = localSelf.y; vp.facing = localSelf.facing;
-      } else if (pair) {
-        const a = pair.a.players[id], b = pair.b.players[id];
-        if (a && b) {
-          // 瞬移/閃現：兩快照間位移過大時直接對齊終點,避免被插值成「滑行」而失去瞬移感
-          if ((b.x - a.x) ** 2 + (b.y - a.y) ** 2 > 160 * 160) {
-            vp.x = b.x; vp.y = b.y; vp.facing = b.facing;
-          } else {
-            vp.x = a.x + (b.x - a.x) * pair.alpha;
-            vp.y = a.y + (b.y - a.y) * pair.alpha;
-            vp.facing = lerpAngle(a.facing, b.facing, pair.alpha);
-          }
-        } else if (b) { vp.x = b.x; vp.y = b.y; vp.facing = b.facing; }
-        else if (a) { vp.x = a.x; vp.y = a.y; vp.facing = a.facing; }
-      }
-      next[id] = vp;
-    }
-    view.players = next;
-    if (perf) { perf.builds++; const d = performance.now() - t0; perf.buildMs += d; if (d > perf.worstBuildMs) perf.worstBuildMs = d; }
-    return view;
-  }
-
   // ---------- 結算 ----------
   function hostGameover() {
     gameoverSent = true;
@@ -525,39 +374,6 @@ function createController(): GameController {
     showGameover({ winnerName: data.winner, winnerTeam: data.winnerTeam || 0, players: data.players, isHost: false, bossResult: data.bossResult, bossRound: data.bossRound, bossStats: data.bossStats, bossMode: data.bossMode, bossName: data.bossName } as GameOverView);
   }
 
-  function buildBossStats(state: any) {
-    const stats = state.stats;
-    if (!stats) return undefined;
-    const perPlayer = Object.entries(stats.perPlayer || {}).map(([id, raw]: any) => ({
-      id,
-      name: raw.name,
-      charId: raw.charId,
-      dmgDealt: Math.round(raw.dmgDealt || 0),
-      dmgTaken: Math.round(raw.dmgTaken || 0),
-      healing: Math.round(raw.healing || 0),
-      kills: raw.kills || 0,
-      deaths: raw.deaths || 0,
-      revives: raw.revives || 0,
-      maxHit: Math.round(raw.maxHit || 0),
-      critCount: raw.critCount || 0,
-      ccApplied: raw.ccApplied || 0,
-      skillUses: { basic: raw.skillUses?.basic || 0, skill1: raw.skillUses?.skill1 || 0, skill2: raw.skillUses?.skill2 || 0, ultimate: raw.skillUses?.ultimate || 0, evade: raw.skillUses?.evade || 0 },
-    }));
-    let mvpId: string | null = null;
-    let mvpScore = -1;
-    for (const p of perPlayer) {
-      const score = p.dmgDealt + p.healing * 0.6 + p.revives * 80 + p.kills * 25;
-      if (score > mvpScore) { mvpScore = score; mvpId = p.id; }
-    }
-    return {
-      totalDuration: (state.time || 0) - (stats.runStart || 0),
-      retryCount: stats._retryCount || 0,
-      perRound: stats.perRound || [],
-      perPlayer,
-      mvpId,
-    };
-  }
-
   function showGameover(viewData: GameOverView) {
     emit('phase', 'gameover');
     emit('gameover', viewData);
@@ -583,7 +399,7 @@ function createController(): GameController {
     net.join(code);
   }
 
-  function selectChar(charId: number) {
+  function selectChar(charId: string) {
     selectedChar = charId;
     if (role === 'host') {
       const me = lobby.find((p) => p.id === selfId);
@@ -622,7 +438,7 @@ function createController(): GameController {
     if (role !== 'host') return;
     if (lobby.length >= MAX_PLAYERS) return;
     const npcId = 'npc-' + Math.random().toString(36).slice(2, 8);
-    const charId = Math.floor(Math.random() * CHARACTERS.length);
+    const charId = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)].id;
     const npcNum = lobby.filter((p) => p.isNpc).length + 1;
     lobby.push({ id: npcId, name: `NPC ${npcNum}`, charId, controlScheme: 'wasd-jkl', isHost: false, isNpc: true, team: 0 });
     broadcastLobby();
@@ -641,7 +457,7 @@ function createController(): GameController {
   }
 
   // ---------- 開發者模式：直接進入遊戲（指定或隨機角色）----------
-  function devStartGame(charId?: number) {
+  function devStartGame(charId?: string) {
     const DEV_MODE = true;
     if (!DEV_MODE) return;
 
@@ -653,21 +469,17 @@ function createController(): GameController {
 
     // 生成隨機玩家（2-4個角色）
     const numPlayers = Math.floor(Math.random() * 3) + 2; // 2-4 players
-    const allCharIds = Array.from({ length: CHARACTERS.length }, (_, i) => i); // 0..N-1 characters
+    const allCharIds = CHARACTERS.map((c) => c.id); // 角色 slug 清單
+    const randomCharId = () => allCharIds[Math.floor(Math.random() * allCharIds.length)];
     lobby = [];
 
-    // 自己：使用指定的角色或隨機選取
-    let charForSelf: number;
-    if (charId !== undefined && charId >= 0 && charId < CHARACTERS.length) {
-      charForSelf = charId;
-    } else {
-      charForSelf = allCharIds[Math.floor(Math.random() * allCharIds.length)];
-    }
+    // 自己：使用指定的角色（slug）或隨機選取
+    const charForSelf: string = (charId !== undefined && allCharIds.includes(charId)) ? charId : randomCharId();
     lobby.push({ id: selfId, name: myName, charId: charForSelf, controlScheme: selectedControlScheme, isHost: true, team: selectedTeam });
 
     // 其他玩家
     for (let i = 1; i < numPlayers; i++) {
-      const randomChar = allCharIds[Math.floor(Math.random() * allCharIds.length)];
+      const randomChar = randomCharId();
       lobby.push({
         id: 'dev-' + i,
         name: `NPC ${i}`,
@@ -686,15 +498,16 @@ function createController(): GameController {
   }
 
   // ---------- 開發者：直接進入闖關模式 (?dev=true&boss=true) ----------
-  function devStartBoss(charId?: number, round = 1) {
+  function devStartBoss(charId?: string, round = 1) {
     myName = 'Dev Player';
     role = 'host';
     selfId = 'dev-' + Math.random().toString(36).slice(2, 9);
     roomCode = 'DEV';
-    const all = Array.from({ length: CHARACTERS.length }, (_, i) => i);
-    const me = (charId !== undefined && charId >= 0 && charId < CHARACTERS.length) ? charId : all[Math.floor(Math.random() * all.length)];
+    const all = CHARACTERS.map((c) => c.id); // 角色 slug 清單
+    const randomCharId = () => all[Math.floor(Math.random() * all.length)];
+    const me: string = (charId !== undefined && all.includes(charId)) ? charId : randomCharId();
     lobby = [{ id: selfId, name: myName, charId: me, controlScheme: selectedControlScheme, isHost: true, team: 1 }];
-    for (let i = 1; i <= 2; i++) lobby.push({ id: 'dev-' + i, name: '隊友 ' + i, charId: all[Math.floor(Math.random() * all.length)], controlScheme: 'wasd-jkl', isHost: false, isNpc: true, team: 1 });
+    for (let i = 1; i <= 2; i++) lobby.push({ id: 'dev-' + i, name: '隊友 ' + i, charId: randomCharId(), controlScheme: 'wasd-jkl', isHost: false, isNpc: true, team: 1 });
     selectedChar = me; selectedTeam = 1;
     startBossSession(round, 'campaign');
   }
@@ -733,7 +546,7 @@ function createController(): GameController {
       onBossQuit: bossQuit,
       input,
     });
-    bindViewControls();
+    camera.bindViewControls();
     maybeStartLoop();
   }
 
@@ -745,56 +558,10 @@ function createController(): GameController {
     canvasEl = null;
   }
 
-  // ---------- 視角模式：V 循環（0 遠景 → 1 近景三人稱 → 2 第一人稱）、滑鼠鎖定控視角、準心 ----------
-  function ensureCrosshair() {
-    if (crosshairEl || !canvasEl) return;
-    const host = canvasEl.parentElement || document.body;
-    const el = document.createElement('div');
-    el.className = 'chase-crosshair';
-    el.style.display = 'none';
-    el.innerHTML = '<div class="chase-cross-dot"></div>';
-    host.appendChild(el);
-    crosshairEl = el;
-  }
-
+  // 自身朝向：camera 進入視角模式時用來初始化鏡頭方向。host 取權威 state，joiner 取預測值。
   function selfFacing(): number {
-    const me: any = role === 'host' ? (gameState && gameState.players[selfId as string]) : localSelf;
+    const me: any = role === 'host' ? (gameState && gameState.players[selfId as string]) : prediction.getLocalSelf();
     return me && typeof me.facing === 'number' ? me.facing : 0;
-  }
-
-  function applyViewMode(mode: number) {
-    mode = ((mode % 3) + 3) % 3;
-    if (mode === viewMode) return;
-    const wasNormal = viewMode === 0;
-    viewMode = mode;
-    if (mode !== 0) {
-      ensureCrosshair();
-      // 由遠景進入時以自身朝向初始化視角；近景預設稍俯視、第一人稱平視（模式間切換則保留視角）
-      if (wasNormal) input.setLook(selfFacing(), mode === 1 ? -0.35 : 0);
-      input.setViewMode(mode);
-      if (crosshairEl) crosshairEl.style.display = 'flex';
-      if (!document.pointerLockElement) canvasEl?.requestPointerLock?.();
-    } else {
-      input.setViewMode(0);
-      if (crosshairEl) crosshairEl.style.display = 'none';
-      if (document.pointerLockElement) document.exitPointerLock();
-    }
-  }
-
-  function bindViewControls() {
-    if (chaseBound) return;
-    chaseBound = true;
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyV' && running && !e.repeat) { e.preventDefault(); applyViewMode(viewMode + 1); }
-    });
-    // 視角模式下若滑鼠未鎖定，點「畫布」重新鎖定（限定 canvas，避免點選單/按鈕時誤搶游標）
-    window.addEventListener('mousedown', (e) => {
-      if (viewMode !== 0 && running && !document.pointerLockElement && e.target === canvasEl) canvasEl?.requestPointerLock?.();
-    });
-    // 鎖定被解除（Esc/切窗）時更新準心提示樣式
-    document.addEventListener('pointerlockchange', () => {
-      if (crosshairEl) crosshairEl.classList.toggle('unlocked', viewMode !== 0 && !document.pointerLockElement);
-    });
   }
 
   return {
@@ -821,14 +588,6 @@ function createController(): GameController {
     detachCanvas,
     get selectedChar() { return selectedChar; },
   };
-}
-
-// 角度插值 (走最短弧,避免 ±π 邊界瞬轉)
-function lerpAngle(a: number, b: number, t: number): number {
-  let d = b - a;
-  while (d > Math.PI) d -= Math.PI * 2;
-  while (d < -Math.PI) d += Math.PI * 2;
-  return a + d * t;
 }
 
 // 模組單例：整個 App 共用同一個 controller。

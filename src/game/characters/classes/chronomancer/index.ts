@@ -4,9 +4,10 @@ import { characterSprite } from '../../textureSprite.ts';
 import { drawChronomancerTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 17, name: '時空術士', color: '#00bcd4', shape: 'circle', sprite: characterSprite('chronomancer', '#00bcd4', false, drawChronomancerTexture),
+    id: 'chronomancer', order: 17, evadeType: 'blink', name: '時空術士', color: '#00bcd4', shape: 'circle', sprite: characterSprite('chronomancer', '#00bcd4', false, drawChronomancerTexture),
     maxHp: 180, maxMana: 140, speed: 175,
     desc: '操控時空節奏的高技巧法師。時間稜鏡讓施法後快速走位、時間加速增幅友軍、時間停滯凍結敵群，大招時空逆轉回溯自身的位置與血量並在原地引爆。脆皮但能扭轉戰局。',
     role: '特殊 · 戰場操控',

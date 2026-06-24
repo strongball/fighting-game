@@ -128,8 +128,6 @@ src/
     input.js          鍵盤 → input state（三套操作配置）
     network.js        PeerJS P2P 包裝（host 星狀拓撲）
     renderer.js       three.js 渲染入口（編排 render3d/ 模組 + 音效偵測）
-    renderer.canvas2d.js  舊版 Canvas2D 渲染（保留備援參考）
-    render2d/         Canvas2D 版繪製模組（備援）
     render3d/         three.js 渲染模組
       scene.js        WebGLRenderer/相機/燈光/地板/泛光後處理/震動閃光
       models.js       18 角色程序化 3D 模型 + 動畫狀態機
@@ -181,11 +179,14 @@ src/
 
 | 子系統 | 註冊點 | 新增方式 |
 | --- | --- | --- |
-| 角色 | `characters/index.ts` glob `classes/*/index.ts` | 新增一個職業資料夾，`export default new XxxCharacter()` |
+| 角色 | `characters/index.ts` glob `classes/*/index.ts` | 新增一個職業資料夾，`export default new XxxCharacter()`；`id` 用穩定字串 slug（= 資料夾名），`order` 決定大廳順序 |
 | 魔王 | `bosses/index.ts` glob `*/index.ts` | 新增一個魔王資料夾，`export default new XxxBoss()` |
 | 動作 handler | `actions/handlers/index.ts` glob `*/index.ts` | 新增 `handlers/<type>/index.ts`，`export const handlers = { <type>: fn }` |
-| 狀態效果 | `entities/effects.ts` 的 `EFFECT_DEFS` | 加一筆 `{ apply, cleanseable }`（淨化清單自動推導） |
+| 狀態效果 | `entities/effects.ts` 的 `EFFECT_DEFS` | 加一筆 `{ apply, cleanseable, hud }`（淨化清單自動推導；`hud` 同檔提供狀態列圖示/名稱） |
+| 天賦 | `characters/talents/registry.ts` | 在角色 `talent.ts` 內 `registerTalent('<id>', { ...hooks })`（傷害管線 + 生命週期 hook） |
 | 角色 VFX | `render3d/vfx/registry.js` | 在角色 `vfx.ts` 內 `registerVfx('<id>', { onCast, … })` |
+| HUD widget | `render3d/hud/widgets.js` | 在 `render3d/hud/widgets/<name>.js` 內 `registerHudWidget({ id, mount, update })` |
+| 網路同步欄位 | `network/snapshot.ts` 的 `NET_PLAYER_FIELDS` / `NET_STATE_FIELDS` | 在欄位陣列 append 一行（宣告式 manifest，避免漏接 desync） |
 
 ### 型別與測試
 
@@ -198,12 +199,13 @@ src/
 
 > 多數擴充靠 registry「加一個檔/一筆」即可；以下列出要碰哪些檔案。
 
-- **新增一個角色**：在 `src/game/characters/classes/<slug>/` 建 `index.ts`（`export default new XxxCharacter(data, loaders)`）、`model.ts`、`texture.ts`、`vfx.ts`。glob 會自動納入。技能在 `data` 內以 `basic/skill1/skill2/ultimate` 描述（`type` 對應某個 action handler）。閃避型別可加 `evadeType: 'blink' | 'dash'`。
+- **新增一個角色**：在 `src/game/characters/classes/<slug>/` 建 `index.ts`（`export default new XxxCharacter(data, loaders)`）、`model.ts`、`texture.ts`、`vfx.ts`。glob 會自動納入。`data.id` 用**穩定字串 slug**（建議＝資料夾名，例 `'warrior'`；不再是數字，兩人同時加角色不會搶號衝突），`order` 數字決定大廳顯示順序。技能在 `data` 內以 `basic/skill1/skill2/ultimate` 描述（`type` 對應某個 action handler），閃避型別以 `evadeType: 'blink' | 'dash'` 指定（必填）。被動天賦見下。
 - **新增一種技能動作（action type）**：在 `src/game/actions/handlers/<type>/index.ts` 匯出 `export const handlers = { <type>(ctx) { … } }`。`ctx` 為 `ActionContext`（含 `state/caster/action/…`）。角色資料的技能把 `type` 設成它即可。
-- **新增一種狀態效果（effect）**：在 `src/game/entities/effects.ts` 的 `EFFECT_DEFS` 加一筆 `{ apply, cleanseable }`。可被淨化者設 `cleanseable: true`——**淨化清單會自動推導**，不必再改 `cleanse`。
-- **新增一個天賦（被動）**：天賦資料寫在角色 `data.talent`；邏輯依性質內聯於 hot-path，進入點與對照表見 `entities/damage.ts` 開頭的「天賦系統導覽」註解。
+- **新增一種狀態效果（effect）**：在 `src/game/entities/effects.ts` 的 `EFFECT_DEFS` 加一筆 `{ apply, cleanseable, hud }`。可被淨化者設 `cleanseable: true`（**淨化清單自動推導**）；要顯示在狀態列就加 `hud: { icon, name, buff }`（與邏輯 co-located，不必再改 `hud.js`）。
+- **新增一個天賦（被動）**：天賦資料寫在角色 `data.talent`（`{ id, name, desc, ...參數 }`）。邏輯在角色資料夾建 `talent.ts`，`registerTalent('<id>', { ...hooks })`，並在該角色 `index.ts` 加 `import './talent.ts'`（side-effect 註冊，仿 `vfx.ts`）。可用 hook：傷害管線 `modifyOutgoing/modifyIncoming/onDealt/onAttacked`、生命週期 `cooldownRate/onTimers/onRecovery/onCastResolved`——涵蓋多數天賦，**不必再改 `damage.ts`/`playerState.ts`/`casting.ts`**。少數 aura/跨實體/與施放序列緊密耦合者（warsong、plague、pyromancy、undeath、iaido 居合就緒）仍內聯，進入點見 `characters/talents/registry.ts` 導覽註解。
 - **新增一個闖關魔王**：在 `src/game/bosses/<slug>/` 建 `index.ts`（`export default new XxxBoss()`）、`ai.ts`、`model.ts`、`action.ts`。glob 自動納入，依 `round` 排序。
 - **新增/美化技能特效（VFX）**：在角色 `vfx.ts` 內 `registerVfx('<vfxId>', { onCast, onHit, projectile, zone })`，並讓技能資料的 `vfx` 指到該 id。缺 hook 時走通用 fallback（安全不報錯）。
+- **新增一個 HUD 指示器/警示（widget）**：在 `src/game/render3d/hud/widgets/<name>.js` 內 `registerHudWidget({ id, mount(ctx), update(handle, ctx) })`——`mount` 建立自己的 DOM、`update` 每幀更新。glob 自動載入，不必動 `hud.js` 核心。範例見 `hud/widgets/hazardAlert.js`。
 
 ## 開發與測試
 

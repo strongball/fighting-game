@@ -21,7 +21,7 @@ export function App() {
   const [menuStatus, setMenuStatus] = useState<{ msg: string; isError: boolean }>({ msg: '', isError: false });
   const [lobbyStatus, setLobbyStatus] = useState('');
   const [gameover, setGameover] = useState<GameOverView | null>(null);
-  const [selectedChar, setSelectedChar] = useState(0);
+  const [selectedChar, setSelectedChar] = useState<string>(controller.selectedChar);
   const [selectedControlScheme, setSelectedControlScheme] = useState<ControlScheme>('wasd-jkl');
   const [selectedTeam, setSelectedTeam] = useState(0);
 
@@ -47,7 +47,7 @@ export function App() {
     if (isDev) {
       const bossParam = params.get('boss');
       const roundParam = params.get('bossRound');
-      const charId = roleParam ? parseInt(roleParam, 10) : undefined;
+      const charId = roleParam || undefined; // 角色 slug（穩定唯一 id）
       const bossRound = roundParam ? parseInt(roundParam, 10) : undefined;
       if (bossParam === 'true') setTimeout(() => controller.devStartBoss(charId, bossRound), 100);
       else setTimeout(() => controller.devStartGame(charId), 100);
@@ -71,7 +71,7 @@ export function App() {
     }
   }, [phase]);
 
-  function handleSelectChar(charId: number) {
+  function handleSelectChar(charId: string) {
     setSelectedChar(charId);
     controller.selectChar(charId);
   }

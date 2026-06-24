@@ -16,7 +16,7 @@ describe('Potion and Drop Item System', () => {
   });
 
   it('handles item pick up collisions and inventory limits', () => {
-    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 0, team: 1 }], {}, { mode: 'boss' });
+    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 'warrior', team: 1 }], {}, { mode: 'boss' });
     const p = state.players.p1;
     p.x = 100;
     p.y = 100;
@@ -57,7 +57,7 @@ describe('Potion and Drop Item System', () => {
   });
 
   it('applies instant + slow heal-over-time on using HP potion', () => {
-    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 0, team: 1 }], {}, { mode: 'boss' });
+    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 'warrior', team: 1 }], {}, { mode: 'boss' });
     const p = state.players.p1;
     p.maxHp = 500;
     p.hp = 100; // Low hp
@@ -78,7 +78,7 @@ describe('Potion and Drop Item System', () => {
   });
 
   it('applies mana restoration on using MP potion', () => {
-    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 0, team: 1 }], {}, { mode: 'boss' });
+    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 'warrior', team: 1 }], {}, { mode: 'boss' });
     const p = state.players.p1;
     p.maxMana = 100;
     p.mana = 20;
@@ -90,7 +90,7 @@ describe('Potion and Drop Item System', () => {
   });
 
   it('applies global passive HP regeneration of 2% max HP per second', () => {
-    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 0, team: 1 }], {}, { mode: 'ffa' });
+    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 'warrior', team: 1 }], {}, { mode: 'ffa' });
     const p = state.players.p1;
     p.maxHp = 500;
     p.hp = 250; // 50% HP
@@ -108,7 +108,7 @@ describe('Potion and Drop Item System', () => {
   });
 
   it('avoids double trigger of potion on holding keys (rising-edge check)', () => {
-    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 0, team: 1 }], {}, { mode: 'boss' });
+    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 'warrior', team: 1 }], {}, { mode: 'boss' });
     const p = state.players.p1;
     p.maxHp = 500;
     p.hp = 100;
@@ -126,7 +126,7 @@ describe('Potion and Drop Item System', () => {
   });
 
   it('correctly handles potion starting count, carry-over, and replenishment between rounds', () => {
-    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 0, team: 1 }], {}, { mode: 'boss' });
+    const state = createInitialState([{ id: 'p1', name: 'Tester', charId: 'warrior', team: 1 }], {}, { mode: 'boss' });
     const p = state.players.p1;
     
     // 1. Initial round start (Round 1)

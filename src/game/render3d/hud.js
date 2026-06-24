@@ -3,32 +3,18 @@
 
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { getCharacter } from '../characters.js';
+import { getEffectHud } from '../entities/effects.ts';
 import { ULT_MAX } from '../constants.js';
 import { sceneX, sceneZ } from './coords.js';
+import { el, setText, setStyle, setClass, setHtml, pct, hexA, esc } from './hud/dom.js';
+import { getHudWidgets } from './hud/widgets.js';
+// 以 glob 自動載入所有 hud widget（side-effect 註冊到 widgets registry，仿 vfx）。
+import.meta.glob('./hud/widgets/*.js', { eager: true });
 
 const HEAD_Y = 90;
 
-// 狀態效果顯示元資料：icon / 顯示名 / 是否為增益
-const EFFECT_META = {
-  haste:      { icon: '⚡', name: '加速',   buff: true },
-  protect:    { icon: '🛡', name: '護體',   buff: true },
-  reflect:    { icon: '🪞', name: '反射',   buff: true },
-  lifesteal:  { icon: '🩸', name: '吸血',   buff: true },
-  rage:       { icon: '🔥', name: '狂暴',   buff: true },
-  overdrive:  { icon: '⚡', name: '超載',   buff: true },
-  invis:      { icon: '👻', name: '隱身',   buff: true },
-  evading:    { icon: '💨', name: '無敵',   buff: true },
-  slow:       { icon: '🐢', name: '緩速',   buff: false },
-  stun:       { icon: '💫', name: '暈眩',   buff: false },
-  root:       { icon: '🌿', name: '定身',   buff: false },
-  burn:       { icon: '🔥', name: '燃燒',   buff: false },
-  bleed:      { icon: '🩸', name: '流血',   buff: false },
-  chill:      { icon: '❄️', name: '冰寒',   buff: false },
-  frozen:     { icon: '🧊', name: '冰凍',   buff: false },
-  mark:       { icon: '🎯', name: '標記',   buff: false },
-  weaken:     { icon: '💀', name: '衰弱',   buff: false },
-  dmg_reduce: { icon: '🔻', name: '弱化',   buff: false },
-};
+// 狀態效果的顯示中繼資料（icon / 顯示名 / 增益）已與效果邏輯 co-located 於
+// entities/effects.ts 的 EFFECT_DEFS；此處透過 getEffectHud(kind) 查詢，避免維護第二份表。
 
 function getSkillKeys(controlScheme) {
   if (controlScheme === 'arrows-asdf') {
@@ -379,10 +365,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
   const bannerHint = el('div', 'hud-banner-hint', banner);
   banner.style.display = 'none';
 
-  // 站進敵方地面危險區 (毒沼等) 的即時警示：全螢幕綠色暈邊 + 中央提示字
-  const hazardWarn = el('div', 'hud-hazard', layer);
-  const hazardText = el('div', 'hud-hazard-text', hazardWarn);
-  hazardWarn.style.display = 'none';
+  // 站進敵方地面危險區的即時警示已抽成 hud widget（hud/widgets/hazardAlert.js）。
 
   // 闖關 Boss 登場動畫 overlay (3 段：暗幕 → 名字滑入 → 機制 tag 揭曉 → 淡出)
   const introOv = el('div', 'hud-intro', layer);
@@ -437,6 +420,11 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
   // 頭頂名牌
   const plates = new Map(); // pid -> { obj, name, hp, mp, root }
   const hpTrack = new Map(); // pid -> { hp, hitAt } 供「隱身被打到才短暫顯示血條」用
+
+  // ---- 疊加式 HUD widgets（registry，見 ./hud/widgets.js）----
+  // 各 widget 在 mount 時建立自己的 DOM、回傳 handle；update() 尾端統一每幀更新。
+  const widgetCtx = { layer, scene, camera, stage, hooks, isMobile };
+  const mountedWidgets = getHudWidgets().map((w) => ({ w, handle: w.mount ? w.mount(widgetCtx) : null }));
 
   function ensurePlate(pid) {
     let pl = plates.get(pid);
@@ -727,20 +715,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
       setStyle(introOv, 'display', 'none');
     }
 
-    // ---- 站進敵方地面危險區 (毒沼等) → 全螢幕警示 (通用：任何敵方造成的 zone) ----
-    let inHazard = false;
-    if (state.mode === 'boss') {
-      const meH = state.players[selfId];
-      if (meH && meH.alive && state.zones) {
-        for (const z of state.zones) {
-          if (z.delay && z.delay > 0) continue;            // 預警中、尚未生效
-          const owner = state.players[z.owner];
-          if (!owner || owner.team === meH.team) continue;  // 只警示敵方造成的區域
-          if (Math.hypot(z.x - meH.x, z.y - meH.y) <= (z.radius || 0)) { inHazard = true; break; }
-        }
-      }
-    }
-    setStyle(hazardWarn, 'display', inHazard ? '' : 'none');
+    // 站進敵方地面危險區的警示已移到 hud widget（hud/widgets/hazardAlert.js），於 update 尾端更新。
 
     // 機制提示卡：boss 模式才顯示；intro / fighting / wiped 都顯示，cleared 時隱藏
     const isBossMode = state.mode === 'boss';
@@ -771,16 +746,8 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
       setStyle(wipeActions, 'display', isHost ? '' : 'none');
       setStyle(wipeWait, 'display', isHost ? 'none' : '');
     }
-    if (inHazard) {
-      // 文字與顏色都依當前魔王的危險屬性 (毒綠 / 火紅 / 冰藍…)，不再一律綠色
-      let ht = '⚠️ 站在危險地面上 — 快離開！', hc = '#9ad13a';
-      for (const pp of players) { if (pp.isBoss) { const bcz = getCharacter(pp.charId); if (bcz.hazardText) ht = bcz.hazardText; if (bcz.hazardColor) hc = bcz.hazardColor; break; } }
-      setText(hazardText, ht);
-      // 字用「淡色 + 深色描邊 + 同色外光暈」(無底牌，與其他 HUD 一致)：在紅/綠/藍任何畫面都讀得清
-      setStyle(hazardText, 'color', lighten(hc, 0.55));
-      setStyle(hazardText, 'textShadow', `0 1px 3px #000, 0 2px 7px #000, 0 0 16px ${hexA(hc, 0.85)}`);
-      setStyle(hazardWarn, 'boxShadow', `inset 0 0 120px 34px ${hexA(hc, 0.5)}`);
-    }
+    // ---- 疊加式 HUD widgets（各自獨立的指示器/警示，見 ./hud/widgets/）----
+    for (const { w, handle } of mountedWidgets) w.update(handle, { state, selfId });
   }
 
   function partLabel(bc, partId) {
@@ -916,22 +883,7 @@ function updateItemChip(chip, kind, count, isBossMode) {
   }
 }
 
-function el(tag, cls, parent) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (parent) parent.appendChild(e);
-  return e;
-}
-// 只在值真的改變時才寫 DOM；避免每幀重複寫入 textContent/style/innerHTML
-// 造成不必要的 reflow/repaint（在 DevTools 會看到元素「瘋狂閃爍」）。
-function setText(e, v) { if (e._txt !== v) { e._txt = v; e.textContent = v; } }
-function setStyle(e, k, v) { const p = '_st_' + k; if (e[p] !== v) { e[p] = v; e.style[k] = v; } }
-function setClass(e, v) { if (e._cls !== v) { e._cls = v; e.className = v; } }
-function setHtml(e, v) { if (e._html !== v) { e._html = v; e.innerHTML = v; } }
-function pct(r) { return `${Math.max(0, Math.min(1, r)) * 100}%`; }
-function hexA(hex, a) { const h = hex.replace('#', ''); const s = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; const n = parseInt(s, 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
-function lighten(hex, t) { const h = hex.replace('#', ''); const s = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; const n = parseInt(s, 16); const m = (c) => Math.round(c + (255 - c) * t); return `rgb(${m((n >> 16) & 255)},${m((n >> 8) & 255)},${m(n & 255)})`; }
-function esc(s) { return String(s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+// DOM 小工具已抽到 ./hud/dom.js（供 hud.js 與各 hud widget 共用）。
 
 // 闖關 Boss 登場動畫：以 0-1 的進度 t 推進 3 段表演
 // 0-0.25: 暗幕降下 + ROUND N 浮現
@@ -990,7 +942,7 @@ function buildPlateBuffs(p) {
   const eff = p.effects || {};
   for (const key of Object.keys(eff)) {
     const data = eff[key]; if (!data) continue;
-    const meta = EFFECT_META[key]; if (!meta) continue;
+    const meta = getEffectHud(key); if (!meta) continue;
     if (data.remaining != null && data.remaining <= 0) continue;
     list.push({ buff: meta.buff, icon: meta.icon });
   }
@@ -1021,7 +973,7 @@ function buildBuffHtml(p) {
   for (const key of Object.keys(eff)) {
     const data = eff[key];
     if (!data) continue;
-    const meta = EFFECT_META[key];
+    const meta = getEffectHud(key);
     if (!meta) continue;
     const remaining = data.remaining;
     if (remaining != null && remaining <= 0) continue;
@@ -1044,6 +996,6 @@ function isLavaBurning(state, me) {
   const burn = me && me.effects && me.effects.burn;
   if (!burn || burn.remaining <= 0) return false;
   if (state.mode !== 'boss') return false;
-  const boss = Object.values(state.players || {}).find((p) => p && p.isBoss && p.charId === 102);
+  const boss = Object.values(state.players || {}).find((p) => p && p.isBoss && getCharacter(p.charId)?.lavaBurn);
   return !!boss && (burn.srcId == null || burn.srcId === boss.id);
 }

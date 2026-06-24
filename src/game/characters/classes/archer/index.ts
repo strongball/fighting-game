@@ -5,9 +5,10 @@ import { drawArcherTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { attachSkinGear } from './gear.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 4, name: '弓箭手', color: '#27ae60', shape: 'circle', sprite: characterSprite('archer', '#27ae60', true, drawArcherTexture),
+    id: 'archer', order: 4, evadeType: 'dash', name: '弓箭手', color: '#27ae60', shape: 'circle', sprite: characterSprite('archer', '#27ae60', true, drawArcherTexture),
     maxHp: 220, maxMana: 80, speed: 188,
     desc: '持續輸出的遠程 carry，全為直線箭術、不再自動追蹤。越遠越痛、貫穿箭洞穿一線、寄生箭流血剋逃，大招緊密箭幕朝正面傾瀉。需前排掩護走位。',
     role: '後排 · 持續輸出',

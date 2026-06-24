@@ -12,7 +12,7 @@ function setup(playerCount = 2) {
   const boss: any = makeBoss('boss-11', 110, 1200, 450, 2, { isBoss: true, aiId: 'time_devourer' });
   state.players[boss.id] = boss;
   for (let i = 0; i < playerCount; i++) {
-    const p: any = makePlayer(`p${i}`, `P${i}`, 0, 300 + i * 100, 900, 1);
+    const p: any = makePlayer(`p${i}`, `P${i}`, 'warrior', 300 + i * 100, 900, 1);
     state.players[p.id] = p;
   }
   return { state, boss };
@@ -151,10 +151,10 @@ describe('Round 11 temporal echoes', () => {
 });
 
 describe('Round 11 falling clock hands', () => {
-  it('uses four persistent delayed zones without windup fx spam or custom zone geometry', () => {
+  it('uses persistent delayed zones without windup fx spam or custom zone geometry', () => {
     const { state, boss } = setup(1);
     const skill = getCharacter(110).skill2;
-    expect(skill.count).toBe(4);
+    expect(skill.count).toBe(6);
     expect(skill.delay).toBeGreaterThan(0);
     expect(skill.suppressWindupTelegraph).toBe(true);
     expect(skill.vfx).toBeUndefined();

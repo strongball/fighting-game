@@ -1,6 +1,6 @@
 import { ULT_MAX, ULT_LOCKOUT } from '../constants.js';
 import { getCharacter } from '../characters.js';
-import { applyEffect } from '../entities/effects.ts';
+import { getTalentHooks } from '../characters/talents/registry';
 import { addFx } from '../entities/fx.ts';
 import { recordSkillUse } from '../entities/stats.ts';
 import { executeAction } from './executor.ts';
@@ -74,7 +74,8 @@ export function tryAction(state: GameState, p: Player, slot: string) {
   recordSkillUse(state, p, slot);
   executeAction(state, p, action);
   p.iaiReady = false;
-  if (talent && talent.id === 'timeprism' && slot !== 'basic') applyEffect(p, 'haste', { duration: talent.duration || 1.5, factor: talent.factor || 1.25 });
+  // iaido 居合就緒（讀寫 iaiReady、與施放序列緊密耦合）仍內聯於上方；timeprism 等施放後效果走 hook。
+  getTalentHooks(talent?.id)?.onCastResolved?.(state, p, action, slot, talent);
 }
 
 export function tryUltimate(state: GameState, p: Player) {
@@ -97,7 +98,7 @@ export function tryUltimate(state: GameState, p: Player) {
   executeAction(state, p, action, { silent: true });
   p.iaiReady = false;
 
-  if (talent && talent.id === 'timeprism') applyEffect(p, 'haste', { duration: talent.duration || 1.5, factor: talent.factor || 1.25 });
+  getTalentHooks(talent?.id)?.onCastResolved?.(state, p, action, 'ultimate', talent);
   recordSkillUse(state, p, 'ultimate');
   addFx(state, {
     type: 'ultimate',

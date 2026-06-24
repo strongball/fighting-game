@@ -4,9 +4,10 @@ import { characterSprite } from '../../textureSprite.ts';
 import { drawGunnerTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 14, name: '槍手', color: '#d4a017', shape: 'circle', sprite: characterSprite('gunner', '#d4a017', false, drawGunnerTexture),
+    id: 'gunner', order: 14, evadeType: 'dash', name: '槍手', color: '#d4a017', shape: 'circle', sprite: characterSprite('gunner', '#d4a017', false, drawGunnerTexture),
     maxHp: 200, maxMana: 70, speed: 210,
     desc: '高機動的雙槍射手。火力壓制讓持續點射越打越痛、翻滾閃避位移強化、燃燒彈爆裂灼燒，大招彈幕風暴大幅提升移動、攻擊速度與攻擊力持續 10 秒。與弓箭手的定點遠射相反——越近越強、快節奏、多發。',
     role: '後排 · 機動跑打',

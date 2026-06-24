@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 8, name: '元素使', color: '#e67e22', shape: 'circle', sprite: characterSprite('elementalist', '#e67e22', true, drawElementalistTexture),
+    id: 'elementalist', order: 8, evadeType: 'blink', name: '元素使', color: '#e67e22', shape: 'circle', sprite: characterSprite('elementalist', '#e67e22', true, drawElementalistTexture),
     maxHp: 220, maxMana: 150, speed: 160,
     desc: '封鎖地形的持續法師。推進火牆封路、寒霜足跡留下凍徑風箏，大招隕石風暴覆蓋大片區域持續灼燒。不擅爆發、極耗魔，靠擊退類隊友把敵人逼進火海。',
     role: '控制 · 區域封鎖',

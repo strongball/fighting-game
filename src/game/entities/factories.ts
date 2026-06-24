@@ -4,7 +4,7 @@ import { getBossEntityHitRadius } from '../bosses/hitbox.ts';
 import { uid } from './math.ts';
 import type { GameState, Player, Projectile, Zone, GameMode, EntityId } from '../types';
 
-export function makePlayer(id: EntityId, name: string, charId: number, x: number, y: number, team = 0): Player {
+export function makePlayer(id: EntityId, name: string, charId: string | number, x: number, y: number, team = 0): Player {
   const c = getCharacter(charId);
   return {
     id, name, charId,
@@ -36,7 +36,7 @@ export function makePlayer(id: EntityId, name: string, charId: number, x: number
   };
 }
 
-export function makeBoss(id: EntityId, charId: number, x: number, y: number, team: number, opts: Record<string, any> = {}): Player {
+export function makeBoss(id: EntityId, charId: string | number, x: number, y: number, team: number, opts: Record<string, any> = {}): Player {
   // \u540d\u7a31\uff1a\u512a\u5148\u7528 opts.name\uff1b\u5176\u6b21\u9b54\u738b\u7528 'Boss'\u3001\u5176\u9918 (\u5c0f\u5175/\u5206\u8eab/\u90e8\u4f4d/\u93e1\u50cf) \u7528\u6a21\u677f\u540d\u7a31\u3002
   const fallbackName = opts.isBoss ? 'Boss' : (getCharacter(charId).name || 'Boss');
   const e = makePlayer(id, opts.name || fallbackName, charId, x, y, team);
@@ -71,7 +71,7 @@ export function spawnPoints(n: number): Array<{ x: number; y: number }> {
 }
 
 export function createInitialState(
-  playersArr: Array<{ id: EntityId; name: string; charId: number; team?: number; isNpc?: boolean }>,
+  playersArr: Array<{ id: EntityId; name: string; charId: string | number; team?: number; isNpc?: boolean }>,
   flags: { freeMana?: boolean; noCooldown?: boolean; noDamage?: boolean; difficulty?: number } = {},
   opts: { mode?: GameMode; round?: number } = {},
 ): GameState {

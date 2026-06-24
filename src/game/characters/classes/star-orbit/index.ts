@@ -7,7 +7,7 @@ import { tickStarOrbit } from './orbit.ts';
 import './vfx.ts';
 
 const data = {
-  id: 18, name: '星環使', color: '#5ad7ff', shape: 'circle', sprite: characterSprite('star-orbit', '#5ad7ff', false, drawStarOrbitTexture),
+  id: 'star-orbit', order: 18, evadeType: 'dash', name: '星環使', color: '#5ad7ff', shape: 'circle', sprite: characterSprite('star-orbit', '#5ad7ff', false, drawStarOrbitTexture),
   maxHp: 210, maxMana: 100, speed: 185,
   desc: '遠程星砲爆發者。身邊最多環繞三顆星球，星球會隨時間回復；星軌砲會把目前星球全部打出去，群星歸位則立刻補滿。',
   role: '遠程 · 星砲爆發',

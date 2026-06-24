@@ -7,7 +7,7 @@ import { getCodexEntry, type SkillSlot } from '../utils/characterCodex';
 import type { CharacterMeta, ControlScheme, GameFlags, LobbyView, SkillMeta } from '../types';
 
 const CHARACTERS = RAW_CHARACTERS as unknown as CharacterMeta[];
-const getCharacter = rawGetCharacter as (id: number) => CharacterMeta;
+const getCharacter = rawGetCharacter as (id: string) => CharacterMeta;
 
 interface BossMeta {
   id: number;
@@ -64,7 +64,8 @@ function secondsLabel(value?: number) {
 // 選角詳情面板：技能說明以「角色圖鑑.md」為單一來源 (getCodexEntry)，
 // 解析不到時 fallback 至程式內既有欄位；數值 (HP/MP/移速) 一律取自程式碼以保證與實際一致。
 function CharacterDetail({ char, skillDisplay }: { char: CharacterMeta; skillDisplay: ReturnType<typeof getSkillDisplay> }) {
-  const codex = getCodexEntry(char.id);
+  // 圖鑑（角色圖鑑.md）以數字 id 為鍵；角色的 order 保留該對照（= 舊數字 id）。
+  const codex = char.order != null ? getCodexEntry(char.order) : null;
   const role = codex?.role ?? char.role;
   const description = codex?.description ?? char.desc;
   const talent = codex?.talent ?? char.talent;
@@ -137,10 +138,10 @@ function CharacterDetail({ char, skillDisplay }: { char: CharacterMeta; skillDis
 interface LobbyScreenProps {
   lobby: LobbyView;
   status: string;
-  selectedChar: number;
+  selectedChar: string;
   selectedControlScheme: ControlScheme;
   selectedTeam: number;
-  onSelectChar: (id: number) => void;
+  onSelectChar: (id: string) => void;
   onSelectControlScheme: (scheme: ControlScheme) => void;
   onSelectTeam: (team: number) => void;
   onSelectGameFlags: (flags: GameFlags) => void;

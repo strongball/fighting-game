@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 11, name: '咒術師', color: '#8e44ad', shape: 'triangle', sprite: characterSprite('hexer', '#8e44ad', false, drawHexerTexture),
+    id: 'hexer', order: 11, evadeType: 'blink', name: '咒術師', color: '#8e44ad', shape: 'triangle', sprite: characterSprite('hexer', '#8e44ad', false, drawHexerTexture),
     maxHp: 210, maxMana: 130, speed: 165,
     desc: '以詛咒削弱敵軍的控制型輔助。詛咒彈使目標易傷、噩夢束縛定身緩速、衰弱領域同時減速敵人並削弱其輸出，大招萬咒齊發鎖死整片戰場。傷害普通，價值在削弱與控場。',
     role: '支援 · 控制/削弱',

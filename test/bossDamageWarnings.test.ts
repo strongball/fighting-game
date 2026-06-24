@@ -20,7 +20,7 @@ describe('boss damage warnings', () => {
   it('does not apply delayed zone damage before the delay has resolved', () => {
     const state: any = createInitialState([], {}, { mode: 'boss' });
     const boss = makeBoss('boss', 102, 100, 100, 2, { isBoss: true });
-    const player = makePlayer('player', 'Hero', 0, 150, 100, 1);
+    const player = makePlayer('player', 'Hero', 'warrior', 150, 100, 1);
     state.players = { boss, player };
     state.zones.push(makeZone(boss.id, 150, 100, {
       radius: 120,
@@ -41,7 +41,7 @@ describe('boss damage warnings', () => {
   it('shows clear warning FX when Lava Juggernaut phase burn is applied', () => {
     const state: any = createInitialState([], {}, { mode: 'boss' });
     const boss = makeBoss('boss', 102, 400, 300, 2, { isBoss: true });
-    const player = makePlayer('player', 'Hero', 0, 450, 300, 1);
+    const player = makePlayer('player', 'Hero', 'warrior', 450, 300, 1);
     state.players = { boss, player };
     initBossPhase(boss);
     boss.hp = boss.maxHp * 0.49;
@@ -55,8 +55,8 @@ describe('boss damage warnings', () => {
 
   it('shows damage popups when soul tether deals proximity damage', () => {
     const state: any = createInitialState([], {}, { mode: 'boss' });
-    const a = makePlayer('a', 'A', 0, 300, 300, 1);
-    const b = makePlayer('b', 'B', 1, 330, 300, 1);
+    const a = makePlayer('a', 'A', 'warrior', 300, 300, 1);
+    const b = makePlayer('b', 'B', 'mage', 330, 300, 1);
     state.players = { a, b };
     state.tethers = [{ a: 'a', b: 'b', minGap: 200, dmg: 18, tick: 0.5, tickTimer: 0.01, remaining: 2 }];
 

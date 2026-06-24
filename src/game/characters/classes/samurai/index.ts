@@ -5,9 +5,10 @@ import { drawSamuraiTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { tickSamuraiIaijutsu } from './iaijutsu.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 13, name: '武士', color: '#151515', shape: 'triangle', sprite: characterSprite('samurai', '#151515', false, drawSamuraiTexture), meleeRole: true,
+    id: 'samurai', order: 13, evadeType: 'dash', name: '武士', color: '#151515', shape: 'triangle', sprite: characterSprite('samurai', '#151515', false, drawSamuraiTexture), meleeRole: true,
     maxHp: 240, maxMana: 60, speed: 196,
     desc: '可玩版無明劍聖。以窄角一文字、縮地斬與納刀架勢掌控距離，奧義斬業一閃會排出三條延遲死線，逼敵人連續側閃。',
     role: '近戰 · 居合死線',

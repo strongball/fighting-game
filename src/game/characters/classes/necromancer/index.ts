@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 16, name: '死靈法師', color: '#2d3436', shape: 'triangle', sprite: characterSprite('necromancer', '#2d3436', false, drawNecromancerTexture),
+    id: 'necromancer', order: 16, evadeType: 'blink', name: '死靈法師', color: '#2d3436', shape: 'triangle', sprite: characterSprite('necromancer', '#2d3436', false, drawNecromancerTexture),
     maxHp: 210, maxMana: 110, speed: 155,
     desc: '以血換取強力 DoT 與汲取的暗系法師。亡者之觸讓持續傷害回復自身、生命汲取鎖血、腐蝕爆發釋放毒霧，大招亡靈大軍召喚亡兵並大範圍腐蝕。與法師的瞬間爆發不同——你是持續壓血的死神。',
     role: '特殊 · 持續壓血',

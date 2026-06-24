@@ -4,9 +4,10 @@ import { characterSprite } from '../../textureSprite.ts';
 import { drawSummonerTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
+import './talent.ts';
 
 const data = {
-    id: 15, name: '召喚師', color: '#16a085', shape: 'circle', sprite: characterSprite('summoner', '#16a085', false, drawSummonerTexture),
+    id: 'summoner', order: 15, evadeType: 'blink', name: '召喚師', color: '#16a085', shape: 'circle', sprite: characterSprite('summoner', '#16a085', false, drawSummonerTexture),
     maxHp: 210, maxMana: 130, speed: 155,
     desc: '操控召喚物建立數量優勢的特殊角色。召喚共鏈讓戰靈護主回血、召喚戰靈持續施壓、靈魂爆破犧牲召喚物炸開敵群，大招大召喚術一次喚出強化戰靈。自身戰力低，價值在召喚物。',
     role: '特殊 · 召喚操控',

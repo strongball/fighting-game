@@ -34,12 +34,12 @@ function installSeededRandom(seed: number) {
 // 戰士(melee/charge/grapple)、法師(projectile/zone)、刺客(blink/dash)、
 // 坦克(buff/pull)、治療(channel/heal/follow-zone)、狂戰士(leap)。
 const SCENARIO_PLAYERS = [
-  { id: 'p0', name: 'Warrior', charId: 0, team: 0 },
-  { id: 'p1', name: 'Mage', charId: 1, team: 0 },
-  { id: 'p2', name: 'Assassin', charId: 2, team: 0 },
-  { id: 'p3', name: 'Tank', charId: 3, team: 0 },
-  { id: 'p4', name: 'Healer', charId: 5, team: 0 },
-  { id: 'p5', name: 'Berserker', charId: 6, team: 0 },
+  { id: 'p0', name: 'Warrior', charId: 'warrior', team: 0 },
+  { id: 'p1', name: 'Mage', charId: 'mage', team: 0 },
+  { id: 'p2', name: 'Assassin', charId: 'assassin', team: 0 },
+  { id: 'p3', name: 'Tank', charId: 'tank', team: 0 },
+  { id: 'p4', name: 'Healer', charId: 'healer', team: 0 },
+  { id: 'p5', name: 'Berserker', charId: 'berserker', team: 0 },
 ];
 
 function buildScenario() {

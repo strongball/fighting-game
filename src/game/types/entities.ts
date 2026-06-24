@@ -62,7 +62,7 @@ export type EffectBag = Partial<Record<string, EffectInstance>>;
 export interface Player {
   id: EntityId;
   name: string;
-  charId: number;
+  charId: string | number; // 玩家=slug 字串；魔王(>=100)/召喚物(<0)=數字
   team: number;
 
   // 運動學

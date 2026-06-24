@@ -1,7 +1,7 @@
 import { PLAYER_RADIUS } from '../constants.js';
 import { getCharacter } from '../characters.js';
 
-export function getBossEntityHitRadius(charId: number, scale: number, opts: any = {}) {
+export function getBossEntityHitRadius(charId: string | number, scale: number, opts: any = {}) {
   if (opts.isPart) return Math.round(24 * (scale || 1));
   if (opts.isBoss) {
     const ch = getCharacter(charId);

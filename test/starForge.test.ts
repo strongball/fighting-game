@@ -9,8 +9,8 @@ function setup() {
   const state: any = createInitialState([], {}, { mode: 'boss' });
   state.roundPhase = 'fighting';
   const boss: any = makeBoss('boss-12', 111, 1200, 450, 2, { isBoss: true, aiId: 'star_forge' });
-  const left: any = makePlayer('left', 'Left', 1, 1000, 700, 1);
-  const right: any = makePlayer('right', 'Right', 1, 1400, 700, 1);
+  const left: any = makePlayer('left', 'Left', 'mage', 1000, 700, 1);
+  const right: any = makePlayer('right', 'Right', 'mage', 1400, 700, 1);
   state.players = { [boss.id]: boss, [left.id]: left, [right.id]: right };
   return { state, boss, left, right };
 }
@@ -28,7 +28,7 @@ describe('Round 12 star forge', () => {
     expect([boss.basic.type, boss.skill1.type, boss.skill2.type, boss.ultimate.type]).toEqual([
       'melee', 'zone', 'zone', 'light_dark',
     ]);
-    expect(boss.ultimate.chain).toEqual([{ slot: 'basic', windup: 1.0, delay: 0.45 }]);
+    expect(boss.ultimate.chain).toEqual([{ slot: 'basic', windup: 0.7, delay: 0.35 }]);
   });
 
   it.each([[0, 4], [1, 6], [2, 7]])('precalculates phase %i star-rain impacts', (phaseIdx, count) => {
@@ -44,7 +44,7 @@ describe('Round 12 star forge', () => {
     boss.phaseIdx = 2;
     startSelectedWindup(state, boss, 'ultimate');
     expect(boss.aiState.slot).toBe('ultimate');
-    expect(boss.aiState.totalWindupT).toBe(1.3);
+    expect(boss.aiState.totalWindupT).toBe(0.6);
   });
 
   it('draws the cooling warning on the same half used by damage resolution', () => {
@@ -75,6 +75,6 @@ describe('Round 12 star forge', () => {
     dealDamage(state, boss, boss.maxHp * 0.05, left.id);
     expect(boss.desperation).toBe(true);
     expect(boss.aiState.slot).toBe('ultimate');
-    expect(boss.aiState.totalWindupT).toBe(1.3);
+    expect(boss.aiState.totalWindupT).toBe(1.0);
   });
 });
