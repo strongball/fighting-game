@@ -836,6 +836,30 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   flex: 1; accent-color: var(--accent); cursor: pointer; height: 22px;
 }
 
+/* 視角切換：分段式按鈕 */
+.settings-seg {
+  display: flex;
+  gap: 6px;
+}
+.settings-seg-btn {
+  flex: 1;
+  background: var(--panel2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.settings-seg-btn:hover { background: #26384a; }
+.settings-seg-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b1118;
+}
+
 /* ==========================================================================
    Mobile Touch Controls & Responsive HUD Layouts
    ========================================================================== */
@@ -1026,6 +1050,62 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   height: 28px;
   background: radial-gradient(circle at 35% 35%, #e8eef4 0%, #a3b2c0 60%, #7b8e9d 100%);
   border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.4);
+  pointer-events: none;
+  transition: transform 0.05s ease;
+}
+
+/* 轉視角搖桿（右側）：與移動搖桿同構，但以青色調與 ↻ 圖示區分。
+   置於按鍵下層（z 99 < 按鍵 100）：點按鍵時觸發按鍵，在空白處拖曳則轉視角；
+   閒置指示器停在按鍵叢上方的空白區（bottom:290px，固定避開按鍵叢頂端 250px）。 */
+.mobile-look-zone {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  height: 78%;
+  pointer-events: auto;
+  z-index: 99;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.mobile-look-base {
+  position: absolute;
+  right: 75px;
+  bottom: 290px;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(120,210,230,0.08) 0%, rgba(120,210,230,0.01) 70%, rgba(120,210,230,0.05) 100%);
+  border: 2px solid rgba(130, 220, 240, 0.18);
+  border-radius: 50%;
+  box-shadow: inset 0 0 10px rgba(130, 220, 240, 0.06), 0 6px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: none;
+  opacity: 0.4;
+  transform: scale(0.95);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.mobile-look-base::after {
+  content: '↻';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: rgba(180, 235, 245, 0.35);
+  pointer-events: none;
+}
+.mobile-look-knob {
+  position: absolute;
+  left: 26px;
+  top: 26px;
+  width: 28px;
+  height: 28px;
+  background: radial-gradient(circle at 35% 35%, #e6fbff 0%, #8fcdd8 60%, #5f97a3 100%);
+  border: 1px solid rgba(200, 245, 255, 0.4);
   border-radius: 50%;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.4);
   pointer-events: none;

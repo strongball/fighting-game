@@ -70,11 +70,17 @@ export function createInput(controlScheme = 'wasd-jkl') {
   // ---- 視角模式狀態：滑鼠控視角 + Pointer Lock（mode 1/2 才啟用）----
   let viewMode = 0;                   // 0=一般遠景 1=近景第三人稱 2=第一人稱
   let prevScheme = controlScheme;     // 退出視角模式時還原的操作方式
-  let lookYaw = 0, lookPitch = 0;     // lookYaw=水平(=aim)；lookPitch：+ 仰視 / - 俯視（兩模式一致）
+  // lookYaw=水平視角(=aim)。lookPitch=俯仰角，已「鎖定」：由 camera 進入各模式時設成固定值
+  //（近景稍俯視、第一人稱平視），滑鼠/搖桿只能左右轉、不能上下 —— 避免上下擺動造成的暈眩。
+  let lookYaw = 0, lookPitch = 0;
   let pointerLocked = false;
   let mouseBasic = false;             // 滑鼠左鍵 = 普通攻擊
-  const LOOK_SENS = 0.0024, PITCH_MIN = -1.2, PITCH_MAX = 1.2;
-  let viewCfg = getViewSettings();    // 滑鼠靈敏度 / 反轉 Y（由設定面板即時更新）
+  const LOOK_SENS = 0.0024;
+  // 行動端「轉視角」搖桿：水平偏移量 -1..1，於 getView() 依實時 dt 連續積分（按住即持續左右轉）
+  let lookStickX = 0;
+  let lastLookTs = 0;                  // 上次積分時間戳；停手歸零以重置 dt 基準
+  const LOOK_TOUCH_YAW = 2.8;         // 滿偏每秒左右旋轉弧度
+  let viewCfg = getViewSettings();    // 視角靈敏度（由設定面板即時更新）
   subscribeViewSettings((s) => { viewCfg = s; });
 
   function setKey(code, down) {
@@ -99,6 +105,7 @@ export function createInput(controlScheme = 'wasd-jkl') {
       else touchKeys[k] = false;
     }
     mouseBasic = false;
+    lookStickX = 0; lastLookTs = 0;
   });
 
   // ---- 滑鼠：Pointer Lock 下控視角 + 左鍵普攻（mode 1/2 才生效）----
@@ -109,10 +116,7 @@ export function createInput(controlScheme = 'wasd-jkl') {
   document.addEventListener('mousemove', (e) => {
     if (!enabled || viewMode === 0 || !pointerLocked) return;
     const sens = LOOK_SENS * (viewCfg.sensitivity || 1);
-    lookYaw += e.movementX * sens;            // 滑鼠右移 → 視角右轉
-    lookPitch += (viewCfg.invertY ? e.movementY : -e.movementY) * sens; // 上移=仰視（反轉 Y 則相反）
-    if (lookPitch > PITCH_MAX) lookPitch = PITCH_MAX;
-    else if (lookPitch < PITCH_MIN) lookPitch = PITCH_MIN;
+    lookYaw += e.movementX * sens;            // 滑鼠左右 → 視角左右轉（俯仰已鎖定，忽略上下移動）
   });
   document.addEventListener('mousedown', (e) => {
     if (!enabled || viewMode === 0 || !pointerLocked) return;
@@ -131,6 +135,7 @@ export function createInput(controlScheme = 'wasd-jkl') {
         if (k === 'aim') touchKeys[k] = null;
         else touchKeys[k] = false;
       }
+      lookStickX = 0; lastLookTs = 0;
     },
     setScheme(scheme) {
       if (viewMode !== 0) { prevScheme = KEY_MAPS[scheme] ? scheme : prevScheme; return; } // 視角模式中只記住，退出時還原
@@ -156,7 +161,25 @@ export function createInput(controlScheme = 'wasd-jkl') {
       return viewMode;
     },
     setLook(yaw, pitch) { if (typeof yaw === 'number') lookYaw = yaw; if (typeof pitch === 'number') lookPitch = pitch; },
-    getView() { return { mode: viewMode, yaw: lookYaw, pitch: lookPitch, locked: pointerLocked }; },
+    // 行動端「轉視角」搖桿：只取水平分量（俯仰已鎖定，僅左右轉）。死區內視為放開。
+    setTouchLook(dx) {
+      if (Math.abs(dx) < 0.12) { lookStickX = 0; return; }
+      lookStickX = Math.max(-1, Math.min(1, dx));
+    },
+    // 每幀（draw）呼叫一次：依實時 dt 積分觸控搖桿造成的「左右」視角變化（按住即持續轉；俯仰固定不動）。
+    getView() {
+      if (viewMode !== 0 && lookStickX !== 0) {
+        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        let dt = lastLookTs ? (now - lastLookTs) / 1000 : 0;
+        if (dt > 0.05) dt = 0.05;              // 背景分頁回來時限制單幀跳動
+        lastLookTs = now;
+        const sens = viewCfg.sensitivity || 1;
+        lookYaw += lookStickX * LOOK_TOUCH_YAW * sens * dt;          // 右推 → 視角右轉
+      } else {
+        lastLookTs = 0;                        // 放開：重置 dt 基準，避免下次按住瞬跳
+      }
+      return { mode: viewMode, yaw: lookYaw, pitch: lookPitch, locked: pointerLocked };
+    },
     getViewMode() { return viewMode; },
     setTouchDirection(dx, dy) {
       const dist = Math.hypot(dx, dy);
@@ -183,9 +206,14 @@ export function createInput(controlScheme = 'wasd-jkl') {
     },
     get() {
       if (viewMode !== 0) {
-        // WASD 視為相對視角：W 前進 / S 後退 / A·D 平移；旋轉 lookYaw 後量化回 8 向世界布林
-        const fwd = (keyboardKeys.up ? 1 : 0) - (keyboardKeys.down ? 1 : 0);
-        const strafe = (keyboardKeys.right ? 1 : 0) - (keyboardKeys.left ? 1 : 0);
+        // 移動相對視角：W/前推=前進、S/後拉=後退、A·D/左右=平移；鍵盤(WASD)與行動端移動搖桿並用。
+        // 旋轉 lookYaw 後量化回 8 向世界布林。（行動端 touchKeys.aim 在此忽略，朝向一律取 lookYaw。）
+        const mUp = keyboardKeys.up || touchKeys.up;
+        const mDown = keyboardKeys.down || touchKeys.down;
+        const mLeft = keyboardKeys.left || touchKeys.left;
+        const mRight = keyboardKeys.right || touchKeys.right;
+        const fwd = (mUp ? 1 : 0) - (mDown ? 1 : 0);
+        const strafe = (mRight ? 1 : 0) - (mLeft ? 1 : 0);
         const cy = Math.cos(lookYaw), sy = Math.sin(lookYaw);
         let wx = cy * fwd - sy * strafe;   // 世界 +x = 右
         let wy = sy * fwd + cy * strafe;   // 世界 +y = 下（朝鏡頭）
@@ -194,14 +222,14 @@ export function createInput(controlScheme = 'wasd-jkl') {
         if (d > 0.001) { wx /= d; wy /= d; R = wx > 0.38; L = wx < -0.38; D = wy > 0.38; U = wy < -0.38; }
         return {
           up: U, down: D, left: L, right: R,
-          basic: keyboardKeys.basic || mouseBasic,
-          skill1: keyboardKeys.skill1,
-          skill2: keyboardKeys.skill2,
-          ultimate: keyboardKeys.ultimate,
-          evade: keyboardKeys.evade,
-          item1: keyboardKeys.item1,
-          item2: keyboardKeys.item2,
-          aim: lookYaw, // 近景第三人稱：朝向直接由滑鼠視角決定
+          basic: keyboardKeys.basic || mouseBasic || touchKeys.basic,
+          skill1: keyboardKeys.skill1 || touchKeys.skill1,
+          skill2: keyboardKeys.skill2 || touchKeys.skill2,
+          ultimate: keyboardKeys.ultimate || touchKeys.ultimate,
+          evade: keyboardKeys.evade || touchKeys.evade,
+          item1: keyboardKeys.item1 || touchKeys.item1,
+          item2: keyboardKeys.item2 || touchKeys.item2,
+          aim: lookYaw, // 近景第三人稱：朝向直接由滑鼠/搖桿視角決定
         };
       }
       return {

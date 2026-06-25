@@ -14,14 +14,23 @@ import {
   updateViewSettings,
   type ViewSettings,
 } from '../utils/viewSettings';
+import {
+  getCameraView,
+  subscribeCameraView,
+  requestCameraMode,
+  type CameraView,
+  type CameraMode,
+} from '../utils/cameraView';
 
 export function AudioSettingsButton() {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<AudioSettings>(getAudioSettings());
   const [viewCfg, setViewCfg] = useState<ViewSettings>(getViewSettings());
+  const [cameraView, setCameraView] = useState<CameraView>(getCameraView());
 
   useEffect(() => subscribeAudioSettings(setSettings), []);
   useEffect(() => subscribeViewSettings(setViewCfg), []);
+  useEffect(() => subscribeCameraView(setCameraView), []);
 
   // ESC 開/關設定（戰鬥中也能用；開啟時解除滑鼠鎖定，讓游標可操作面板）
   useEffect(() => {
@@ -72,11 +81,12 @@ export function AudioSettingsButton() {
               onVolume={(v) => updateAudioSettings({ sfxVolume: v, sfxMuted: false })}
               onToggleMute={() => updateAudioSettings({ sfxMuted: !settings.sfxMuted })}
             />
+            {cameraView.active && (
+              <CameraViewRow mode={cameraView.mode} onMode={requestCameraMode} />
+            )}
             <SensitivityRow
               sensitivity={viewCfg.sensitivity}
-              invertY={viewCfg.invertY}
               onSensitivity={(v) => updateViewSettings({ sensitivity: v })}
-              onToggleInvert={() => updateViewSettings({ invertY: !viewCfg.invertY })}
             />
             <FullscreenRow />
           </div>
@@ -123,30 +133,55 @@ function VolumeRow({ label, volume, muted, onVolume, onToggleMute }: VolumeRowPr
   );
 }
 
-interface SensitivityRowProps {
-  sensitivity: number;
-  invertY: boolean;
-  onSensitivity: (v: number) => void;
-  onToggleInvert: () => void;
+interface CameraViewRowProps {
+  mode: CameraMode;
+  onMode: (m: CameraMode) => void;
 }
 
-function SensitivityRow({ sensitivity, invertY, onSensitivity, onToggleInvert }: SensitivityRowProps) {
+// 視角切換（戰鬥中）：遠景 / 近景第三人稱 / 第一人稱。等同鍵盤 V 循環，但行動端無鍵盤，靠此切換。
+function CameraViewRow({ mode, onMode }: CameraViewRowProps) {
+  const opts: { m: CameraMode; label: string }[] = [
+    { m: 0, label: '遠景' },
+    { m: 1, label: '第三人稱' },
+    { m: 2, label: '第一人稱' },
+  ];
   return (
     <div className="settings-row">
       <div className="settings-row-top">
-        <span className="settings-label">滑鼠靈敏度<span style={{ color: '#7b8a97', fontSize: '11px', marginLeft: '6px' }}>視角用</span></span>
+        <span className="settings-label">
+          視角<span style={{ color: '#7b8a97', fontSize: '11px', marginLeft: '6px' }}>戰鬥中・鍵盤 V</span>
+        </span>
+      </div>
+      <div className="settings-seg">
+        {opts.map((o) => (
+          <button
+            key={o.m}
+            className={`settings-seg-btn${mode === o.m ? ' active' : ''}`}
+            aria-pressed={mode === o.m}
+            onClick={() => onMode(o.m)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface SensitivityRowProps {
+  sensitivity: number;
+  onSensitivity: (v: number) => void;
+}
+
+// 視角靈敏度：控制近景/第一人稱「左右轉」的速度（滑鼠與行動端轉視角搖桿共用）。俯仰已鎖定，故無上下反轉選項。
+function SensitivityRow({ sensitivity, onSensitivity }: SensitivityRowProps) {
+  return (
+    <div className="settings-row">
+      <div className="settings-row-top">
+        <span className="settings-label">視角靈敏度<span style={{ color: '#7b8a97', fontSize: '11px', marginLeft: '6px' }}>左右轉</span></span>
         <span className="settings-pct">{sensitivity.toFixed(1)}×</span>
       </div>
       <div className="settings-row-ctrl">
-        <button
-          className="settings-mute"
-          style={{ fontSize: '11px', fontWeight: 700 }}
-          aria-label={invertY ? '取消反轉 Y 軸' : '反轉 Y 軸'}
-          title={invertY ? '上下已反轉（點按恢復）' : '上下正常（點按反轉）'}
-          onClick={onToggleInvert}
-        >
-          {invertY ? 'Y反' : 'Y正'}
-        </button>
         <input
           type="range"
           min={0.2}

@@ -92,15 +92,22 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
   // ---- 行動端虛擬搖桿與按鍵 ----
   const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
   let joystickZone, joystickBase, joystickKnob, mobileButtonsZone, mBtns;
-  
+  let lookZone, lookBase, lookKnob;
+
   if (isMobile) {
     layer.classList.add('is-mobile');
-    
-    // 搖桿區
+
+    // 移動搖桿區（左側，浮動：手指按下處生成）
     joystickZone = el('div', 'mobile-joystick-zone', layer);
     joystickBase = el('div', 'mobile-joystick-base', joystickZone);
     joystickKnob = el('div', 'mobile-joystick-knob', joystickBase);
-    
+
+    // 轉視角搖桿區（右側，浮動；置於按鍵下層，僅近景/第一人稱時顯示，由更新迴圈依視角模式切換）
+    lookZone = el('div', 'mobile-look-zone', layer);
+    lookBase = el('div', 'mobile-look-base', lookZone);
+    lookKnob = el('div', 'mobile-look-knob', lookBase);
+    setStyle(lookZone, 'display', 'none');
+
     // 按鍵區
     mobileButtonsZone = el('div', 'mobile-buttons-zone', layer);
     
@@ -184,7 +191,73 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
 
     joystickZone.addEventListener('touchend', resetJoystick, { passive: false });
     joystickZone.addEventListener('touchcancel', resetJoystick, { passive: false });
-    
+
+    // 轉視角搖桿事件處理（rate-based：偏移量 → 旋轉速度，由 input.getView 依實時 dt 積分）
+    let lookActive = false;
+    let lookStartX = 0;
+    let lookStartY = 0;
+    const lookMaxR = 30;
+
+    lookZone.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      const rect = lookZone.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+
+      setStyle(lookBase, 'left', `${x - 40}px`);
+      setStyle(lookBase, 'top', `${y - 40}px`);
+      setStyle(lookBase, 'right', 'auto');
+      setStyle(lookBase, 'bottom', 'auto');
+      setStyle(lookBase, 'opacity', '1');
+      setStyle(lookBase, 'transform', 'scale(1)');
+
+      lookActive = true;
+      lookStartX = touch.clientX;
+      lookStartY = touch.clientY;
+
+      e.preventDefault();
+    }, { passive: false });
+
+    lookZone.addEventListener('touchmove', (e) => {
+      if (!lookActive) return;
+      const touch = e.touches[0];
+
+      // 只取水平位移：俯仰已鎖定，轉視角僅左右（旋鈕也只左右移動，明示「不能上下」）
+      let dx = touch.clientX - lookStartX;
+      if (dx > lookMaxR) dx = lookMaxR;
+      else if (dx < -lookMaxR) dx = -lookMaxR;
+
+      setStyle(lookKnob, 'transform', `translate(${dx}px, 0px)`);
+
+      if (hooks.input && hooks.input.setTouchLook) {
+        hooks.input.setTouchLook(dx / lookMaxR);
+      }
+
+      e.preventDefault();
+    }, { passive: false });
+
+    const resetLook = (e) => {
+      if (!lookActive) return;
+      lookActive = false;
+
+      setStyle(lookKnob, 'transform', 'translate(0px, 0px)');
+
+      setStyle(lookBase, 'left', 'auto');
+      setStyle(lookBase, 'top', 'auto');
+      setStyle(lookBase, 'right', '75px');
+      setStyle(lookBase, 'bottom', '290px');
+      setStyle(lookBase, 'opacity', '0.4');
+      setStyle(lookBase, 'transform', 'scale(0.95)');
+
+      if (hooks.input && hooks.input.setTouchLook) {
+        hooks.input.setTouchLook(0, 0);
+      }
+      if (e) e.preventDefault();
+    };
+
+    lookZone.addEventListener('touchend', resetLook, { passive: false });
+    lookZone.addEventListener('touchcancel', resetLook, { passive: false });
+
     // 按鍵事件處理
     Object.values(mBtns).forEach((btn) => {
       btn.root.addEventListener('touchstart', (e) => {
@@ -585,9 +658,25 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
         
         const showControls = me.alive && state.roundPhase !== 'wiped' && state.roundPhase !== 'cleared';
         const wasShown = joystickZone.style.display !== 'none';
-        
+
         setStyle(joystickZone, 'display', showControls ? '' : 'none');
         setStyle(mobileButtonsZone, 'display', showControls ? '' : 'none');
+
+        // 轉視角搖桿：僅在近景/第一人稱（視角模式 ≠ 0）且可操作時顯示
+        const inViewMode = !!(hooks.input && hooks.input.getViewMode && hooks.input.getViewMode() !== 0);
+        const showLook = showControls && inViewMode;
+        const lookWasShown = lookZone.style.display !== 'none';
+        setStyle(lookZone, 'display', showLook ? '' : 'none');
+        if (!showLook && lookWasShown) {
+          setStyle(lookKnob, 'transform', 'translate(0px, 0px)');
+          setStyle(lookBase, 'left', 'auto');
+          setStyle(lookBase, 'top', 'auto');
+          setStyle(lookBase, 'right', '75px');
+          setStyle(lookBase, 'bottom', '290px');
+          setStyle(lookBase, 'opacity', '0.4');
+          setStyle(lookBase, 'transform', 'scale(0.95)');
+          if (hooks.input && hooks.input.setTouchLook) hooks.input.setTouchLook(0, 0);
+        }
         
         if (!showControls && wasShown) {
           // Reset joystick position visually

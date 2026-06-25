@@ -3,16 +3,13 @@
 // 與音效設定相同的 pub/sub 形式，彼此解耦（input 屬遊戲層、UI 屬 React 層）。
 
 export interface ViewSettings {
-  /** 滑鼠靈敏度倍率（套在基礎靈敏度上），0.2..3。 */
+  /** 視角靈敏度倍率（左右轉速，套在基礎靈敏度上），0.2..3。 */
   sensitivity: number;
-  /** 反轉滑鼠上下（Y 軸）。 */
-  invertY: boolean;
 }
 
 const STORAGE_KEY = 'fg-view-settings';
 const DEFAULTS: ViewSettings = {
   sensitivity: 1.0,
-  invertY: false,
 };
 
 function clampSens(v: unknown, fallback: number): number {
@@ -28,7 +25,6 @@ function loadSettings(): ViewSettings {
     const parsed = JSON.parse(raw) as Partial<ViewSettings>;
     return {
       sensitivity: clampSens(parsed.sensitivity, DEFAULTS.sensitivity),
-      invertY: !!parsed.invertY,
     };
   } catch {
     return { ...DEFAULTS };
@@ -63,7 +59,6 @@ export function updateViewSettings(patch: Partial<ViewSettings>): void {
     ...state,
     ...patch,
     sensitivity: patch.sensitivity !== undefined ? clampSens(patch.sensitivity, state.sensitivity) : state.sensitivity,
-    invertY: patch.invertY !== undefined ? !!patch.invertY : state.invertY,
   };
   persist();
   subscribers.forEach((cb) => cb(state));

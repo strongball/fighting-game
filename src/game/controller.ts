@@ -246,6 +246,7 @@ function createController(): GameController {
     logicTimer = setInterval(logicTick, 1000 / 30);
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(renderLoop);
+    camera.setBattleActive(true); // 戰鬥開始：設定面板顯示「視角」切換列
   }
 
   function stopLoop() {
@@ -254,6 +255,7 @@ function createController(): GameController {
     if (logicTimer) { clearInterval(logicTimer); logicTimer = null; }
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     camera.reset(); // 離開戰鬥時回到一般遠景視角
+    camera.setBattleActive(false); // 戰鬥結束：隱藏「視角」切換列
   }
 
   // ---------- 邏輯/網路迴圈（固定步、不依賴畫面更新）----------
