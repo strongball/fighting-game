@@ -88,6 +88,10 @@ export function AudioSettingsButton() {
               sensitivity={viewCfg.sensitivity}
               onSensitivity={(v) => updateViewSettings({ sensitivity: v })}
             />
+            <AutoAimRow
+              enabled={viewCfg.autoAim}
+              onToggle={(v) => updateViewSettings({ autoAim: v })}
+            />
             <FullscreenRow />
           </div>
         </div>
@@ -190,6 +194,38 @@ function SensitivityRow({ sensitivity, onSensitivity }: SensitivityRowProps) {
           value={sensitivity}
           onChange={(e) => onSensitivity(Number(e.target.value))}
         />
+      </div>
+    </div>
+  );
+}
+
+interface AutoAimRowProps {
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+}
+
+// 自動瞄準：出招時把朝向微吸附到前方錐形內的敵人（俯視角難瞄的輔助）。預設開。
+function AutoAimRow({ enabled, onToggle }: AutoAimRowProps) {
+  return (
+    <div className="settings-row">
+      <div className="settings-row-top">
+        <span className="settings-label">自動瞄準<span style={{ color: '#7b8a97', fontSize: '11px', marginLeft: '6px' }}>出招吸附前方敵人・按住右鍵鎖定</span></span>
+      </div>
+      <div className="settings-seg">
+        <button
+          className={`settings-seg-btn${enabled ? ' active' : ''}`}
+          aria-pressed={enabled}
+          onClick={() => onToggle(true)}
+        >
+          開
+        </button>
+        <button
+          className={`settings-seg-btn${!enabled ? ' active' : ''}`}
+          aria-pressed={!enabled}
+          onClick={() => onToggle(false)}
+        >
+          關
+        </button>
       </div>
     </div>
   );

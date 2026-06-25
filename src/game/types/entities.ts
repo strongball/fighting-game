@@ -96,6 +96,7 @@ export interface Player {
   combo: number; comboTimer: number;
   iaiTimer: number; iaiReady?: boolean;
   suppressTarget: EntityId | null; suppressStacks: number;
+  lockTargetId: EntityId | null; // 玩家按住鎖定(C)的目標 id；無則 null（供 HUD 鎖頭 + 網路 snapshot）
 
   // 召喚物 / 魔王 / 部位 / 鏡像
   ownerId: EntityId | null;

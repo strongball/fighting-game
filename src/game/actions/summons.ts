@@ -9,6 +9,10 @@ import type { GameState, Player, EntityId, ActionDef } from '../types';
 
 let summonSeq = 1;
 
+// 闖關模式召喚物存活時間倍率：打王是長時間消耗戰，若沿用 PK 用的短存活(8~13s)，
+// 軍隊會不斷消失（玩家體感像「一下就死」）。在打王模式拉長存活，讓召喚物作為持久肉牆。
+const BOSS_SUMMON_LIFE_MULT = 2.5;
+
 function aoeAt(state: GameState, ownerId: EntityId, x: number, y: number, opt: any) {
   for (const o of Object.values(state.players)) {
     if (!isEnemy(state, ownerId, o)) continue;
@@ -41,7 +45,7 @@ export function summonMinions(state: GameState, summoner: Player, action: Action
       facing: summoner.facing,
     });
     m.isSummon = true;
-    m.summonLife = action.minionLife || 14;
+    m.summonLife = (action.minionLife || 14) * (state.mode === 'boss' ? BOSS_SUMMON_LIFE_MULT : 1);
     state.players[id] = m;
     addFx(state, { type: 'blink', x, y, color: action.color, life: 0.42, radius: 64, vfx: action.vfx });
   }
@@ -49,10 +53,14 @@ export function summonMinions(state: GameState, summoner: Player, action: Action
 }
 
 function detonateMinions(state: GameState, summoner: Player, action: ActionDef) {
+  let detonated = 0;
   for (const o of Object.values(state.players)) {
     if (!o.isSummon || o.ownerId !== summoner.id || !o.alive) continue;
     aoeAt(state, summoner.id, o.x, o.y, { radius: action.radius || 120, dmg: action.dmg || 60, knockback: action.knockback || 120, effect: action.effect });
     addFx(state, { type: 'hit', x: o.x, y: o.y, color: action.color, life: 0.3, radius: action.radius || 120, vfx: action.vfx });
     o.hp = 0; o.alive = false;
+    detonated++;
   }
+  // 引爆有命中召喚物 → 立即重置指定技能冷卻（召喚師：炸完馬上能再召喚，補回被犧牲的軍隊）。
+  if (detonated > 0 && action.refundCd && summoner.cd) summoner.cd[action.refundCd] = 0;
 }

@@ -5,11 +5,14 @@
 export interface ViewSettings {
   /** 視角靈敏度倍率（左右轉速，套在基礎靈敏度上），0.2..3。 */
   sensitivity: number;
+  /** 自動瞄準（出招時微吸附前方敵人）。預設開；input.js 讀此旗標。見 game/systems/autoLock.ts。 */
+  autoAim: boolean;
 }
 
 const STORAGE_KEY = 'fg-view-settings';
 const DEFAULTS: ViewSettings = {
   sensitivity: 1.0,
+  autoAim: true,
 };
 
 function clampSens(v: unknown, fallback: number): number {
@@ -25,6 +28,7 @@ function loadSettings(): ViewSettings {
     const parsed = JSON.parse(raw) as Partial<ViewSettings>;
     return {
       sensitivity: clampSens(parsed.sensitivity, DEFAULTS.sensitivity),
+      autoAim: typeof parsed.autoAim === 'boolean' ? parsed.autoAim : DEFAULTS.autoAim,
     };
   } catch {
     return { ...DEFAULTS };
@@ -59,6 +63,7 @@ export function updateViewSettings(patch: Partial<ViewSettings>): void {
     ...state,
     ...patch,
     sensitivity: patch.sensitivity !== undefined ? clampSens(patch.sensitivity, state.sensitivity) : state.sensitivity,
+    autoAim: patch.autoAim !== undefined ? !!patch.autoAim : state.autoAim,
   };
   persist();
   subscribers.forEach((cb) => cb(state));

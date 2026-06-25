@@ -147,9 +147,11 @@ export function dealDamage(
   if (state.flags && state.flags.noDamage && !target.isBoss) return;
 
   let dmg = amount;
+  // 闖關模式：玩家召喚物對魔王傷害的承受大幅衰減，讓召喚物能在魔王的高傷/AoE 下存活、
+  // 作為吸引仇恨的肉牆（召喚流在打王模式的核心價值）。0.12 ≈ 有效血量 ×8.3。
   if (state.mode === 'boss' && (target.isMinion || target.isSummon) && target.ownerId) {
     const owner = state.players[target.ownerId];
-    if (owner && !owner.isBoss) dmg *= 0.2;
+    if (owner && !owner.isBoss) dmg *= 0.12;
   }
   if (hostile && attacker && (attacker.isMinion || attacker.isSummon) && attacker.ownerId) {
     const owner = state.players[attacker.ownerId];

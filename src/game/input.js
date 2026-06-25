@@ -17,6 +17,7 @@ const KEY_MAPS = {
     Space: 'evade',
     KeyU: 'item1',
     KeyI: 'item2',
+    KeyC: 'lock',
   },
   'arrows-asdf': {
     ArrowUp: 'up',
@@ -30,6 +31,7 @@ const KEY_MAPS = {
     Space: 'evade',
     KeyQ: 'item1',
     KeyE: 'item2',
+    KeyC: 'lock',
   },
   'wasd-ijkl': {
     KeyW: 'up', ArrowUp: 'up',
@@ -43,6 +45,7 @@ const KEY_MAPS = {
     Space: 'evade',
     KeyU: 'item1',
     KeyO: 'item2',
+    KeyC: 'lock',
   },
   // 近景第三人稱：WASD 相對視角移動（於 get() 旋轉量化）、滑鼠控視角、左鍵=普攻、1234=招式
   'chase': {
@@ -57,12 +60,13 @@ const KEY_MAPS = {
     Space: 'evade',
     KeyQ: 'item1',
     KeyE: 'item2',
+    KeyC: 'lock',
   },
 };
 
 export function createInput(controlScheme = 'wasd-jkl') {
-  const keyboardKeys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false };
-  const touchKeys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false, aim: null };
+  const keyboardKeys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false, lock: false };
+  const touchKeys = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false, lock: false, aim: null };
   let enabled = false;
   let currentScheme = controlScheme;
   let keyMap = KEY_MAPS[currentScheme];
@@ -74,7 +78,8 @@ export function createInput(controlScheme = 'wasd-jkl') {
   //（近景稍俯視、第一人稱平視），滑鼠/搖桿只能左右轉、不能上下 —— 避免上下擺動造成的暈眩。
   let lookYaw = 0, lookPitch = 0;
   let pointerLocked = false;
-  let mouseBasic = false;             // 滑鼠左鍵 = 普通攻擊
+  let mouseBasic = false;             // 滑鼠左鍵 = 普通攻擊（相機模式）
+  let mouseLock = false;              // 滑鼠右鍵 = 按住鎖定（俯視角 hold-to-lock）
   const LOOK_SENS = 0.0024;
   // 行動端「轉視角」搖桿：水平偏移量 -1..1，於 getView() 依實時 dt 連續積分（按住即持續左右轉）
   let lookStickX = 0;
@@ -104,7 +109,7 @@ export function createInput(controlScheme = 'wasd-jkl') {
       if (k === 'aim') touchKeys[k] = null;
       else touchKeys[k] = false;
     }
-    mouseBasic = false;
+    mouseBasic = false; mouseLock = false;
     lookStickX = 0; lastLookTs = 0;
   });
 
@@ -125,6 +130,18 @@ export function createInput(controlScheme = 'wasd-jkl') {
   document.addEventListener('mouseup', (e) => {
     if (e.button === 0) mouseBasic = false;
   });
+  // ---- 俯視角：滑鼠右鍵 = 按住鎖定（避開 Tab/Shift 等在 web 上有副作用的鍵）----
+  document.addEventListener('mousedown', (e) => {
+    if (!enabled || viewMode !== 0) return;
+    if (e.button === 2) mouseLock = true;
+  });
+  document.addEventListener('mouseup', (e) => {
+    if (e.button === 2) mouseLock = false;
+  });
+  // 右鍵鎖定期間不要跳出瀏覽器右鍵選單
+  document.addEventListener('contextmenu', (e) => {
+    if (enabled && viewMode === 0) e.preventDefault();
+  });
 
   return {
     enable() { enabled = true; },
@@ -135,6 +152,7 @@ export function createInput(controlScheme = 'wasd-jkl') {
         if (k === 'aim') touchKeys[k] = null;
         else touchKeys[k] = false;
       }
+      mouseBasic = false; mouseLock = false;
       lookStickX = 0; lastLookTs = 0;
     },
     setScheme(scheme) {
@@ -230,6 +248,7 @@ export function createInput(controlScheme = 'wasd-jkl') {
           item1: keyboardKeys.item1 || touchKeys.item1,
           item2: keyboardKeys.item2 || touchKeys.item2,
           aim: lookYaw, // 近景第三人稱：朝向直接由滑鼠/搖桿視角決定
+          assist: false, lock: false, // 相機模式以滑鼠/搖桿自由瞄準 → 不啟用自動鎖定
         };
       }
       return {
@@ -245,9 +264,11 @@ export function createInput(controlScheme = 'wasd-jkl') {
         item1: keyboardKeys.item1 || touchKeys.item1,
         item2: keyboardKeys.item2 || touchKeys.item2,
         aim: touchKeys.aim, // 人類玩家以移動方向轉向；魔王 AI 則合成 aim 角度
+        assist: viewCfg.autoAim !== false, // 自動瞄準（A 出招微吸附），預設開、設定頁可關
+        lock: keyboardKeys.lock || touchKeys.lock || mouseLock, // 按住鎖定：滑鼠右鍵 / C 鍵 / 行動端鎖定鈕
       };
     },
   };
 }
 
-export const EMPTY_INPUT = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false, aim: null };
+export const EMPTY_INPUT = { up: false, down: false, left: false, right: false, basic: false, skill1: false, skill2: false, ultimate: false, evade: false, item1: false, item2: false, lock: false, aim: null };
