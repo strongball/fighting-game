@@ -1,6 +1,6 @@
 import { ARENA, difficultyMult } from '../constants.js';
 import { makeBoss } from '../entities/factories.ts';
-import { getBossForRound } from '../bosses.js';
+import { getBossForRound, getBoss } from '../bosses.js';
 import { initBossPhase } from './phases.ts';
 
 export const BOSS_TEAM = 2;
@@ -58,6 +58,14 @@ export function spawnBoss(state: any, round: number) {
 }
 
 export function clearBossSide(state: any) {
+  const boss = findBossEntity(state);
+  if (boss) {
+    const bossData = getBoss(boss.charId);
+    if (bossData && typeof bossData.cleanup === 'function') {
+      bossData.cleanup(state);
+    }
+  }
+
   for (const o of bossSideEntities(state)) delete state.players[o.id];
   state.tethers = [];
   state.timeAnchors = [];

@@ -581,8 +581,9 @@ function computeProfileInput(profile, state, ent, dt) {
       input.aim = s.aimAng;
       const a = ch[s.slot] || {};
       // 設定連段：剩餘 chain 清單 + 接續延遲（短破綻接下一招）
-      if (a.chain && a.chain.length && !s.chainQueue) {
-        s.chainQueue = a.chain.slice();
+      const combo = prof.combos && prof.combos[s.slot];
+      if (combo && combo.length && !s.chainQueue) {
+        s.chainQueue = combo.slice();
       }
       // 破綻窗口長度：有 chain 接續 → 用 chain.delay 較短；否則依招式重量
       const hasChainNext = s.chainQueue && s.chainQueue.length > 0;

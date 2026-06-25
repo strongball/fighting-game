@@ -1,5 +1,7 @@
 import { getCharacter } from '../characters.js';
 
+import { getBoss } from '../bosses.js';
+
 function angleDiff(a: number, b: number) {
   let d = a - b;
   while (d > Math.PI) d -= Math.PI * 2;
@@ -17,6 +19,11 @@ export function applyBossDamageModifiers(state: any, boss: any, attacker: any, a
     const rel = Math.abs(angleDiff(ang, boss.facing));
     if (mech.frontArmor && rel < 0.9) dmg *= 1 - mech.frontArmor;
     if (mech.backWeak && rel > Math.PI - 0.9) dmg *= 1 + mech.backWeak;
+  }
+
+  const bossData = getBoss(boss.charId);
+  if (bossData && typeof bossData.modifyIncomingDamage === 'function') {
+    dmg = bossData.modifyIncomingDamage(state, boss, attacker, dmg);
   }
 
   if (mech.minionShield) {

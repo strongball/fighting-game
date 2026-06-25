@@ -3,9 +3,10 @@ import { dist } from '../entities/math.ts';
 import { spawnPoints } from '../entities/factories.ts';
 import { addFx } from '../entities/fx.ts';
 import { recordRevive } from '../entities/stats.ts';
-import { followBossParts, teamPlayers } from './lifecycle.ts';
+import { followBossParts, teamPlayers, findBossEntity } from './lifecycle.ts';
 import { tickBossPhases } from './phases.ts';
 import { tickTimeAnchors } from './time-anchors.ts';
+import { getBoss } from '../bosses.js';
 
 const REVIVE_RADIUS = 100;
 const REVIVE_TIME = 3.0;
@@ -34,6 +35,15 @@ export function tickBossSystems(state: any, dt: number) {
   tickTimeAnchors(state, dt);
   tetherTick(state, dt);
   reviveTick(state, dt);
+
+  const boss = findBossEntity(state);
+  if (boss && boss.alive) {
+    const bossData = getBoss(boss.charId);
+    if (bossData && typeof bossData.tick === 'function') {
+      bossData.tick(state, boss, dt);
+    }
+  }
+
   recordHistory(state);
 }
 

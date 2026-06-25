@@ -61,7 +61,7 @@ const data = {
     basic: { name: '踏地震波', type: 'zone', range: 0, radius: 270, dmg: 36, lifetime: 0.4, tick: 0.4, knockback: 220, cd: 2.0, windup: 0.5, telegraph: 'circle', color: '#b0a99f', effect: STUN(0.4), vfx: 'boss_titan_stomp' },
     skill1: { name: '殲滅雷射', type: 'zone', range: 250, radius: 170, dmg: 50, lifetime: 1.6, tick: 0.3, delay: 1.0, moving: 200, requiresPart: 'arm_left', cd: 6.8, windup: 0.6, telegraph: 'line', color: '#49d0ff', vfx: 'boss_titan_laser' },
     skill2: { name: '旋轉巨鋸', type: 'zone', range: 250, radius: 240, dmgPct: 0.03, lifetime: 2.2, tick: 0.25, moving: 280, requiresPart: 'arm_right', cd: 7.5, windup: 0.5, telegraph: 'line', color: '#ff7043', effect: BURN(6, 2), vfx: 'boss_titan_saw' },
-    ultimate: { name: '核心過載', type: 'zone', range: 0, radius: 420, dmg: 70, lifetime: 0.6, tick: 0.6, delay: 1.2, knockback: 300, effect: STUN(0.6), requiresPartsDown: true, cd: 15.0, windup: 0.6, telegraph: 'circle', color: '#9fe8ff', vfx: 'boss_titan_ult' },
+    ultimate: { name: '核心過載', type: 'zone', range: 0, radius: 380, dmg: 70, lifetime: 0.8, tick: 0.4, delay: 1.2, knockback: 450, effect: STUN(1.0), requiresPartsDown: true, cd: 15.0, windup: 0.6, telegraph: 'circle', color: '#9fe8ff', vfx: 'boss_titan_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, loadVfx });

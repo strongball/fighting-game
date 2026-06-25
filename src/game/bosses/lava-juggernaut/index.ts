@@ -66,11 +66,10 @@ const data = {
         ] },
     ],
 
-    basic: { name: '熔岩劈斬', type: 'melee', dmg: 50, range: 300, arc: 1.2, knockback: 200, cd: 1.4, windup: 0.5, telegraph: 'arc', color: '#ff7043', effect: BURN(8, 2), vfx: 'boss_juggernaut_slash',
-      chain: [{ slot: 'skill2', windup: 0.4, delay: 0.2 }] },
+    basic: { name: '熔岩劈斬', type: 'melee', dmg: 50, range: 300, arc: 1.2, knockback: 200, cd: 1.4, windup: 0.5, telegraph: 'arc', color: '#ff7043', effect: BURN(8, 2), vfx: 'boss_juggernaut_slash' },
     skill1: { name: '烈焰衝鋒', type: 'charge', speed: 900, range: 740, dmg: 80, hitRadius: 130, knockback: 320, stopOnHit: true, effect: STUN(1.0), cd: 7.5, windup: 0.5, telegraph: 'line', color: '#ff5a1f', wallStun: 2.2, vfx: 'boss_juggernaut_charge' },
     skill2: { name: '震地烈焰', type: 'zone', range: 220, radius: 240, dmgPct: 0.035, lifetime: 2.4, tick: 0.5, delay: 0.8, moving: 0, effect: BURN(12, 3), cd: 9.0, windup: 0.5, telegraph: 'circle', color: '#e74c3c', vfx: 'boss_juggernaut_quake' },
-    ultimate: { name: '熔岩噴發', type: 'zone', range: 170, radius: 210, dmgPct: 0.04, lifetime: 4, tick: 0.5, delay: 0.9, count: 9, scatter: 400, stagger: 0.12, effect: BURN(14, 3), cd: 14.3, windup: 0.6, telegraph: 'circle', color: '#ff5a1f', vfx: 'boss_juggernaut_ult' },
+    ultimate: { name: '熔岩噴發', type: 'zone', range: 220, radius: 200, dmg: 60, lifetime: 4, tick: 0.5, delay: 0.9, count: 10, scatter: 450, stagger: 0.12, effect: BURN(14, 3), cd: 14.3, windup: 0.6, telegraph: 'circle', color: '#ff5a1f', vfx: 'boss_juggernaut_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

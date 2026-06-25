@@ -63,7 +63,7 @@ const data = {
     basic: { name: '虛空彈', type: 'projectile', dmg: 28, speed: 760, radius: 14, lifetime: 1.6, count: 5, spread: 0.5, knockback: 50, cd: 1.1, windup: 0.35, telegraph: 'line', color: '#c39bff', vfx: 'boss_void_bolt' },
     skill1: { name: '混沌符咒', type: 'apply_scramble', radius: 480, duration: 2.4, cd: 8.3, windup: 0.5, telegraph: 'circle', color: '#b14fd8', vfx: 'boss_void_scramble' },
     skill2: { name: '奇點黑洞', type: 'zone', range: 280, radius: 300, dmg: 30, lifetime: 2.4, tick: 0.4, delay: 0.6, pull: 500, effect: SLOW(1.0, 0.5), cd: 9.8, windup: 0.5, telegraph: 'circle', color: '#5b2c8e', swapHit: true, vfx: 'boss_void_blackhole' },
-    ultimate: { name: '時光倒流', type: 'time_rewind', rewindSeconds: 3.0, dmg: 90, radius: 260, cd: 15.0, windup: 0.6, telegraph: 'circle', color: '#a06cff', vfx: 'boss_void_ult' },
+    ultimate: { name: '時光倒流', type: 'time_rewind', rewindSeconds: 5.0, dmg: 90, radius: 220, cd: 15.0, windup: 0.6, telegraph: 'circle', color: '#a06cff', vfx: 'boss_void_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

@@ -128,6 +128,7 @@ export function createPrediction({ getSelfId, perf }: PredictionDeps) {
     view.roundPhase = latest.roundPhase; view.banner = latest.banner; view.tethers = latest.tethers;
     view.introDur = latest.introDur; view.roundTimer = latest.roundTimer;
     view.bossWipedRound = latest.bossWipedRound; view.stats = latest.stats;
+    view.bossCustom = latest.bossCustom;
     view.timeAnchors = latest.timeAnchors || [];
     view.timeAnchorRitual = latest.timeAnchorRitual || null;
     // 投射物/區域/特效/可破壞物：生命短、移動快,取最新即可 (插值意義不大)

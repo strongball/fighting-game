@@ -51,7 +51,7 @@ const data = {
     basic: { name: '寒霜疾刺', type: 'melee', dmg: 34, range: 190, arc: 0.9, knockback: 90, cd: 0.8, windup: 0.2, telegraph: 'arc', color: '#9fe8ff', effect: CHILL(1), vfx: 'boss_frost_slash' },
     skill1: { name: '霜影突襲', type: 'blink', range: 460, dmg: 55, hitRadius: 160, knockback: 120, effect: CHILL(2), cd: 5.3, windup: 0.35, telegraph: 'self', color: '#74e0ff', vfx: 'boss_frost_blink' },
     skill2: { name: '鏡花幻影', type: 'summon_clones', count: 4, cd: 11.3, windup: 0.4, telegraph: 'self', color: '#bfefff', vfx: 'boss_frost_clones' },
-    ultimate: { name: '絕對冰域', type: 'zone', range: 0, radius: 350, dmg: 30, lifetime: 2.5, tick: 0.5, follow: true, effect: CHILL(2), cd: 14.3, windup: 0.6, telegraph: 'circle', color: '#cdf6ff', vfx: 'boss_frost_ult' },
+    ultimate: { name: '絕對冰域', type: 'zone', range: 0, radius: 300, dmg: 35, lifetime: 3.0, tick: 0.5, follow: true, effect: { kind: 'chill', duration: 4.0, stacks: 3, max: 4, freezeDur: 2.0 }, cd: 14.3, windup: 0.6, telegraph: 'circle', color: '#cdf6ff', vfx: 'boss_frost_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

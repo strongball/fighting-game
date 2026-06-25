@@ -56,9 +56,8 @@ const data = {
 
     basic: { name: '虛空裂斬', type: 'melee', dmg: 44, range: 320, arc: 1.3, knockback: 200, cd: 1.1, windup: 0.35, telegraph: 'arc', color: '#ffffff', vfx: 'boss_doppel_slash' },
     skill1: { name: '鏡像複製', type: 'mirror_players', cd: 18, once: true, windup: 0.6, telegraph: 'self', color: '#cfcfff', vfx: 'boss_doppel_mirror' },
-    skill2: { name: '竊取絕技', type: 'steal_ultimate', cd: 9.0, windup: 0.5, telegraph: 'self', color: '#b0b0ff', vfx: 'boss_doppel_steal',
-      chain: [{ slot: 'basic', windup: 0.2, delay: 0.15 }] },
-    ultimate: { name: '終焉之刻', type: 'zone', range: 0, radius: 470, dmg: 60, lifetime: 1.2, tick: 0.3, delay: 1.4, knockback: 200, effect: STUN(0.5), cd: 16.5, windup: 0.7, telegraph: 'circle', color: '#ffffff', vfx: 'boss_doppel_ult' },
+    skill2: { name: '竊取絕技', type: 'steal_ultimate', cd: 9.0, windup: 0.5, telegraph: 'self', color: '#b0b0ff', vfx: 'boss_doppel_steal' },
+    ultimate: { name: '終焉之刻', type: 'zone', range: 0, radius: 400, dmg: 60, lifetime: 1.2, tick: 0.3, delay: 1.4, knockback: 350, effect: STUN(1.0), cd: 16.5, windup: 0.7, telegraph: 'circle', color: '#ffffff', vfx: 'boss_doppel_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });

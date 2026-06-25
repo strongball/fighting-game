@@ -22,9 +22,9 @@ function startSelectedWindup(state: any, boss: any, slot: string) {
   computeBossInput(state, boss, 0.033);
 }
 
-describe('Round 12 star forge', () => {
+describe('Round 14 star forge', () => {
   it('uses only existing action types and chains the ultimate into a hammer', () => {
-    const boss: any = getBossForRound(12);
+    const boss: any = getBossForRound(14);
     expect([boss.basic.type, boss.skill1.type, boss.skill2.type, boss.ultimate.type]).toEqual([
       'melee', 'zone', 'zone', 'light_dark',
     ]);
@@ -62,7 +62,7 @@ describe('Round 12 star forge', () => {
     const { state, boss, left, right } = setup();
     boss.aiState.safeLeft = true;
     const leftHp = left.hp, rightHp = right.hp;
-    executeAction(state, boss, getBossForRound(12)!.ultimate);
+    executeAction(state, boss, getBossForRound(14)!.ultimate);
     expect(left.hp).toBe(leftHp);
     expect(right.hp).toBeLessThan(rightHp);
     expect(right.kvx).toBeGreaterThan(0);

@@ -34,6 +34,7 @@ export const NET_STATE_FIELDS = [
   'phase', 'winner', 'winnerTeam', 'time',
   'mode', 'round', 'bossId', 'bossHp', 'bossMaxHp',
   'roundPhase', 'roundTimer', 'introDur', 'banner', 'tethers', 'bossWipedRound',
+  'bossCustom',
   // 投射物 / 區域 / 特效：生命短、數量少，原樣帶上供渲染
   'projectiles', 'zones', 'fx',
 ] as const;

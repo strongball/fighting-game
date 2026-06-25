@@ -16,7 +16,7 @@ import { applyDecorations, updateDecorationFade } from './render3d/decorations.j
 import { createAtmosphere } from './render3d/atmosphere.js';
 import { createBossUltimateAura } from './render3d/bossUltimateAura.js';
 import { createTimeAnchorLayer } from './render3d/timeAnchors.js';
-import { getBossForRound } from './bosses.js';
+import { getBossForRound, getBoss } from './bosses.js';
 import { createCharacterModel, animateModel, attachSkin } from './render3d/models.js';
 import { computeBossVisualState, createBossPartModel } from './bosses/render3d.ts';
 import { sceneX, sceneZ } from './render3d/coords.js';
@@ -499,14 +499,33 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
 
     // 場景主題：偵測 (mode/round) 變化，套用 Boss 主題色 + 裝飾 + 大氣粒子
     if (state.mode === 'boss') {
+      const data = getBossForRound(state.round);
+      const theme = (data && data.theme) || null;
       if (state.round !== appliedThemeRound || appliedThemeMode !== 'boss') {
-        const data = getBossForRound(state.round);
-        const theme = (data && data.theme) || null;
         sceneMgr.applyTheme(theme);
         applyDecorations(sceneMgr.themeGroup, theme || {});
         atmosphere.setTheme(theme || {});
         appliedThemeRound = state.round;
         appliedThemeMode = 'boss';
+        sceneMgr._inSandstormVfx = false;
+      }
+
+      const bossEnt = Object.values(state.players).find((o) => o.isBoss && o.alive);
+      if (bossEnt) {
+        const bossData = getBoss(bossEnt.charId);
+        if (bossData && typeof bossData.renderTick === 'function') {
+          bossData.renderTick(state, bossEnt, dt, { sceneMgr, scene, atmosphere });
+        }
+      } else if (sceneMgr._customOverrideActive) {
+        sceneMgr._customOverrideActive = false;
+        if (theme) {
+          scene.background = new THREE.Color(theme.sky);
+          scene.fog = new THREE.Fog(theme.fog, theme.fogNear, theme.fogFar);
+          atmosphere.setTheme(theme);
+        } else {
+          sceneMgr.applyTheme(null);
+          atmosphere.setTheme({});
+        }
       }
     } else if (appliedThemeMode !== 'ffa') {
       sceneMgr.applyTheme(null);

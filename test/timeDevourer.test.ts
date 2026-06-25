@@ -18,7 +18,7 @@ function setup(playerCount = 2) {
   return { state, boss };
 }
 
-describe('Round 11 time anchors', () => {
+describe('Round 12 time anchors', () => {
   it('creates one anchor per living player and succeeds when all occupy one', () => {
     const { state, boss } = setup(3);
     prepareTimeAnchorRitual(state, boss, { windup: 5, finalPhaseWindup: 3.8, anchorRadius: 95 });

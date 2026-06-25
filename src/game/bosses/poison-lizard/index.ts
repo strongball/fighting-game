@@ -50,7 +50,7 @@ const data = {
     basic: { name: '毒爪', type: 'melee', dmg: 30, range: 210, arc: 1.1, knockback: 120, cd: 1.0, windup: 0.35, telegraph: 'arc', color: '#9acd32', effect: BURN(6, 2), vfx: 'boss_lizard_claw' },
     skill1: { name: '腐蝕毒吐', type: 'projectile', dmg: 22, speed: 680, radius: 16, lifetime: 1.1, count: 4, spread: 0.35, knockback: 40, cd: 6.0, windup: 0.4, telegraph: 'line', color: '#7fff00', effect: BURN(10, 3), leaveZone: { radius: 150, dmgPct: 0.025, lifetime: 4, tick: 0.5, effect: BURN(10, 2), color: '#5a8f2f', vfx: 'boss_lizard_pool' }, vfx: 'boss_lizard_spit' },
     skill2: { name: '毒沼飛撲', type: 'leap', range: 460, dur: 0.5, dmg: 60, radius: 180, knockback: 160, cd: 7.5, windup: 0.35, telegraph: 'circle', color: '#6a3d9a', effect: BURN(8, 2), leaveZone: { radius: 170, dmgPct: 0.025, lifetime: 5, tick: 0.5, effect: BURN(12, 2), color: '#4e7a2f', vfx: 'boss_lizard_pool' }, vfx: 'boss_lizard_pounce' },
-    ultimate: { name: '瘴氣風暴', type: 'zone', range: 180, radius: 210, dmgPct: 0.035, lifetime: 5, tick: 0.5, delay: 0.8, count: 7, scatter: 380, stagger: 0.16, effect: BURN(14, 3), cd: 14.3, windup: 0.6, telegraph: 'circle', color: '#6abf2f', vfx: 'boss_lizard_ult' },
+    ultimate: { name: '瘴氣風暴', type: 'zone', range: 240, radius: 200, dmg: 35, lifetime: 6, tick: 0.5, delay: 0.8, count: 8, scatter: 400, stagger: 0.16, effect: BURN(14, 3), cd: 14.3, windup: 0.6, telegraph: 'circle', color: '#6abf2f', vfx: 'boss_lizard_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });
