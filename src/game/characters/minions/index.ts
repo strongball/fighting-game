@@ -9,6 +9,7 @@ import bubbleMinion from '../../bosses/tidal-siren/bubble.ts';
 import bruiserMinion from './minion-bruiser.ts';
 import casterMinion from './minion-caster.ts';
 import revenantMinion from './minion-revenant.ts';
+import pylonMinion from '../../bosses/mecha-god/pylon.ts';
 
 export const MINIONS = {
   // -1/-2：通用雜兵，玩家與魔王共用（調整會影響關卡平衡，勿輕動）。
@@ -19,6 +20,8 @@ export const MINIONS = {
   '-4': bruiserMinion,
   '-5': casterMinion,
   '-6': revenantMinion,
+  // -7：魔王能量共振柱
+  '-7': pylonMinion,
 };
 
 export function getMinion(id) {
