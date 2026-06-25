@@ -145,7 +145,7 @@ export interface Projectile {
 
 /** 範圍區（由 entities/factories.ts makeZone 建立）。 */
 export interface Zone {
-  id: number;
+  id: number | string;
   owner: EntityId;
   x: number; y: number;
   radius: number; dmg: number;
