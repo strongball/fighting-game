@@ -13,19 +13,26 @@ import type { Player } from '../../../types';
 // 共用參數
 const FALCON = {
   crit: 1.7,          // 爆擊倍率（+70%，與鷹瞳同調）
-  splashRadius: 100,  // 對目標周圍敵人的濺射半徑（仿 Blitz Beat 3x3）
+  splashRadius: 130,  // 對目標周圍敵人的濺射半徑（仿 Blitz Beat 3x3）
   splashFactor: 0.6,  // 濺射目標承受比例
-  range: 380,         // 索敵半徑
+  range: 460,         // 索敵半徑（基礎放大，鷹打得更遠＝走位時更安全）
   intervalMin: 2.4,   // 平時兩次鷹擊間隔（秒）下限
   intervalMax: 3.4,   // 上限（區間內偽隨機）
   retry: 0.25,        // 射程內無敵人時的重試間隔
 };
 
+// 鷹的「有效索敵半徑」：鷹眼凝視 / 大招期間（p._falconRange）放大觸發範圍。
+function effectiveRange(p: any): number {
+  const fr = p._falconRange;
+  return FALCON.range * (fr && fr.remaining > 0 ? fr.mult : 1);
+}
+
 // 一次飛行的「招式參數」。總傷害守恆：hits × hitDmg × crit。
-// 平時獵鷹突擊：10 × 5.4 × 1.7 ≈ 91.8。
-const BLITZ = { hits: 10, hitDmg: 5.4, hitGap: 0.035, strikeAt: 0.2, dur: 0.62 };
+// 平時獵鷹突擊：10 × 5.4 × 1.7 ≈ 91.8（不帶擊退，避免把敵人推離自己的輸出範圍）。
+const BLITZ = { hits: 10, hitDmg: 5.4, hitGap: 0.035, strikeAt: 0.2, dur: 0.62, knockback: 0 };
 // 大絕鷹擊風暴：每趟更快（0.4s 來回）、6 段；風暴持續期間連續來回 → 打很多次。
-const STORM = { hits: 6, hitDmg: 6, hitGap: 0.04, strikeAt: 0.12, dur: 0.4 };
+// 每趟首擊帶「中等擊退」（弱於 K 的鷹擊·震退），把敵群推開＝保命。
+const STORM = { hits: 6, hitDmg: 6.2, hitGap: 0.04, strikeAt: 0.12, dur: 0.4, knockback: 90 };
 
 // 整數 PRNG（Math.imul 全平台一致），回傳 0..1。
 function mulberry32(a: number): number {
@@ -57,7 +64,7 @@ function nextInterval(f: any): number {
 
 function nearestEnemy(state: any, p: Player): Player | null {
   let best: Player | null = null;
-  let bestD = FALCON.range;
+  let bestD = effectiveRange(p);
   for (const o of Object.values(state.players) as any[]) {
     if (!o.alive || !isEnemy(state, p.id, o)) continue;
     const d = Math.hypot(o.x - p.x, o.y - p.y);
@@ -72,13 +79,15 @@ function launchFlight(state: any, p: Player, f: any, P: any): boolean {
   if (!tgt) return false;
   f.flight = {
     t: 0, dur: P.dur, hits: P.hits, hitDmg: P.hitDmg, hitGap: P.hitGap, strikeAt: P.strikeAt,
+    knockback: P.knockback || 0,
     targetId: tgt.id, tdx: tgt.x - p.x, tdy: tgt.y - p.y, trail: 0,
   };
   return true;
 }
 
 // 單段鷹擊：主目標必爆 + 周圍濺射。noTalent 避免擾動本體「鷹瞳每三發」計數與重複加成。
-function strike(state: any, p: Player, target: Player, idx: number, hitDmg: number) {
+// 每趟首擊（idx 0）帶擊退（把主目標推離自己），後續段不推、維持輸出。
+function strike(state: any, p: Player, target: Player, idx: number, hitDmg: number, knockback: number) {
   const facing = Math.atan2(target.y - p.y, target.x - p.x);
   dealDamage(state, target, hitDmg * FALCON.crit, p.id, { noTalent: true, source: 'falcon' });
   for (const o of Object.values(state.players) as any[]) {
@@ -88,8 +97,34 @@ function strike(state: any, p: Player, target: Player, idx: number, hitDmg: numb
     }
   }
   const big = idx === 0;
+  if (knockback && big) {
+    const d = Math.hypot(target.x - p.x, target.y - p.y) || 1;
+    target.kvx += (target.x - p.x) / d * knockback;
+    target.kvy += (target.y - p.y) / d * knockback;
+  }
   if (big) addFx(state, { type: 'dash', x: p.x, y: p.y, facing, color: '#ffd76a', life: 0.2, vfx: 'falconer_swoop' });
   addFx(state, { type: 'hit', x: target.x, y: target.y, facing, color: '#ffd76a', life: big ? 0.34 : 0.22, radius: big ? 30 : 18, width: idx, vfx: 'falconer_swoop' });
+}
+
+// K「鷹擊·震退」：鷹自肩飛出朝四周俯衝，把附近敵人強力擊退（弱傷、重在 peel 保命）。
+// 由 talent.onCastResolved（slot 'skill1'）呼叫。擊退強於大招的每趟首擊。
+export function falconPeel(state: any, p: Player, opts: any = {}) {
+  const radius = opts.radius || 240;
+  const dmg = opts.dmg || 36;
+  const kb = opts.knockback || 220;
+  for (const o of Object.values(state.players) as any[]) {
+    if (o === p || !o.alive || !isEnemy(state, p.id, o)) continue;
+    const dx = o.x - p.x, dy = o.y - p.y;
+    const d = Math.hypot(dx, dy);
+    if (d > radius) continue;
+    dealDamage(state, o, dmg, p.id, { noTalent: true, source: 'falcon' });
+    const dd = d || 1;
+    o.kvx += dx / dd * kb;
+    o.kvy += dy / dd * kb;
+    addFx(state, { type: 'hit', x: o.x, y: o.y, facing: Math.atan2(dy, dx), color: '#ffd76a', life: 0.3, radius: 24, vfx: 'falconer_swoop' });
+  }
+  // 鷹俯衝的落地金色衝擊環（重用 falconer_dive）
+  addFx(state, { type: 'dash', x: p.x, y: p.y, facing: p.facing, color: '#ffd76a', life: 0.3, vfx: 'falconer_dive' });
 }
 
 // 大絕：開啟「鷹擊風暴」——一段時間內鷹連續來回俯衝。由 talent.onCastResolved 呼叫。
@@ -106,6 +141,9 @@ export function tickFalcon(state: any, p: Player, dt: number) {
     return;
   }
   const f = ensureFalcon(p);
+
+  // 鷹眼凝視 / 大招期間的「索敵範圍放大」buff 計時（由 talent.onCastResolved 設定）。
+  if (p._falconRange && p._falconRange.remaining > 0) p._falconRange.remaining -= dt;
 
   // 風暴計時（持續期間讓鷹不斷來回），並週期性放出「風暴氛圍」脈衝（擴張金環＋旋繞金羽）。
   if (f.frenzy) {
@@ -137,7 +175,7 @@ export function tickFalcon(state: any, p: Player, dt: number) {
     }
     for (let h = 0; h < fl.hits; h++) {
       const hitTime = fl.strikeAt + h * fl.hitGap;
-      if (prev < hitTime && fl.t >= hitTime && aim) strike(state, p, aim, h, fl.hitDmg);
+      if (prev < hitTime && fl.t >= hitTime && aim) strike(state, p, aim, h, fl.hitDmg, fl.knockback);
     }
     if (fl.t >= fl.dur) {
       f.flight = null;
