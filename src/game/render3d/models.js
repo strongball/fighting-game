@@ -363,9 +363,10 @@ export function createCharacterModel(charId) {
   group.add(rootRing);
 
   if (parts.barrageWings) group.add(parts.barrageWings);
+  if (parts.falcon) group.add(parts.falcon);
 
   group.userData = {
-    parts: { torso, head, armL, armR, legL, legR, emblem, shieldRing, shieldShell, rageRing, burnRing, frozenRingLow, frozenRingHigh, stunRing, stunHalo, rootRing, handR, face, accents, starOrbitShards: parts.starOrbitShards, barrageWings: parts.barrageWings },
+    parts: { torso, head, armL, armR, legL, legR, emblem, shieldRing, shieldShell, rageRing, burnRing, frozenRingLow, frozenRingHigh, stunRing, stunHalo, rootRing, handR, face, accents, starOrbitShards: parts.starOrbitShards, barrageWings: parts.barrageWings, falcon: parts.falcon },
     skinMats,
     phase: Math.random() * Math.PI * 2,
     breathe: Math.random() * Math.PI * 2,
@@ -790,6 +791,54 @@ export function animateModel(group, dt, info) {
       }
       wings.scale.setScalar(0.7 + 0.6 * e);                   // 展開後放大到 1.3×
       if (wings.userData.mat) wings.userData.mat.opacity = 0.25 + 0.72 * e;
+    }
+  }
+
+  // 鳥獵鷹隼：平時棲於肩、攻擊時「飛出俯衝」再返回。
+  // 由 sim 的 p._falcon.flight = { t, dur } 驅動（falcon.ts）；模型恆面向 +X → 往 +X 飛即朝敵。
+  if (parts.falcon) {
+    const fal = parts.falcon;
+    const rest = fal.userData.rest;
+    const wings = fal.userData.wings || [];
+    const fl = p && p._falcon && p._falcon.flight;
+    ud.falconFlap = (ud.falconFlap || 0) + dt * (fl ? 26 : 6);
+    if (fl) {
+      const u = Math.min(1, fl.t / (fl.dur || 0.62));
+      const arc = Math.sin(u * Math.PI);          // 0→1→0：去程＋回程
+      // 把「世界位移(tdx,tdy)」轉成模型本地座標（group 已繞 Y 轉 ud.curFacing）→ 飛到敵人實際位置。
+      const th = ud.curFacing || 0, c2 = Math.cos(th), s2 = Math.sin(th);
+      const wx = fl.tdx || 0, wz = fl.tdy || 0;
+      const lx = wx * c2 - wz * s2;
+      const lz = wx * s2 + wz * c2;
+      // 弧線飛行：沿「棲位→敵人」推進(arc)，外加垂直方向的側擺 → 去程/回程走不同側形成弧/環，不是直線來回。
+      const dirx = lx - rest.x, dirz = lz - rest.z;
+      const dl = Math.hypot(dirx, dirz) || 1;
+      const perpx = -dirz / dl, perpz = dirx / dl;
+      const lateral = Math.sin(u * Math.PI * 2) * Math.min(70, dl * 0.22); // 來回不同側的弧度（隨距離、上限 70）
+      fal.position.x = rest.x + dirx * arc + perpx * lateral;
+      fal.position.z = rest.z + dirz * arc + perpz * lateral;
+      fal.position.y = rest.y + (24 - rest.y) * arc + Math.sin(u * Math.PI) * 8; // 拋物高度：先升後俯衝下探
+      // 鷹頭朝「實際飛行方向」：用上一幀位移求向量（含弧線側擺）→ 去程朝敵、回程朝你都自然。
+      const hx = fal.position.x - (ud.falPrevX != null ? ud.falPrevX : fal.position.x);
+      const hz = fal.position.z - (ud.falPrevZ != null ? ud.falPrevZ : fal.position.z);
+      if (Math.hypot(hx, hz) > 0.05) fal.rotation.y = Math.atan2(-hz, hx);
+      ud.falPrevX = fal.position.x; ud.falPrevZ = fal.position.z;
+      fal.rotation.z = -arc * 0.4 + lateral * 0.01;    // 俯衝前傾 + 轉彎側傾
+      const flap = Math.sin(ud.falconFlap) * 0.6;      // 急速拍翼
+      for (const w of wings) w.rotation.x = w.userData.side * (0.2 + flap);
+      const storm = p && p._falcon && p._falcon.frenzy ? 1.3 : 1; // 大絕風暴：鷹更巨大有壓迫感
+      fal.scale.setScalar((fal.userData.baseScale || 1) * (1.5 + arc * 0.5) * storm);
+    } else {
+      // 棲息：輕微上下浮動 + 緩慢拍翼，平滑回到棲位。
+      fal.position.x += (rest.x - fal.position.x) * Math.min(1, dt * 10);
+      fal.position.z += (rest.z - fal.position.z) * Math.min(1, dt * 10);
+      fal.position.y = rest.y + Math.sin(ud.breathe * 2) * 0.6;
+      fal.rotation.z += (0 - fal.rotation.z) * Math.min(1, dt * 10);
+      fal.rotation.y += (0 - fal.rotation.y) * Math.min(1, dt * 10);
+      fal.scale.setScalar(fal.userData.baseScale || 1);
+      ud.falPrevX = null; ud.falPrevZ = null;
+      const flap = Math.sin(ud.falconFlap) * 0.12;
+      for (const w of wings) w.rotation.x = w.userData.side * (0.1 + flap);
     }
   }
 
