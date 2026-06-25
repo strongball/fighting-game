@@ -64,7 +64,7 @@ registerBossAction('summon_bubble', (state, boss, a, h) => {
     vfx: 'boss_siren_warning_bubble',
     follow: bubbleId
   });
-  warningZone.id = warningZoneId;
+  (warningZone as any).id = warningZoneId;
   state.zones = state.zones || [];
   state.zones.push(warningZone);
 
