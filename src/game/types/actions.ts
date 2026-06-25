@@ -13,8 +13,13 @@ export interface Input {
   basic: boolean; skill1: boolean; skill2: boolean; ultimate: boolean; evade: boolean;
   item1: boolean; item2: boolean;
   /** 魔王 AI 合成的瞄準角度；人類玩家為 null（以移動方向轉向）。 */
-  aim: number | null;  /** 允許以 slot 字串動態索引（casting.ts 的 input[slot]）。 */
-  [key: string]: boolean | number | null;}
+  aim: number | null;
+  /** 本地真人：自動瞄準（A 出招微吸附）開關。AI/腳本輸入不帶此旗標。見 systems/autoLock.ts。 */
+  assist?: boolean;
+  /** 本地真人：按住鎖定（C）鍵是否按下。見 systems/autoLock.ts。 */
+  lock?: boolean;
+  /** 允許以 slot 字串動態索引（casting.ts 的 input[slot]）。 */
+  [key: string]: boolean | number | null | undefined;}
 
 /**
  * 已知 action type。以 `(string & {})` 收尾保留擴充彈性。

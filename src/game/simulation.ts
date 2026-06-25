@@ -13,6 +13,7 @@ import { resolveCollisions } from './systems/collisions.ts';
 import { tickStatusEffects } from './systems/effects.ts';
 import { updateFx } from './systems/fx.ts';
 import { applyMovement, speedOf } from './systems/movement.ts';
+import { applyPlayerAutoLock } from './systems/autoLock.ts';
 import { tickCharacterTimers, tickCooldowns, tickPassiveRecovery, tickSummonLife } from './systems/playerState.ts';
 import { updateProjectiles } from './systems/projectiles.ts';
 import { checkWin } from './systems/win.ts';
@@ -85,6 +86,7 @@ export function step(state: GameState, inputs: Record<string, Input>, dt: number
         p._lastInput.item2 = !!input.item2;
       }
 
+      applyPlayerAutoLock(state, p, input); // 自動瞄準/鎖定：在轉向前合成 input.aim（僅本地真人）
       applyMovement(p, input, dt, state.flags.difficulty ?? 0.5);
 
       processTrail(state, p, dt); // 移動留痕 (冰霜足跡)

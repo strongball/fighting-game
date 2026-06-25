@@ -511,13 +511,14 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
       const root = document.createElement('div');
       root.className = 'nplate';
       const status = el('div', 'nstatus', root);
+      const lock = el('div', 'nlock', root); lock.textContent = '🔒'; lock.style.display = 'none';
       const name = el('div', 'nname', root);
       const hpw = el('div', 'nbar', root); const hp = el('i', 'hp-fill', hpw); const shield = el('i', 'shield-fill', hpw);
       const mpw = el('div', 'nbar mana', root); const mp = el('i', '', mpw);
       const buffs = el('div', 'nbuffs', root);
       const obj = new CSS2DObject(root);
       scene.add(obj);
-      pl = { obj, name, hp, shield, mp, root, status, buffs };
+      pl = { obj, name, hp, shield, mp, root, status, buffs, lock };
       plates.set(pid, pl);
     }
     return pl;
@@ -529,6 +530,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
     // 頭頂名牌
     const me0 = state.players[selfId];
     const selfTeam = me0 ? (me0.team || 0) : 0;
+    const lockId = me0 ? me0.lockTargetId : null; // 本地玩家按住鎖定(C)的目標 → 名牌標鎖頭
     const rel = (p) => {
       if (p.id === selfId) return 'self';
       if (selfTeam > 0 && (p.team || 0) === selfTeam) return 'ally';
@@ -593,6 +595,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
       } else {
         setStyle(pl.status, 'display', 'none');
       }
+      setStyle(pl.lock, 'display', lockId && p.id === lockId ? '' : 'none');
       pl.obj.visible = true;
     }
     for (const [pid, pl] of plates) if (!seen.has(pid)) pl.obj.visible = false;
