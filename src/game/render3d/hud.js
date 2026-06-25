@@ -826,9 +826,10 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
 
     // 站進敵方地面危險區的警示已移到 hud widget（hud/widgets/hazardAlert.js），於 update 尾端更新。
 
-    // 機制提示卡：boss 模式才顯示；intro / fighting / wiped 都顯示，cleared 時隱藏
+    // 機制提示卡：boss 模式才顯示；intro / fighting / wiped 都顯示，cleared 時隱藏。
+    // 行動端不顯示（小螢幕會被這張卡占滿；機制已於出場 intro 揭曉，且頂部 tag 晶片也有）。
     const isBossMode = state.mode === 'boss';
-    const showMech = isBossMode && state.roundPhase !== 'cleared' && !state.banner;
+    const showMech = !isMobile && isBossMode && state.roundPhase !== 'cleared' && !state.banner;
     setStyle(mechCard, 'display', showMech ? '' : 'none');
     if (showMech) {
       let bossForCard = null;
