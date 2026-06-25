@@ -132,8 +132,12 @@ export function dealDamage(
   attackerId: EntityId,
   opts: { noTalent?: boolean; noReflect?: boolean; meleeHit?: boolean; dot?: boolean; source?: string | null } = {},
 ) {
+  // Invulnerable entities do not take damage
+  if (target.invulnerable) return;
+
   if (!target.alive || amount <= 0) return;
   if (target.effects && target.effects.evading) return;
+
   // 闖關登場動畫期間：全場無敵
   if (state.mode === 'boss' && state.roundPhase !== 'fighting') return;
   // 階段轉換 i-frame：Boss 短暫無敵

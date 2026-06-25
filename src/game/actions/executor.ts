@@ -40,6 +40,18 @@ export function executeAction(state: GameState, caster: Player, action: ActionDe
   const handler = ACTION_HANDLERS.get(action.type);
   if (handler) handler(ctx);
   else executeBossAction(state, caster, action, bossActionHelpers());
+
+  // Replicate Boss actions for active shadow clones
+  if (caster.isBoss && !caster.isFake && !opts.cloneCast) {
+    const clones = Object.values(state.players).filter(
+      (p: any) => p.alive && p.ownerId === caster.id && p.isFake && p.charId === caster.charId
+    );
+    clones.forEach((clone) => {
+      clone.facing = caster.facing;
+      executeAction(state, clone, action, { ...opts, cloneCast: true });
+    });
+  }
+
   runPostActionEffects(ctx);
   caster._srcSlot = prevSrc;
   maybeScheduleTemporalEcho(state, caster, action);

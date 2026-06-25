@@ -554,6 +554,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
     if (huntedId && huntedId === selfId) selfAlert = '🐺 你被盯上了！快拉開距離';
     else if (state.tethers && state.tethers.some((t) => t.a === selfId || t.b === selfId)) selfAlert = '🔗 你被靈魂綁定 — 與隊友拉開距離';
     else if (isLavaBurning(state, meForAlert)) selfAlert = '🔥 熔岩灼燒中 — 先拉開恢復空間';
+    else if (meForAlert && meForAlert.effects && meForAlert.effects.blind) selfAlert = '🌚 你被致盲了！畫面一片漆黑';
     setStyle(huntWarn, 'display', selfAlert ? '' : 'none');
     if (selfAlert) setText(huntWarn, selfAlert);
     for (const p of players) {

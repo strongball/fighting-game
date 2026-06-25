@@ -33,10 +33,10 @@ describe('Boss challenge mode', () => {
     expect(state.phase).toBe('playing');
   });
 
-  it('ends the campaign after defeating Round 15', () => {
-    const state = clearedBossState(15, 'campaign');
+  it('ends the campaign after defeating Round 16', () => {
+    const state = clearedBossState(16, 'campaign');
     checkBossRound(state, 1 / 30);
-    expect(state.round).toBe(15);
+    expect(state.round).toBe(16);
     expect(state.roundPhase).toBe('victory');
     expect(state.phase).toBe('gameover');
   });
