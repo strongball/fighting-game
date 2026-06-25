@@ -1,18 +1,16 @@
 // @ts-nocheck
-// 忍者：隱密、煙霧、幻影。旋轉手裏劍 / 煙霧雲 / 影分身瞬移。
+// 忍者：隱密、影分身、處決。手裏劍 / 定身符 / 影襲·處決瞬移爆斬 / 千影殘影亂舞。
 import * as THREE from 'three';
 import { registerVfx } from '../../../render3d/vfx/registry.js';
-import { ring, burst, column } from '../../../render3d/vfx/lib.js';
+import { ring, burst, column, slashBlade, sphereFlash, cone, addShake, addFlash } from '../../../render3d/vfx/lib.js';
 
-// Calligraphy canvas texture helper for Japanese/Chinese ink style text
+// 書法墨字貼圖（影襲落點的「影」字殘影）
 function createCalligraphyTexture(text, colorStr = '#1a1a1a', size = 128) {
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, size, size);
-
-  // Soft ink splash background
   const grad = ctx.createRadialGradient(size / 2, size / 2, 2, size / 2, size / 2, size * 0.45);
   grad.addColorStop(0, 'rgba(44, 62, 80, 0.25)');
   grad.addColorStop(0.5, 'rgba(26, 37, 48, 0.1)');
@@ -21,399 +19,161 @@ function createCalligraphyTexture(text, colorStr = '#1a1a1a', size = 128) {
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size * 0.45, 0, Math.PI * 2);
   ctx.fill();
-
-  // Ink splatter particles
   ctx.fillStyle = colorStr;
   for (let i = 0; i < 7; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = size * (0.22 + Math.random() * 0.2);
-    const r = size * (0.02 + Math.random() * 0.04);
+    const angle = (i / 7) * Math.PI * 2;
+    const dist = size * 0.3;
+    const r = size * 0.04;
     ctx.beginPath();
     ctx.arc(size / 2 + Math.cos(angle) * dist, size / 2 + Math.sin(angle) * dist, r, 0, Math.PI * 2);
     ctx.fill();
   }
-
-  // Draw the calligraphy character
   ctx.font = `bold ${size * 0.65}px "Kaiti", "STKaiti", "SimSun", "Microsoft YaHei", serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
   ctx.shadowBlur = 4;
   ctx.fillText(text, size / 2, size / 2);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
+  return new THREE.CanvasTexture(canvas);
 }
 
-// 大絕招 — 煙影亂舞：忍秘傳·百刃煙嵐陣
+// 一道「影分身」殘影（半透明三角錐）+ 斬擊刀光，用於處決與千影的每一擊
+function shadowCloneStrike(ctx, c, facing, { big = false, slashColor = '#eaf2ff' } = {}) {
+  const TH = ctx.THREE;
+  const cloneGeo = new TH.ConeGeometry(big ? 12 : 9, big ? 30 : 22, 4);
+  const cloneMat = new TH.MeshBasicMaterial({ color: 0x10161f, transparent: true, opacity: 0.85, blending: TH.NormalBlending, depthWrite: false });
+  const clone = new TH.Mesh(cloneGeo, cloneMat);
+  clone.position.set(c.x, big ? 15 : 12, c.z);
+  clone.rotation.x = Math.PI / 2;
+  clone.rotation.y = -facing;
+  ctx.addTransient(clone, big ? 0.4 : 0.34, (mesh, t) => {
+    mesh.position.x = c.x - Math.cos(facing) * t * (big ? 26 : 18);
+    mesh.position.z = c.z - Math.sin(facing) * t * (big ? 26 : 18);
+    cloneMat.opacity = 0.85 * (1 - t);
+    mesh.scale.setScalar(1 + t * 0.5);
+  });
+  clone.userData.geo = cloneGeo;
+  clone.userData.mat = cloneMat;
+
+  // 交叉斬：亮白主刃 + 影色副刃
+  slashBlade(ctx, c, facing, { color: slashColor, len: big ? 96 : 64, w: big ? 13 : 8, swing: 1.7, life: big ? 0.24 : 0.18 });
+  slashBlade(ctx, c, facing + 0.5, { color: '#2c3e50', len: big ? 80 : 54, w: big ? 9 : 6, swing: -1.5, life: big ? 0.22 : 0.16 });
+  burst(ctx, c, { color: ['#10161f', '#2c3e50', '#9aa4b2'], count: big ? 18 : 10, speed: big ? 240 : 150, up: 30, life: 0.4, size: big ? 4.5 : 3 });
+}
+
+// 大絕 — 千影：影分身亂舞（cast 一發大爆＋每次瞬斬一道殘影）
 registerVfx('ninja_ultimate', {
   onCast(ctx, f, c) {
-    const R = f.radius || 170;
-    ctx.sceneMgr.addShake(12);
-    ctx.sceneMgr.addFlash(0.18, '#cfd8dc');
-    
-    // 起手墨印爆發
-    ring(ctx, c, { color: '#b0bec5', from: 12, to: 120, life: 0.5, y: 4, alpha: 0.85 });
-    for (let i = 0; i < 48; i++) {
-      const a = Math.random() * Math.PI * 2, rr = Math.random() * 60;
-      ctx.particles.spawn({
-        x: c.x + Math.cos(a) * rr, y: Math.random() * 32, z: c.z + Math.sin(a) * rr,
-        vx: Math.cos(a) * (60 + Math.random() * 80), vy: 20 + Math.random() * 40, vz: Math.sin(a) * (60 + Math.random() * 80),
-        gravity: -6, drag: 1.4, life: 0.7 + Math.random() * 0.5,
-        size: 8 + Math.random() * 8, color: Math.random() < 0.5 ? '#4b5358' : '#2c3e50', fade: false
-      });
+    if (f.type === 'ultimate') {
+      // 起手：全螢幕暗影爆閃 + 墨環
+      addShake(ctx, 16);
+      addFlash(ctx, 0.3, '#1a2433');
+      ring(ctx, c, { color: '#b0bec5', from: 16, to: 200, life: 0.6, y: 4, alpha: 0.9, ease: true });
+      ring(ctx, c, { color: '#2c3e50', from: 8, to: 150, life: 0.45, y: 8, alpha: 0.8 });
+      sphereFlash(ctx, c, { color: '#cfd8dc', from: 10, to: 120, life: 0.34, alpha: 0.9 });
+      burst(ctx, c, { color: ['#10161f', '#2c3e50', '#9aa4b2'], count: 56, speed: 360, up: 70, life: 0.7, size: 5.5 });
+      column(ctx, c, { color: '#8a93a3', count: 16, radius: 26, speed: 150, life: 0.5, size: 4 });
+    } else {
+      // 每次影分身瞬斬
+      shadowCloneStrike(ctx, c, f.facing || 0, { big: false, slashColor: '#dfe9f5' });
     }
   },
-  zone(ctx, z) {
-    const THREE = ctx.THREE;
-    const g = new THREE.Group();
-    const R = z.radius || 170;
+});
 
-    const geos = [];
-    const mats = [];
+// 大絕招 — 影襲·處決：瞬移到被控目標背後的致命爆斬
+registerVfx('ninja_shadowstrike', {
+  onCast(ctx, f, c) {
+    const big = !!f.big; // 命中被控目標的處決（big）vs 退化瞬移（一般）
+    addShake(ctx, big ? 13 : 6);
+    addFlash(ctx, big ? 0.26 : 0.12, big ? '#0e1622' : '#2c3e50');
 
-    // 1. 手裏劍軌跡環
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x9b59b6,
-      transparent: true,
-      opacity: 0.6,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide
-    });
-    mats.push(ringMat);
-
-    const ringGeos = [];
-    const ringMeshes = [];
-    for (let k = 0; k < 3; k++) {
-      const tg = new THREE.TorusGeometry(R * 0.45 + k * 18, 1.2, 4, 32);
-      const tm = new THREE.Mesh(tg, ringMat);
-      tm.rotation.set(
-        Math.PI / 2 + (k - 1) * 0.4,
-        (k - 1) * 0.2,
-        0
-      );
-      g.add(tm);
-      ringGeos.push(tg);
-      ringMeshes.push(tm);
-    }
-    geos.push(...ringGeos);
-
-    // 2. 飛旋的立體手裏劍
-    const bladeGeo = new THREE.BoxGeometry(R * 0.38, 0.4, 4);
-    const shurikenMat = new THREE.MeshStandardMaterial({
-      color: 0x2c3e50,
-      emissive: 0x9b59b6,
-      emissiveIntensity: 2.2,
-      metalness: 0.9,
-      roughness: 0.2
-    });
-    geos.push(bladeGeo);
-    mats.push(shurikenMat);
-
-    const shurikens = [];
-    for (let k = 0; k < 4; k++) {
-      const sGroup = new THREE.Group();
-      const b1 = new THREE.Mesh(bladeGeo, shurikenMat);
-      const b2 = new THREE.Mesh(bladeGeo, shurikenMat);
-      b2.rotation.y = Math.PI / 2;
-      sGroup.add(b1, b2);
-      
-      const angle = (k / 4) * Math.PI * 2;
-      sGroup.position.set(Math.cos(angle) * R * 0.65, 8 + (k % 2) * 8, Math.sin(angle) * R * 0.65);
-      g.add(sGroup);
-      shurikens.push({ group: sGroup, baseAngle: angle, y: 8 + (k % 2) * 8 });
+    // 落點「影」字殘影（僅處決時）
+    if (big) {
+      const tex = createCalligraphyTexture('影', '#0b0f16');
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.95, depthWrite: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.position.set(c.x, 18, c.z);
+      sprite.scale.set(34, 34, 1);
+      ctx.addTransient(sprite, 0.6, (mesh, t) => { mesh.position.y = 18 + t * 26; mat.opacity = 0.95 * (1 - t); mesh.scale.setScalar(34 * (1 + t * 0.4)); });
+      sprite.userData.geo = { dispose() { tex.dispose(); } };
+      sprite.userData.mat = mat;
     }
 
-    g.userData.geo = { dispose: () => geos.forEach(geo => geo.dispose()) };
-    g.userData.mat = { dispose: () => mats.forEach(mat => mat.dispose()) };
-
-    let age = 0;
-    return {
-      object3D: g,
-      update(dt, zz) {
-        g.position.y = 2;
-        age += dt;
-
-        g.rotation.y -= dt * 1.5;
-
-        shurikens.forEach((s, idx) => {
-          s.group.rotation.y += dt * 25;
-          const orbitalAngle = s.baseAngle + age * 2.2;
-          const localX = Math.cos(orbitalAngle) * R * 0.65;
-          const localZ = Math.sin(orbitalAngle) * R * 0.65;
-          
-          const worldX = g.position.x + localX;
-          const worldZ = g.position.z + localZ;
-          
-          // 若出界則隱藏手裏劍，防止手裏劍在牆壁邊緣擠成一條線，轉回場內時才重新顯示
-          if (worldX < -595 || worldX > 595 || worldZ < -395 || worldZ > 395) {
-            s.group.visible = false;
-          } else {
-            s.group.visible = true;
-            s.group.position.set(localX, s.y + Math.sin(age * 6 + idx) * 3, localZ);
-          }
-        });
-
-        ringMeshes.forEach((rm, idx) => {
-          rm.rotation.z += dt * (4 + idx * 2);
-        });
-
-        const alpha = Math.max(0, 1 - age / z.lifetime);
-        ringMat.opacity = 0.6 * alpha;
-        shurikenMat.opacity = 0.9 * alpha;
-
-        if (Math.random() < 0.34) {
-          const pAngle = Math.random() * Math.PI * 2;
-          const pRadius = R * (0.3 + Math.random() * 0.5);
-          ctx.particles.spawn({
-            x: g.position.x + Math.cos(pAngle) * pRadius,
-            y: 4 + Math.random() * 26,
-            z: g.position.z + Math.sin(pAngle) * pRadius,
-            vx: Math.cos(pAngle) * (60 + Math.random() * 60),
-            vy: 10 + Math.random() * 30,
-            vz: Math.sin(pAngle) * (60 + Math.random() * 60),
-            gravity: -5, drag: 1.45, life: 0.65,
-            size: 6 + Math.random() * 6,
-            color: Math.random() < 0.5 ? '#1a252f' : '#4b5358', fade: true
-          });
-        }
-      }
-    };
-  }
+    // 主視覺：殘影 + 巨型處決斬
+    shadowCloneStrike(ctx, c, f.facing || 0, { big, slashColor: big ? '#ffffff' : '#cfd8dc' });
+    if (big) {
+      sphereFlash(ctx, c, { color: '#eef4ff', from: 8, to: 70, life: 0.24, alpha: 0.98 });
+      ring(ctx, c, { color: '#2c3e50', from: 6, to: 110, life: 0.4, y: 8, ease: true });
+      cone(ctx, c, f.facing || 0, { color: ['#0e1622', '#2c3e50', '#9aa4b2'], count: 22, speed: 360, spread: 0.6, offset: 30, up: 36, life: 0.45, size: 4 });
+    } else {
+      ring(ctx, c, { color: '#636e72', from: 4, to: 56, life: 0.3, y: 6, alpha: 0.8 });
+    }
+  },
 });
 
 registerVfx('ninja_shuriken', {
   projectile(ctx, pr) {
-    const THREE = ctx.THREE;
-    const g = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x151b24,
-      emissive: 0x2c3e50,
-      emissiveIntensity: 1.5,
-      metalness: 0.9,
-      roughness: 0.15,
-      side: THREE.DoubleSide
-    });
+    const TH = ctx.THREE;
+    const g = new TH.Group();
+    const mat = new TH.MeshStandardMaterial({ color: 0x151b24, emissive: 0x2c3e50, emissiveIntensity: 1.5, metalness: 0.9, roughness: 0.15, side: TH.DoubleSide });
     const r = pr.radius * 2.2;
-    const aGeo = new THREE.BoxGeometry(r * 2, 0.8, r * 0.45);
-    const bGeo = new THREE.BoxGeometry(r * 0.45, 0.8, r * 2);
-    const hubGeo = new THREE.CylinderGeometry(r * 0.28, r * 0.28, 1.2, 8);
-    
-    const a = new THREE.Mesh(aGeo, mat);
-    const b = new THREE.Mesh(bGeo, mat);
-    const hub = new THREE.Mesh(hubGeo, mat);
+    const aGeo = new TH.BoxGeometry(r * 2, 0.8, r * 0.45);
+    const bGeo = new TH.BoxGeometry(r * 0.45, 0.8, r * 2);
+    const hubGeo = new TH.CylinderGeometry(r * 0.28, r * 0.28, 1.2, 8);
+    const a = new TH.Mesh(aGeo, mat), b = new TH.Mesh(bGeo, mat), hub = new TH.Mesh(hubGeo, mat);
     g.add(a, b, hub);
-    
-    g.userData.geo = {
-      dispose() {
-        aGeo.dispose();
-        bGeo.dispose();
-        hubGeo.dispose();
-      }
-    };
+    g.userData.geo = { dispose() { aGeo.dispose(); bGeo.dispose(); hubGeo.dispose(); } };
     g.userData.mat = mat;
-
     return {
       object3D: g,
       update(dt) {
-        g.rotation.y += dt * 32; // Spin flat
-        // Ink splatter trail
+        g.rotation.y += dt * 32;
         if (Math.random() < 0.65) {
-          ctx.particles.spawn({
-            x: g.position.x + (Math.random() - 0.5) * 1.5,
-            y: g.position.y,
-            z: g.position.z + (Math.random() - 0.5) * 1.5,
-            vx: (Math.random() - 0.5) * 8,
-            vy: (Math.random() - 0.5) * 8,
-            vz: (Math.random() - 0.5) * 8,
-            drag: 3,
-            life: 0.28 + Math.random() * 0.22,
-            size: pr.radius * (1.3 + Math.random() * 0.7),
-            color: Math.random() < 0.65 ? '#1a1a1a' : '#2c3e50',
-            fade: true
-          });
+          ctx.particles.spawn({ x: g.position.x + (Math.random() - 0.5) * 1.5, y: g.position.y, z: g.position.z + (Math.random() - 0.5) * 1.5, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, vz: (Math.random() - 0.5) * 8, drag: 3, life: 0.28 + Math.random() * 0.22, size: pr.radius * (1.3 + Math.random() * 0.7), color: Math.random() < 0.65 ? '#1a1a1a' : '#2c3e50', fade: true });
         }
       },
     };
   },
   onHit(ctx, f, c) {
-    // Ink ring and splash
     ring(ctx, c, { color: '#2c3e50', from: 4, to: (f.radius || 14) * 2.8, life: 0.32, y: 8, alpha: 0.85 });
     for (let i = 0; i < 14; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const spd = 70 + Math.random() * 120;
-      ctx.particles.spawn({
-        x: c.x, y: 8, z: c.z,
-        vx: Math.cos(a) * spd, vy: 50 + Math.random() * 90, vz: Math.sin(a) * spd,
-        drag: 1.8, life: 0.42 + Math.random() * 0.28,
-        size: 3.5 + Math.random() * 4,
-        color: Math.random() < 0.6 ? '#1a1a1a' : '#2c3e50',
-        fade: true
-      });
+      const a = (i / 14) * Math.PI * 2;
+      const spd = 70 + (i % 5) * 24;
+      ctx.particles.spawn({ x: c.x, y: 8, z: c.z, vx: Math.cos(a) * spd, vy: 50 + (i % 4) * 22, vz: Math.sin(a) * spd, drag: 1.8, life: 0.42 + (i % 3) * 0.1, size: 3.5 + (i % 3) * 1.4, color: i % 2 ? '#1a1a1a' : '#2c3e50', fade: true });
     }
-  },
-});
-
-registerVfx('ninja_smoke', {
-  onCast(ctx, f, c) {
-    // 大片煙霧雲：緩慢膨脹的灰色濃煙 + 低矮環
-    for (let i = 0; i < 34; i++) {
-      const a = Math.random() * Math.PI * 2, rr = Math.random() * 40;
-      ctx.particles.spawn({
-        x: c.x + Math.cos(a) * rr, y: Math.random() * 30, z: c.z + Math.sin(a) * rr,
-        vx: Math.cos(a) * (30 + Math.random() * 50), vy: 20 + Math.random() * 40, vz: Math.sin(a) * (30 + Math.random() * 50),
-        gravity: -8, drag: 1.5, life: 0.8 + Math.random() * 0.7, size: 8 + Math.random() * 8,
-        color: Math.random() < 0.5 ? '#4b5358' : '#2c3e50', fade: false,
-      });
-    }
-    ring(ctx, c, { color: '#636e72', from: 10, to: 80, life: 0.5, y: 2, alpha: 0.6 });
-  },
-});
-
-registerVfx('ninja_shadowblink', {
-  onCast(ctx, f, c) {
-    const THREE = ctx.THREE;
-    const R = f.range || 320;
-    
-    const startX = c.x - Math.cos(f.facing) * R;
-    const startZ = c.z - Math.sin(f.facing) * R;
-    const safeStartX = Math.max(-595, Math.min(595, startX));
-    const safeStartZ = Math.max(-395, Math.min(395, startZ));
-    
-    // Spawn at start and end positions
-    const points = [
-      { x: safeStartX, z: safeStartZ },
-      { x: c.x, z: c.z }
-    ];
-    
-    points.forEach((pt) => {
-      // Calligraphy Sprite
-      const tex = createCalligraphyTexture('忍', '#111111');
-      const mat = new THREE.SpriteMaterial({
-        map: tex,
-        transparent: true,
-        opacity: 0.95,
-        blending: THREE.NormalBlending
-      });
-      const sprite = new THREE.Sprite(mat);
-      sprite.position.set(pt.x, 14, pt.z);
-      sprite.scale.set(28, 28, 1);
-      
-      ctx.addTransient(sprite, 0.75, (mesh, t) => {
-        mesh.position.y = 14 + t * 24;
-        mat.opacity = 0.95 * (1 - t);
-        mesh.scale.setScalar(28 * (1 + t * 0.45));
-      });
-      
-      sprite.userData.geo = {
-        dispose() {
-          tex.dispose();
-        }
-      };
-      sprite.userData.mat = mat;
-      
-      // Ink burst particles
-      for (let i = 0; i < 22; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const sp = 70 + Math.random() * 90;
-        ctx.particles.spawn({
-          x: pt.x, y: 8, z: pt.z,
-          vx: Math.cos(a) * sp, vy: 30 + Math.random() * 65, vz: Math.sin(a) * sp,
-          drag: 1.7, life: 0.45 + Math.random() * 0.35,
-          size: 5 + Math.random() * 5.5,
-          color: Math.random() < 0.6 ? '#151b24' : '#4b5358',
-          fade: true
-        });
-      }
-    });
-
-    ring(ctx, c, { color: '#636e72', from: 4, to: 56, life: 0.32, y: 6, alpha: 0.8 });
   },
 });
 
 registerVfx('ninja_bind', {
   projectile(ctx, pr) {
-    const THREE = ctx.THREE;
-    const g = new THREE.Group();
-    
-    const talGeo = new THREE.BoxGeometry(pr.radius * 2.5, 0.4, pr.radius * 1.2);
-    const talMat = new THREE.MeshStandardMaterial({
-      color: 0x210e30,
-      emissive: 0x9b59b6,
-      emissiveIntensity: 2.2,
-      roughness: 0.5
-    });
-    const tal = new THREE.Mesh(talGeo, talMat);
+    const TH = ctx.THREE;
+    const g = new TH.Group();
+    const talGeo = new TH.BoxGeometry(pr.radius * 2.5, 0.4, pr.radius * 1.2);
+    const talMat = new TH.MeshStandardMaterial({ color: 0x210e30, emissive: 0x9b59b6, emissiveIntensity: 2.2, roughness: 0.5 });
+    const tal = new TH.Mesh(talGeo, talMat);
     g.add(tal);
-    
     g.userData.geo = talGeo;
     g.userData.mat = talMat;
-
     return {
       object3D: g,
       update(dt) {
         tal.rotation.y += dt * 10;
         tal.rotation.x += dt * 5;
-        
-        ctx.particles.spawn({
-          x: g.position.x, y: g.position.y, z: g.position.z,
-          vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 12, vz: (Math.random() - 0.5) * 12,
-          drag: 3, life: 0.24, size: pr.radius * 0.9,
-          color: Math.random() < 0.6 ? '#636e72' : '#9b59b6', fade: false
-        });
-      }
-    };
-  },
-  onHit(ctx, f, c) {
-    const THREE = ctx.THREE;
-    ring(ctx, c, { color: '#9b59b6', from: 4, to: (f.radius || 11) * 2.8, life: 0.5, y: 8 });
-    
-    const ropeGeo = new THREE.CylinderGeometry(f.radius || 11, f.radius || 11, 28, 8, 1, true);
-    const ropeMat = new THREE.MeshBasicMaterial({
-      color: 0x2c3e50,
-      transparent: true,
-      opacity: 0.85,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      blending: THREE.NormalBlending
-    });
-    
-    const rope = new THREE.Mesh(ropeGeo, ropeMat);
-    rope.position.set(c.x, 14, c.z);
-    
-    ctx.addTransient(rope, 0.75, (mesh, t) => {
-      mesh.scale.set(1 - t * 0.3, 1, 1 - t * 0.3);
-      mesh.rotation.y += 0.05;
-      mesh.material.opacity = 0.85 * (1 - t);
-    });
-    
-    rope.userData.geo = ropeGeo;
-    rope.userData.mat = ropeMat;
-    
-    burst(ctx, c, { color: ['#2c3e50', '#9b59b6', '#000000'], count: 12, speed: 120, up: 30, life: 0.5 });
-  }
-});
-
-// 影襲瞬移落點的緩速煙幕地帶 (skill2 leaveZone)
-registerVfx('ninja_smoke', {
-  zone(ctx, z) {
-    const TH = ctx.THREE;
-    const R = z.radius || 120;
-    const geo = new TH.CircleGeometry(R, 26);
-    const mat = new TH.MeshBasicMaterial({ color: 0x5a6472, transparent: true, opacity: 0.34, depthWrite: false, side: TH.DoubleSide });
-    const disc = new TH.Mesh(geo, mat); disc.rotation.x = -Math.PI / 2; disc.position.y = 1.2;
-    const g = new TH.Group(); g.add(disc);
-    g.userData.geo = geo; g.userData.mat = mat;
-    let first = true;
-    return {
-      object3D: g,
-      update() {
-        if (first) { first = false; const cc = { x: g.position.x, y: 6, z: g.position.z }; burst(ctx, cc, { color: ['#9aa4b2', '#5a6472', '#2c3e50'], count: 24, speed: 130, up: 30, drag: 1.6, life: 0.6, size: 6 }); }
-        mat.opacity = 0.28 + 0.08 * Math.sin(performance.now() / 150);
-        if (Math.random() < 0.5) { const a = Math.random() * Math.PI * 2, rr = Math.random() * R; ctx.particles.spawn({ x: g.position.x + Math.cos(a) * rr, y: 4, z: g.position.z + Math.sin(a) * rr, vx: (Math.random() - 0.5) * 18, vy: 14 + Math.random() * 22, vz: (Math.random() - 0.5) * 18, drag: 1.4, life: 0.8, size: 6, color: '#8a93a3', fade: true }); }
+        ctx.particles.spawn({ x: g.position.x, y: g.position.y, z: g.position.z, vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 12, vz: (Math.random() - 0.5) * 12, drag: 3, life: 0.24, size: pr.radius * 0.9, color: Math.random() < 0.6 ? '#636e72' : '#9b59b6', fade: false });
       },
     };
   },
+  onHit(ctx, f, c) {
+    const TH = ctx.THREE;
+    ring(ctx, c, { color: '#9b59b6', from: 4, to: (f.radius || 11) * 2.8, life: 0.5, y: 8 });
+    // 定身的纏縛繩環（拉長為 2 秒定身，視覺更明顯）
+    const ropeGeo = new TH.CylinderGeometry(f.radius || 12, f.radius || 12, 32, 8, 1, true);
+    const ropeMat = new TH.MeshBasicMaterial({ color: 0x2c3e50, transparent: true, opacity: 0.85, side: TH.DoubleSide, depthWrite: false });
+    const rope = new TH.Mesh(ropeGeo, ropeMat);
+    rope.position.set(c.x, 16, c.z);
+    ctx.addTransient(rope, 0.9, (mesh, t) => { mesh.scale.set(1 - t * 0.25, 1, 1 - t * 0.25); mesh.rotation.y += 0.06; mesh.material.opacity = 0.85 * (1 - t); });
+    rope.userData.geo = ropeGeo;
+    rope.userData.mat = ropeMat;
+    burst(ctx, c, { color: ['#2c3e50', '#9b59b6', '#000000'], count: 14, speed: 130, up: 30, life: 0.5 });
+  },
 });
-
-

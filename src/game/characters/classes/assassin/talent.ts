@@ -1,11 +1,9 @@
-// 天賦 lethal（致命）：隱身中或從背後攻擊時大幅增傷。
+// 天賦 bloodthirst（嗜血）：對流血中的敵人增傷（與「連刃」持續疊流血形成黏著滾雪球）。
 import { registerTalent } from '../../talents/registry';
-import { angleDiff } from '../../../entities/math.ts';
 
-registerTalent('lethal', {
-  modifyOutgoing({ attacker, target, dmg, talent }) {
-    const behind = Math.abs(angleDiff(Math.atan2(attacker.y - target.y, attacker.x - target.x), target.facing)) > Math.PI - (talent.arc || 1.2);
-    if ((attacker.effects && attacker.effects.invis) || behind) return dmg * (1 + (talent.bonus || 0.6));
+registerTalent('bloodthirst', {
+  modifyOutgoing({ target, dmg, talent }) {
+    if (target.effects && target.effects.bleed) return dmg * (1 + (talent.bonus || 0.3));
     return dmg;
   },
 });
