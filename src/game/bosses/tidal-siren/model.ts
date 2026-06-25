@@ -3,7 +3,7 @@
 // 配色：深海藍 #005f73 + 青碧色 #0a9396 + 發光海泡色 #94d2bd + 螢光眼 #00ffff。
 import * as THREE from 'three';
 
-export const modelConfig = { bulk: 2.2, weapon: 'none', scale: 1.7, head: 'triangle', emissiveCore: '#94d2bd', translucent: true };
+export const modelConfig = { bulk: 2.8, weapon: 'none', scale: 2.2, head: 'triangle', emissiveCore: '#94d2bd', translucent: true };
 
 const DEEP_BLUE = '#005f73';
 const TEAL = '#0a9396';

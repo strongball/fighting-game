@@ -149,6 +149,7 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
   slow: { cleanseable: true, hud: { icon: '🐢', name: '緩速', buff: false } },
   stun: { cleanseable: true, hud: { icon: '💫', name: '暈眩', buff: false } },
   frozen: { cleanseable: true, hud: { icon: '🧊', name: '冰凍', buff: false } },
+  blind: { cleanseable: true, hud: { icon: '🌚', name: '致盲', buff: false } },
 
   // ---- 增益（不被淨化）----
   reflect: { hud: { icon: '🪞', name: '反射', buff: true }, apply: (p, _k, data) => { p.effects.reflect = { remaining: data.duration || 5, factor: data.factor || 0.35 }; } },

@@ -91,6 +91,16 @@ function startWindup(state, ent, slot, a, target, customWindup = null) {
 
   prepareBossAction(state, ent, a, {});
 
+  // Replicate Boss prepare action for active shadow clones
+  if (ent.isBoss && !ent.isFake) {
+    const clones = Object.values(state.players).filter(
+      (p) => p.alive && p.ownerId === ent.id && p.isFake && p.charId === ent.charId
+    );
+    clones.forEach((clone) => {
+      prepareBossAction(state, clone, a, {});
+    });
+  }
+
   const phaseCount = Array.isArray(a.phaseCount)
     ? (a.phaseCount[Math.min(ent.phaseIdx || 0, a.phaseCount.length - 1)] || a.count || 1)
     : (a.count || 1);
@@ -167,6 +177,7 @@ function getMultiblinkTargets(state, caster, action) {
 
 // ---- 預警特效：依危險等級上色、依進度脈動加速、依招式形狀畫地面 decal ----
 function telegraph(state, ent, action, dt) {
+  if (ent.effects && (ent.effects.stealth || ent.effects.invis)) return;
   const s = ent.aiState;
   const totalT = s.totalWindupT || Math.max(1.0, action.windup != null ? action.windup : 0.5);
   const progress = Math.max(0, Math.min(1, 1 - s.windupT / Math.max(0.001, totalT)));
@@ -722,7 +733,7 @@ function computeProfileInput(profile, state, ent, dt) {
   input.aim = aimAt(ent, target.x, target.y);
   const want = prof.range || 80;
   // 一般狀態：偶爾發呆不追擊，讓玩家有喘息空間
-    if (!ent.desperation && s.phaseIdx < 2) {
+    if (!ent.desperation && s.phaseIdx < 2 && !prof.noLoiter) {
       s._loiterT = (s._loiterT || 0) - dt;
       if (s._loiterT <= 0) {
         s._loiterT = BOSS_PACING.loiterBase + Math.random() * BOSS_PACING.loiterRandom;
@@ -742,6 +753,27 @@ function computeProfileInput(profile, state, ent, dt) {
 
 // 假身 AI：隨機方向遊走 (每 ~1s 換向)，營造真假難辨
 function fakeInput(state, ent, dt, input) {
+  if (ent.chaseTarget) {
+    let target = null;
+    let bd = Infinity;
+    for (const o of Object.values(state.players)) {
+      if (o.alive && o.team === 1) {
+        const d = dist(ent.x, ent.y, o.x, o.y);
+        if (d < bd) {
+          bd = d;
+          target = o;
+        }
+      }
+    }
+    if (target) {
+      input.aim = Math.atan2(target.y - ent.y, target.x - ent.x);
+      if (bd > 70) {
+        moveToward(input, ent, target.x, target.y, 70);
+      }
+      return input;
+    }
+  }
+
   const s = ent.aiState;
   s._wt = (s._wt || 0) - dt;
   if (s._wt <= 0 || s._ang == null) { s._wt = 0.8 + Math.random() * 0.8; s._ang = Math.random() * Math.PI * 2; }

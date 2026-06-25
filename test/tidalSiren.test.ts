@@ -4,9 +4,9 @@ import { makePlayer, makeBoss, createInitialState } from '../src/game/entities/f
 import { executeAction } from '../src/game/actions/executor.ts';
 import { tickBossSystems } from '../src/game/bosses/systems.ts';
 
-describe('Round 5 Tidal Siren', () => {
-  it('is registered as Round 5', () => {
-    const boss = getBossForRound(5);
+describe('Round 6 Tidal Siren', () => {
+  it('is registered as Round 6', () => {
+    const boss = getBossForRound(6);
     expect(boss).toBeTruthy();
     expect(boss.name).toBe('潮汐歌姬');
   });
@@ -14,7 +14,7 @@ describe('Round 5 Tidal Siren', () => {
   it('spawns safe bubbles and slows/drowns players outside bubbles during flood', () => {
     const state: any = createInitialState([], {}, { mode: 'boss' });
     state.roundPhase = 'fighting';
-    state.round = 5;
+    state.round = 6;
 
     const boss = makeBoss('siren', 113, 200, 200, 2, { isBoss: true });
     const player = makePlayer('hero', 'Hero', 'warrior', 400, 400, 1);
@@ -73,7 +73,7 @@ describe('Round 5 Tidal Siren', () => {
   it('stuns the player inside a bubble minion and frees them when bubble is killed', () => {
     const state: any = createInitialState([], {}, { mode: 'boss' });
     state.roundPhase = 'fighting';
-    state.round = 5;
+    state.round = 6;
 
     const boss = makeBoss('siren', 113, 200, 200, 2, { isBoss: true });
     const player = makePlayer('hero', 'Hero', 'warrior', 300, 300, 1);
@@ -81,7 +81,7 @@ describe('Round 5 Tidal Siren', () => {
     state.players = { [boss.id]: boss, [player.id]: player, [teammate.id]: teammate };
 
     // 施放水泡禁錮
-    executeAction(state, boss, getBossForRound(5)!.skill2);
+    executeAction(state, boss, getBossForRound(6)!.skill2);
 
     // 驗證水泡小兵生成
     const bubble = Object.values(state.players).find((o: any) => o.isMinion && o.charId === -3);

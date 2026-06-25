@@ -51,9 +51,11 @@ registerBossAction('summon_bubble', (state, boss, a, h) => {
     aiId: 'fake', // 無 AI 動作
     name: '深海水泡',
     maxHp: bubbleHp,
-    scale: 1.0,
+    scale: 2.5, // 視覺球體半徑 34，scale 2.5 → hitR ≈ 45，各職業普攻都能命中
     facing: target.facing,
   });
+  // 直接覆寫 hitR，確保命中判定與視覺球一致，讓玩家大概 2~3 下打破
+  bubbleMinion.hitR = 42;
 
   // 建立地面警告紅色光圈區，並讓它追隨水泡 (實質鎖死在原地)
   const warningZoneId = 'warning-bubble-' + Math.random().toString(36).slice(2, 7);

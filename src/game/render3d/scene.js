@@ -176,7 +176,9 @@ export function createSceneManager(canvas) {
     flashA *= Math.exp(-6 * dt);
     if (flashA < 0.01) flashA = 0;
     flashEl.style.background = flashColor;
-    flashEl.style.opacity = (flashA * 0.85).toFixed(3);
+    flashEl.style.mixBlendMode = (flashColor === '#000000') ? 'normal' : 'screen';
+    const baseOpacity = flashColor === '#000000' ? flashA : flashA * 0.85;
+    flashEl.style.opacity = baseOpacity.toFixed(3);
 
     // 鏡頭焦點：平滑 lerp 到目標 (玩家)；clamp 在競技場縮邊內 (避免拍到場外)
     const FOLLOW_BLEND = Math.min(1, dt * 4.0); // 反應速度 (越大越貼)

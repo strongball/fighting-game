@@ -136,6 +136,9 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     for (const p of Object.values(state.players)) {
       seen.add(p.id);
       const e = ensureModel(p);
+      if (p.id === selfId && p.effects && p.effects.blind && p.effects.blind.remaining > 0) {
+        sceneMgr.addFlash(0.96, '#000000');
+      }
       // 倒地 (闖關模式)：team1 真人玩家死亡時不消失，留在原地呈現「倒地」狀態供隊友靠近復活。
       // 其餘 (FFA 淘汰 / 魔王陣營 / 召喚物) 死亡即隱藏。
       const downed = state.mode === 'boss' && !p.alive && p.team === 1 && !p.aiId;
@@ -143,7 +146,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
       // 從隱藏(死亡/重生)轉可見：位置直接對齊，避免從舊位置滑入
       if (e.wasHidden) { e.rx = p.x; e.ry = p.y; e.spd = 0; e.wasHidden = false; }
       // 第一人稱時藏起自身模型（避免相機卡在自己身體內）
-      e.group.visible = !(hideSelf && p.id === selfId);
+      e.group.visible = !(hideSelf && p.id === selfId) && !p.isUltDisappeared;
 
       // ---- 渲染端位置插值 ----
       // 邏輯/網路 30Hz 更新 p.x/p.y，但畫面以 ~60fps 繪製；直接設位置會出現 30Hz 階梯抖動。
