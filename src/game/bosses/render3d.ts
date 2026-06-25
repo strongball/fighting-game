@@ -111,6 +111,11 @@ export function updateBossModelVisuals(group: any, ud: any, dt: number, info: an
   if (ud.weakZone) updateWeakZone(ud, dt, info);
   if (ud.coreShield) updateCoreShield(ud, dt, info);
   if (ud.bossCore) updateBossCore(ud, dt, info);
+
+  // 執行自訂模型更新 Hook (以解耦不同魔王/小兵的動畫實作)
+  if (ud.parts && typeof ud.parts.customUpdate === 'function') {
+    ud.parts.customUpdate(dt, group, ud);
+  }
 }
 
 export function computeBossVisualState(state: any, selfId: string, boss: any, bossData: any) {

@@ -927,6 +927,14 @@ export function animateModel(group, dt, info) {
       m.opacity += (targetOp - m.opacity) * Math.min(1, dt * 10);
     }
   }
+
+  // 懸浮效果：若實體具有 floatHeight 屬性，使其在 3D 空間中懸浮並微幅上下漂浮
+  const floatHeight = (p && p.floatHeight) || 0;
+  if (floatHeight > 0) {
+    const t = performance.now() * 0.0035;
+    group.position.y = floatHeight + Math.sin(t * 3.0) * 1.5;
+  }
+
   updateBossModelVisuals(group, ud, dt, { ...info, targetOpacity: targetOp });
 
 }
