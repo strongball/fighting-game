@@ -75,7 +75,7 @@ const data = {
       color: '#aa33ff',
       dmgMult: 1.2,
       speedMult: 1.2,
-      cdMult: 0.5,
+      cdMult: 0.75,
       tagsOverride: [
         { icon: '👥', text: '影鏡互換冷卻減半' },
         { icon: '💥', text: '分身死亡時會產生暗影爆炸' },
@@ -203,12 +203,14 @@ const data = {
             clone.facing = targetFacing;
           }
 
+          state.fx.push({ type: 'hit', x: clone.x, y: clone.y, color: '#8800ff', life: 0.5, radius: 180, vfx: 'boss_shadow_ult_warning' });
+
           state.zones.push(makeZone(clone.id, clone.x, clone.y, {
             radius: 180,
             dmg: 50,
             lifetime: 0.5,
             tick: 0.5,
-            delay: 0,
+            delay: 1.2,
             color: '#aa33ff',
             vfx: 'boss_shadow_ult_slam',
             srcSlot: 'ultimate'
@@ -217,13 +219,13 @@ const data = {
       }
     });
 
-    // 終極大招重擊落下計時器
+    // 終極大招重擊落下計時器（先降下預警，再延遲現身）
     if (boss._ultSlamTimer !== undefined && boss._ultSlamTimer > 0) {
       boss._ultSlamTimer -= dt;
       if (boss._ultSlamTimer <= 0) {
         boss._ultSlamTimer = 0;
-        boss.isUltDisappeared = false;
 
+        // 瞬移至目標背後（保持消失狀態）
         const target = state.players[boss._ultSlamTargetId];
         if (target && target.alive) {
           const distBehind = 60;
@@ -233,18 +235,40 @@ const data = {
           boss.facing = targetFacing;
         }
 
+        // 預警特效 + 延遲傷害區域（地面預警圈 1.2s）
+        state.fx.push({ type: 'hit', x: boss.x, y: boss.y, color: '#8800ff', life: 0.5, radius: 180, vfx: 'boss_shadow_ult_warning' });
+
         state.zones.push(makeZone(boss.id, boss.x, boss.y, {
           radius: 180,
           dmg: 50,
           lifetime: 0.5,
           tick: 0.5,
-          delay: 0,
+          delay: 1.2,
           color: '#aa33ff',
           vfx: 'boss_shadow_ult_slam',
           srcSlot: 'ultimate'
         }));
 
-        activeClones.forEach((clone) => {
+        // 延遲現身計時器（配合炸地板時間）
+        boss._ultSlamAppearTimer = 1.2;
+      }
+    }
+
+    // Boss 延遲現身：與 slam 震波同步
+    if (boss._ultSlamAppearTimer !== undefined && boss._ultSlamAppearTimer > 0) {
+      boss._ultSlamAppearTimer -= dt;
+      if (boss._ultSlamAppearTimer <= 0) {
+        boss._ultSlamAppearTimer = 0;
+        boss.isUltDisappeared = false;
+
+        // 分身同時現身並散開
+        const currentClones: any[] = [];
+        for (const p of Object.values(state.players) as any[]) {
+          if (p.alive && p.ownerId === boss.id && p.isFake && p.charId === boss.charId) {
+            currentClones.push(p);
+          }
+        }
+        currentClones.forEach((clone) => {
           clone.isUltDisappeared = false;
           const ang = Math.random() * Math.PI * 2;
           clone.x = Math.max(80, Math.min(1600 - 80, boss.x + Math.cos(ang) * 100));
