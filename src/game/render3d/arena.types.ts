@@ -55,7 +55,7 @@ export interface ArenaTheme {
   sky?: number; fog?: number; fogNear?: number; fogFar?: number;
   // 地板
   floor?: number; ring?: number;
-  floorStyle?: 'tiled' | 'mossy' | 'organic';
+  floorStyle?: 'tiled' | 'mossy' | 'organic' | 'flagstone';
   floorTint?: number; outerGround?: number;
   // 邊界牆
   wallStone?: number; wallTrim?: number;
@@ -75,6 +75,8 @@ export interface ArenaTheme {
   // ---- 內建共用道具的設定（值由對應 builder 解讀；boss 專屬道具的設定可用同名 key）----
   tree?: any; rock?: any; crystal?: any; pillar?: any; brazier?: any;
   ruins?: any; temple?: any; roots?: any; foliage?: any; godrays?: any; groundcover?: any;
+  // boss 專屬道具設定（搭配 props 的同名 builder）：劇毒飛蜥的石砌祭壇 / 毒池環 / 蛇紋石王座 / 立桿火把。
+  dais?: any; pools?: any; throne?: any; torches?: any;
 }
 
 /** 一隻 boss 的完整場地定義：放在 <boss>/arena.ts，由 index.ts 併入 boss data。 */

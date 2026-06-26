@@ -347,31 +347,50 @@ function buildFloor() {
   apron.receiveShadow = true;
   g.add(apron);
 
-  // 有機苔蘚地 (mossy)：延遲建立並快取，避免無謂開銷
-  let organicAlbedo = null, apronTex = null;
+  // 自然地面：mossy/organic = 苔泥；flagstone = 沼澤濕岩板 (風化石、苔斑、不規則裂縫、無格線)。
+  // 皆延遲建立並快取，避免無謂開銷。
+  let organicAlbedo = null, apronTex = null, flagstoneAlbedo = null, flagApronTex = null;
   function applyStyle(theme) {
     const style = (theme && theme.floorStyle) || 'tiled';
-    if (style === 'mossy' || style === 'organic') {
-      if (!organicAlbedo) {
-        organicAlbedo = organicGroundTexture();
-        organicAlbedo.wrapS = organicAlbedo.wrapT = THREE.RepeatWrapping;
-        organicAlbedo.repeat.set(3, 2);
-        organicAlbedo.anisotropy = 8;
+    if (style === 'mossy' || style === 'organic' || style === 'flagstone') {
+      let albedo, apron;
+      if (style === 'flagstone') {
+        if (!flagstoneAlbedo) {
+          flagstoneAlbedo = swampStoneTexture();
+          flagstoneAlbedo.wrapS = flagstoneAlbedo.wrapT = THREE.RepeatWrapping;
+          flagstoneAlbedo.repeat.set(4, 3);
+          flagstoneAlbedo.anisotropy = 8;
+        }
+        if (!flagApronTex) {
+          flagApronTex = flagstoneAlbedo.clone();
+          flagApronTex.wrapS = flagApronTex.wrapT = THREE.RepeatWrapping;
+          flagApronTex.repeat.set(16, 16);
+          flagApronTex.needsUpdate = true;
+        }
+        albedo = flagstoneAlbedo; apron = flagApronTex;
+      } else {
+        if (!organicAlbedo) {
+          organicAlbedo = organicGroundTexture();
+          organicAlbedo.wrapS = organicAlbedo.wrapT = THREE.RepeatWrapping;
+          organicAlbedo.repeat.set(3, 2);
+          organicAlbedo.anisotropy = 8;
+        }
+        if (!apronTex) {
+          apronTex = organicAlbedo.clone();
+          apronTex.wrapS = apronTex.wrapT = THREE.RepeatWrapping;
+          apronTex.repeat.set(16, 16);
+          apronTex.needsUpdate = true;
+        }
+        albedo = organicAlbedo; apron = apronTex;
       }
-      mat.map = organicAlbedo;
+      mat.map = albedo;
       mat.roughnessMap = null;
       mat.roughness = 1.0;
       mat.metalness = 0.0;
       mat.color.setHex(theme.floorTint != null ? theme.floorTint : 0xffffff);
       ring.visible = false;
-      // 外延地坪沿用同一張有機貼圖 (大平鋪，略暗讓視線往外沉)
-      if (!apronTex) {
-        apronTex = organicAlbedo.clone();
-        apronTex.wrapS = apronTex.wrapT = THREE.RepeatWrapping;
-        apronTex.repeat.set(16, 16);
-        apronTex.needsUpdate = true;
-      }
-      apronMat.map = apronTex;
+      // 外延地坪沿用同一張貼圖 (大平鋪，略暗讓視線往外沉)
+      apronMat.map = apron;
       apronMat.color.setHex(theme.outerGround != null ? theme.outerGround : 0x7e8268);
     } else {
       mat.map = tiledAlbedo;
@@ -434,6 +453,60 @@ function organicGroundTexture() {
     x.moveTo(cx, cy);
     const segs = 4 + (Math.random() * 5 | 0);
     for (let s = 0; s < segs; s++) { a += (Math.random() - 0.5) * 1.2; cx += Math.cos(a) * (15 + Math.random() * 28); cy += Math.sin(a) * (15 + Math.random() * 28); x.lineTo(cx, cy); }
+    x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// 沼澤濕岩板 albedo：風化灰綠石 + 苔斑 + 濕暗水漬 + 礦物碎屑 + 不規則裂縫 (無格線/無磚縫，非大理石)
+function swampStoneTexture() {
+  const S = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d');
+  x.fillStyle = '#5a6058';
+  x.fillRect(0, 0, S, S);
+  // 大面積柔邊色斑 (wrap 平鋪 3x3 讓邊界連續)
+  const blob = (cols, n, rmin, rmax, amax) => {
+    for (let i = 0; i < n; i++) {
+      const px = Math.random() * S, py = Math.random() * S;
+      const r = rmin + Math.random() * (rmax - rmin);
+      const col = cols[(Math.random() * cols.length) | 0];
+      for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) {
+        const grd = x.createRadialGradient(px + dx, py + dy, 0, px + dx, py + dy, r);
+        grd.addColorStop(0, `rgba(${col},${(0.12 + Math.random() * amax).toFixed(2)})`);
+        grd.addColorStop(1, `rgba(${col},0)`);
+        x.fillStyle = grd;
+        x.beginPath(); x.arc(px + dx, py + dy, r, 0, 7); x.fill();
+      }
+    }
+  };
+  blob(['108,114,104', '86,92,84', '120,126,112'], 22, 60, 150, 0.3);  // 風化亮/暗石面
+  blob(['60,82,44', '74,96,52', '50,68,38'], 18, 40, 120, 0.34);       // 苔綠斑
+  blob(['38,42,38', '28,32,28'], 14, 30, 95, 0.3);                     // 濕暗水漬
+  // 礦物碎屑 + 砂礫
+  for (let i = 0; i < 2200; i++) { const v = 70 + (Math.random() * 60 | 0); x.fillStyle = `rgba(${v},${v + 6},${v - 4},0.06)`; x.fillRect(Math.random() * S, Math.random() * S, 2, 2); }
+  // 不規則裂縫 (石板裂界，非格線)
+  x.strokeStyle = 'rgba(20,24,20,0.55)'; x.lineCap = 'round';
+  for (let i = 0; i < 16; i++) {
+    x.lineWidth = 1 + Math.random() * 2.5;
+    x.beginPath();
+    let cx = Math.random() * S, cy = Math.random() * S, a = Math.random() * 7;
+    x.moveTo(cx, cy);
+    const segs = 4 + (Math.random() * 6 | 0);
+    for (let s = 0; s < segs; s++) { a += (Math.random() - 0.5) * 1.0; cx += Math.cos(a) * (22 + Math.random() * 40); cy += Math.sin(a) * (22 + Math.random() * 40); x.lineTo(cx, cy); }
+    x.stroke();
+  }
+  // 裂縫旁滲出的苔綠 (柔線)
+  x.strokeStyle = 'rgba(70,104,40,0.4)';
+  for (let i = 0; i < 8; i++) {
+    x.lineWidth = 2 + Math.random() * 3;
+    x.beginPath();
+    let cx = Math.random() * S, cy = Math.random() * S, a = Math.random() * 7;
+    x.moveTo(cx, cy);
+    for (let s = 0; s < 4; s++) { a += (Math.random() - 0.5) * 1.1; cx += Math.cos(a) * (20 + Math.random() * 36); cy += Math.sin(a) * (20 + Math.random() * 36); x.lineTo(cx, cy); }
     x.stroke();
   }
   const t = new THREE.CanvasTexture(c);
