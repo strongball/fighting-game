@@ -18,13 +18,28 @@ import { ARENA } from '../constants.js';
 
 const BG = '#0c0f14';
 
+function isConstrainedGpuDevice() {
+  if (typeof window === 'undefined') return false;
+  const coarse = window.matchMedia?.('(hover: none), (pointer: coarse), (max-width: 820px)')?.matches;
+  const ua = navigator.userAgent || '';
+  return !!coarse || /Android|iPhone|iPad|iPod/i.test(ua);
+}
+
 export function createSceneManager(canvas) {
   const stage = canvas.parentElement || canvas;
+  const constrainedGpu = isConstrainedGpuDevice();
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: !constrainedGpu, powerPreference: 'high-performance' });
+  } catch (err) {
+    console.warn('[render3d] WebGL init failed with preferred settings, retrying safe renderer.', err);
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'default' });
+  }
+  const dprCap = constrainedGpu ? 1.25 : 2;
+  const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
   renderer.setPixelRatio(dpr);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = !constrainedGpu;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -53,8 +68,8 @@ export function createSceneManager(canvas) {
   const dir = new THREE.DirectionalLight(0xffe6c4, 2.3);
   dir.position.set(420, 1080, 360);
   dir.target.position.set(0, 0, 0);
-  dir.castShadow = true;
-  dir.shadow.mapSize.set(2048, 2048);
+  dir.castShadow = !constrainedGpu;
+  dir.shadow.mapSize.set(constrainedGpu ? 1024 : 2048, constrainedGpu ? 1024 : 2048);
   dir.shadow.camera.near = 200;
   dir.shadow.camera.far = 2600;
   dir.shadow.camera.left = -820;
@@ -106,13 +121,24 @@ export function createSceneManager(canvas) {
   }
 
   // ---- 泛光後處理鏈 (收斂：僅高亮特效發光，場景不過曝) ----
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.5, 0.5, 0.82);
-  composer.addPass(bloom);
-  const outputPass = new OutputPass();
-  composer.addPass(outputPass);
-  let bloomOn = true;
+  let composer = null;
+  let bloom = null;
+  let bloomOn = !constrainedGpu;
+  if (bloomOn) {
+    try {
+      composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.5, 0.5, 0.82);
+      composer.addPass(bloom);
+      const outputPass = new OutputPass();
+      composer.addPass(outputPass);
+    } catch (err) {
+      console.warn('[render3d] Bloom post-processing disabled after init failure.', err);
+      composer = null;
+      bloom = null;
+      bloomOn = false;
+    }
+  }
 
   // ---- 全畫面命中閃光 (DOM overlay，mix-blend screen) ----
   const flashEl = document.createElement('div');
@@ -126,9 +152,23 @@ export function createSceneManager(canvas) {
   let flashA = 0;
   let flashColor = '#ffffff';
   let lastW = 0, lastH = 0;
+  let contextLost = false;
   const _v = new THREE.Vector3();
   const _right = new THREE.Vector3();
   const _up = new THREE.Vector3();
+
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    contextLost = true;
+    bloomOn = false;
+    console.warn('[render3d] WebGL context lost; rendering paused until the browser restores it.');
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    contextLost = false;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap));
+    resize();
+    console.warn('[render3d] WebGL context restored.');
+  });
 
   function resize() {
     const w = Math.max(1, stage.clientWidth | 0);
@@ -136,8 +176,8 @@ export function createSceneManager(canvas) {
     if (w === lastW && h === lastH) return false;
     lastW = w; lastH = h;
     renderer.setSize(w, h, false);
-    composer.setSize(w, h);
-    bloom.setSize(w, h);
+    composer?.setSize(w, h);
+    bloom?.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     return true;
@@ -242,11 +282,22 @@ export function createSceneManager(canvas) {
   }
 
   function render() {
-    if (bloomOn) composer.render();
-    else renderer.render(scene, camera);
+    if (contextLost) return;
+    try {
+      if (bloomOn && composer) composer.render();
+      else renderer.render(scene, camera);
+    } catch (err) {
+      if (bloomOn) {
+        console.warn('[render3d] Bloom render failed; falling back to direct WebGL render.', err);
+        bloomOn = false;
+        renderer.render(scene, camera);
+      } else {
+        throw err;
+      }
+    }
   }
 
-  function dispose() { renderer.dispose(); composer.dispose?.(); flashEl.remove(); }
+  function dispose() { renderer.dispose(); composer?.dispose?.(); flashEl.remove(); }
 
   return {
     scene, camera, renderer, stage,

@@ -236,7 +236,18 @@ function FullscreenRow() {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isFull = !!document.fullscreenElement;
+      setIsFullscreen(isFull);
+      if (!isFull) {
+        const orientation = screen.orientation as any;
+        if (orientation && typeof orientation.unlock === 'function') {
+          try {
+            orientation.unlock();
+          } catch (err) {
+            console.warn('Failed to unlock orientation:', err);
+          }
+        }
+      }
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => {
@@ -246,9 +257,18 @@ function FullscreenRow() {
 
   const handleToggle = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
+      document.documentElement.requestFullscreen()
+        .then(() => {
+          const orientation = screen.orientation as any;
+          if (orientation && typeof orientation.lock === 'function') {
+            orientation.lock('landscape').catch((err: any) => {
+              console.warn('Failed to lock orientation to landscape:', err);
+            });
+          }
+        })
+        .catch((err) => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
