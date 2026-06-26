@@ -62,28 +62,29 @@ function shadowCloneStrike(ctx, c, facing, { big = false, slashColor = '#eaf2ff'
   burst(ctx, c, { color: ['#10161f', '#2c3e50', '#9aa4b2'], count: big ? 18 : 10, speed: big ? 240 : 150, up: 30, life: 0.4, size: big ? 4.5 : 3 });
 }
 
-// 一道發光影分身：自環外位置俯衝向中心、過半程後斬一刀並淡出（青白 additive → 清楚可見）。
-function spawnShadowClone(ctx, c, angle, startR) {
-  const TH = ctx.THREE;
-  const g = new TH.Group();
-  const mat = new TH.MeshBasicMaterial({ color: 0x9fd2ff, transparent: true, opacity: 0, blending: TH.AdditiveBlending, depthWrite: false, side: TH.DoubleSide });
-  const body = new TH.Mesh(new TH.ConeGeometry(6, 30, 5), mat); body.rotation.x = Math.PI; // 尖朝下＝人形剪影
-  const head = new TH.Mesh(new TH.SphereGeometry(4.5, 8, 8), mat); head.position.y = 17;
-  g.add(body, head);
-  const sx = c.x + Math.cos(angle) * startR, sz = c.z + Math.sin(angle) * startR;
-  const faceIn = Math.atan2(c.z - sz, c.x - sx);
-  let slashed = false;
-  g.userData.geo = { dispose() { body.geometry.dispose(); head.geometry.dispose(); } };
-  g.userData.mat = mat;
-  ctx.addTransient(g, 0.46, (m, t) => {
-    m.position.set(sx + (c.x - sx) * t, 14, sz + (c.z - sz) * t); // 俯衝向中心
-    m.rotation.y = -faceIn;
-    mat.opacity = (t < 0.5 ? t / 0.5 : (1 - t) / 0.5) * 0.92;      // 淡入淡出
-    if (!slashed && t >= 0.55) {                                   // 抵達近中心時斬一刀
-      slashed = true;
-      slashBlade(ctx, { x: sx + (c.x - sx) * 0.8, z: sz + (c.z - sz) * 0.8 }, faceIn, { color: '#eaf5ff', len: 70, w: 9, swing: 1.7, life: 0.18 });
+// 一個「半透明忍者殘影分身」：直接複製忍者本體模型（ctx.createCharacterModel('ninja')），
+//   把所有材質改半透明＋微弱冷色自發光（暗場上看得見輪廓、又保留忍者本色），隱藏地面陰影圈。
+//   回傳 model（THREE.Group）與其材質清單 mats（供逐幀調整透明度）。
+//   createModel 由 fxbus 經 ctx 注入（render 層匯入，避免角色層循環依賴）。
+function buildCloneModel(createModel) {
+  const model = createModel('ninja');
+  const mats = [];
+  model.traverse((o) => {
+    // 半透明殘影不需要地面接觸陰影圈
+    if (o.geometry && o.geometry.type === 'CircleGeometry') { o.visible = false; return; }
+    const list = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+    for (const m of list) {
+      m.transparent = true;
+      m.depthWrite = false;
+      m.opacity = 0.6;
+      if (m.emissive !== undefined && m.emissive) {        // 冷色幽光 → 殘影感、確保可見
+        m.emissive = new THREE.Color(0x49b3ff);
+        m.emissiveIntensity = 0.55;
+      }
+      mats.push(m);
     }
   });
+  return { model, mats };
 }
 
 // 大絕 — 千影：召出一圈發光影分身俯衝亂斬（cast）＋每次瞬斬的命中閃光（strike）
@@ -105,48 +106,54 @@ registerVfx('ninja_ultimate', {
   },
 });
 
-// 千影分身：在目標四周召出 5 個「持續存在」的發光人形殘影分身，各自週期性向目標斬擊。
-// 由 ninja/clones.ts 的 tick 在取得目標時發出一次（type 'buff'），整段大招期間都在。
+// 千影分身：在最近目標四周「拉開到普攻射程的環」上召出 5 個半透明忍者本體殘影分身，
+//   整段大招期間站在環上、各自錯開節奏朝目標突進斬一刀再退回（看得到 5 個真．忍者圍攻）。
+//   由 ninja/clones.ts 的 tick 在取得目標時發出一次（type 'buff'），orbit 由 ult 的 orbit 帶入。
 registerVfx('ninja_clones', {
   onCast(ctx, f, c) {
-    const TH = ctx.THREE;
     const N = 5;
-    const orbit = f.radius || 66;
+    const orbit = f.radius || 190;                  // 環半徑：拉到普攻交戰距離，不再貼著目標
     const dur = f.life || 3.5;
-    addShake(ctx, 8);
-    addFlash(ctx, 0.18, '#1a2433');
+    addShake(ctx, 6);
+    addFlash(ctx, 0.16, '#1a2433');
+    const createModel = ctx.createCharacterModel;
+    if (!createModel) return;                        // 保險：render 層未注入則略過（不致崩潰）
     for (let i = 0; i < N; i++) {
-      const ang = (i / N) * Math.PI * 2;
+      const ang = (i / N) * Math.PI * 2 - Math.PI / 2;       // 由正上方均分一圈
       const cx = c.x + Math.cos(ang) * orbit;
       const cz = c.z + Math.sin(ang) * orbit;
+      const ux = (c.x - cx) / orbit, uz = (c.z - cz) / orbit; // 指向目標的單位向量
       const faceIn = Math.atan2(c.z - cz, c.x - cx);
-      // 人形剪影（人物尺寸、清楚可見）：身體(錐狀斗篷) + 頭(球) + 兜帽(錐) + 腳邊光環，
-      //   亮青藍 additive → 暗場上發光、亮場上也讀得出輪廓。
-      const g = new TH.Group();
-      const mat = new TH.MeshBasicMaterial({ color: 0x6ab0ee, transparent: true, opacity: 0, blending: TH.AdditiveBlending, depthWrite: false, side: TH.DoubleSide });
-      const body = new TH.Mesh(new TH.CylinderGeometry(3.5, 10, 34, 6), mat); body.position.y = 17;
-      const head = new TH.Mesh(new TH.SphereGeometry(7, 10, 10), mat); head.position.y = 40;
-      const hood = new TH.Mesh(new TH.ConeGeometry(8, 12, 6), mat); hood.position.y = 47;
-      // 腳邊光環，把分身「釘」在地面、強化存在感
-      const ringMat = new TH.MeshBasicMaterial({ color: 0x9fd2ff, transparent: true, opacity: 0, blending: TH.AdditiveBlending, depthWrite: false, side: TH.DoubleSide });
-      const footRing = new TH.Mesh(new TH.RingGeometry(8, 12, 20), ringMat); footRing.rotation.x = -Math.PI / 2; footRing.position.y = 1;
-      g.add(body, head, hood, footRing);
-      g.position.set(cx, 0, cz);
-      g.rotation.y = -faceIn;
-      g.userData.geo = { dispose() { body.geometry.dispose(); head.geometry.dispose(); hood.geometry.dispose(); footRing.geometry.dispose(); } };
-      g.userData.mat = { dispose() { mat.dispose(); ringMat.dispose(); } };
-      let nextSlash = 0.15 + (i % N) * 0.05;          // 各分身錯開出刀
-      ctx.addTransient(g, dur, (m, t) => {
+      const { model, mats } = buildCloneModel(createModel);
+      model.position.set(cx, 0, cz);
+      model.rotation.y = -faceIn;                            // 面向目標
+      // 只 dispose 逐實例 geometry / material；貼圖由 _texCache 共用，不可 dispose
+      model.userData.geo = { dispose() { model.traverse((o) => { if (o.geometry && o.geometry.dispose) o.geometry.dispose(); }); } };
+      model.userData.mat = { dispose() { for (const m of mats) m.dispose(); } };
+      const st = { phase: 'idle', next: 0.3 + i * 0.12, start: 0, struck: false }; // 突進狀態機（錯開）
+      ctx.addTransient(model, dur, (m, t) => {
         const age = t * dur;
-        const fadeIn = Math.min(1, age / 0.18), fadeOut = Math.min(1, (1 - t) / 0.12);
-        const a = Math.min(fadeIn, fadeOut);
-        mat.opacity = 0.9 * a;
-        ringMat.opacity = 0.5 * a * (0.7 + 0.3 * Math.sin(age * 5 + i));
-        m.position.y = Math.sin(age * 7 + i) * 2;     // 輕浮動
-        if (age >= nextSlash) {                        // 週期性向目標斬一刀
-          nextSlash = age + 0.3;
-          slashBlade(ctx, { x: cx + (c.x - cx) * 0.35, z: cz + (c.z - cz) * 0.35 }, faceIn, { color: '#dff1ff', len: 56, w: 8, swing: 1.6, life: 0.16 });
+        const fadeIn = Math.min(1, age / 0.22), fadeOut = Math.min(1, (1 - t) / 0.3);
+        const alpha = Math.min(fadeIn, fadeOut);
+        for (const mt of mats) mt.opacity = 0.68 * alpha;
+        // 突進斬：到時間 → 朝目標衝一小段、半程斬一刀、再退回 → 回 idle 等下一輪
+        let lunge = 0;
+        if (st.phase === 'idle' && age >= st.next) { st.phase = 'lunge'; st.start = age; st.struck = false; }
+        if (st.phase === 'lunge') {
+          const lt = (age - st.start) / 0.26;
+          if (lt >= 1) { st.phase = 'idle'; st.next = age + 0.4 + (i % 3) * 0.08; }
+          else {
+            lunge = Math.sin(lt * Math.PI) * 54;
+            if (!st.struck && lt >= 0.45) {                  // 衝到半程 → 在目標處斬一刀
+              st.struck = true;
+              slashBlade(ctx, { x: c.x, z: c.z }, faceIn, { color: '#dff1ff', len: 70, w: 9, swing: 1.7, life: 0.16 });
+            }
+          }
         }
+        const slideIn = (1 - fadeIn) * orbit * 0.3;           // 入場：自外側淡入滑進定位
+        m.position.x = cx + ux * (lunge - slideIn);
+        m.position.z = cz + uz * (lunge - slideIn);
+        m.position.y = Math.sin(age * 5 + i) * 1.5;           // 輕浮動
       });
     }
   },

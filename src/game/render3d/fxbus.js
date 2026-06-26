@@ -7,6 +7,9 @@ import { setVecFromWorld, PROJECTILE_Y } from './coords.js';
 import { getVfx } from './vfx/index.ts';
 import { ultimateBurst } from './vfx/lib.js';
 import { getSfxManager } from '../../utils/sfxManager';
+// 供 vfx 透過 ctx 取用「複製角色本體模型」（如忍者千影分身的半透明殘影）。
+// 由 render 層（fxbus）匯入 models.js，避免角色層 vfx 直接 import 造成角色註冊表載入期循環依賴。
+import { createCharacterModel } from './models.js';
 
 export function createFxBus({ scene, particles, sceneMgr }) {
   let seen = new Set();
@@ -251,7 +254,7 @@ export function createFxBus({ scene, particles, sceneMgr }) {
   function onSpawn(f) {
     // 角色專屬 vfx 覆寫 (Phase 3)；缺省走通用
     const vfx = getVfx(f.vfx);
-    const ctx = { THREE, scene, particles, sceneMgr, addTransient, sceneVec: _v };
+    const ctx = { THREE, scene, particles, sceneMgr, addTransient, sceneVec: _v, createCharacterModel };
     const h = f.type === 'melee' ? 18 : (f.type === 'buff' || f.type === 'ultimate') ? 4 : PROJECTILE_Y;
     setVecFromWorld(_v, f.x, f.y, h);
     const c = { x: _v.x, y: _v.y, z: _v.z };
