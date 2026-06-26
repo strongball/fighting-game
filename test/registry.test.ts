@@ -44,7 +44,7 @@ describe('talent hook registry', () => {
   // 守護「角色 index.ts 忘了 import './talent.ts'」這類靜默漏接：傷害管線天賦的 hook 必須註冊。
   it('registers damage-pipeline hooks for migrated talents', () => {
     expect(CHARACTERS.length).toBeGreaterThan(0); // 確保 glob 已載入觸發 talent 註冊
-    expect(getTalentHooks('lethal')?.modifyOutgoing).toBeTypeOf('function');
+    expect(getTalentHooks('virulence')?.modifyOutgoing).toBeTypeOf('function'); // 刺客 (原 lethal → 改劇毒增傷)
     expect(getTalentHooks('deadeye')?.modifyOutgoing).toBeTypeOf('function');
     expect(getTalentHooks('summonbond')?.modifyIncoming).toBeTypeOf('function');
     expect(getTalentHooks('arcane_flow')?.onDealt).toBeTypeOf('function');
