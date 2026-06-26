@@ -190,47 +190,37 @@ describe('Round 5 Shadow Reaper (Redesigned)', () => {
         // Both boss and clone should have disappeared
     expect(boss.isUltDisappeared).toBe(true);
     expect(clone.isUltDisappeared).toBe(true);
-    expect(boss._ultSlamTimer).toBe(8.0);
-    expect(clone._ultSlamTimer).toBe(6.0);
+    expect(boss._ultSlamTimer).toBe(9.0);
+    expect(clone._ultSlamTimer).toBeUndefined();
 
     // Immediately on cast, 1st cross (Horizontal: 5 zones) spawned for both boss and clone (2 * 5 = 10 zones)
     let strikeZones = state.zones.filter((z: any) => z.vfx === 'boss_shadow_ult_strike');
     expect(strikeZones.length).toBe(10);
 
-    // Tick 2.0s (total 2.0s) -> 2nd cross (Vertical: 5 zones) spawned (another 2 * 5 = 10 zones)
-    tickBossSystems(state, 2.0);
+    // Tick 3.0s (total 3.0s) -> 2nd cross (Vertical: 5 zones) spawned (another 2 * 5 = 10 zones)
+    tickBossSystems(state, 3.0);
     strikeZones = state.zones.filter((z: any) => z.vfx === 'boss_shadow_ult_strike');
     expect(strikeZones.length).toBe(20);
 
-    // Tick 2.0s (total 4.0s) -> 3rd cross (X: 8 zones per caster, center skipped) spawned (another 2 * 8 = 16 zones)
-    tickBossSystems(state, 2.0);
+    // Tick 3.0s (total 6.0s) -> 3rd cross (X: 8 zones per caster, center skipped) spawned (another 2 * 8 = 16 zones)
+    tickBossSystems(state, 3.0);
     strikeZones = state.zones.filter((z: any) => z.vfx === 'boss_shadow_ult_strike');
     expect(strikeZones.length).toBe(36);
 
-    // Tick 2.0s (total 6.0s) -> Clone slams down behind target
-    tickBossSystems(state, 2.0);
-    expect(clone._ultSlamTimer).toBe(0);
-    expect(boss._ultSlamTimer).toBeCloseTo(2.0);
-
-    // Clone should teleport behind the player (300 - 60 = 240)
-    expect(clone.x).toBeCloseTo(240);
-    expect(clone.y).toBeCloseTo(200);
-
-    // Clone slam zone created
-    let slamZones = state.zones.filter((z: any) => z.vfx === 'boss_shadow_ult_slam');
-    expect(slamZones.length).toBe(1);
-
-    // Tick the remaining 2.0s (total 8.0s) -> Boss slams down behind target
-    tickBossSystems(state, 2.0);
+    // Tick 3.0s (total 9.0s) -> Boss slams down behind target, and clone reappears
+    tickBossSystems(state, 3.0);
     expect(boss._ultSlamTimer).toBe(0);
 
     // Boss should teleport behind the player (300 - 60 = 240)
     expect(boss.x).toBeCloseTo(240);
     expect(boss.y).toBeCloseTo(200);
 
-    // Both boss and clone slam zones created
-    slamZones = state.zones.filter((z: any) => z.vfx === 'boss_shadow_ult_slam');
-    expect(slamZones.length).toBe(2);
+    // Clone should reappear and be placed near the boss (isUltDisappeared set to false)
+    expect(clone.isUltDisappeared).toBe(false);
+
+    // Only boss's slam zone created
+    let slamZones = state.zones.filter((z: any) => z.vfx === 'boss_shadow_ult_slam');
+    expect(slamZones.length).toBe(1);
   });
 
   it('makes clones chase player when chaseTarget is true', () => {

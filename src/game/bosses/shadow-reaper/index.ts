@@ -14,7 +14,7 @@ function updateBossCrosses(state: any, ent: any, dt: number) {
   if (ent._ultCrossRemaining !== undefined && ent._ultCrossRemaining > 0) {
     ent._ultCrossTimer -= dt;
     if (ent._ultCrossTimer <= 0) {
-      ent._ultCrossTimer += 2.0;
+      ent._ultCrossTimer += 3.0;
       ent._ultCrossRemaining--;
 
       const target = state.players[ent._ultSlamTargetId];
@@ -96,7 +96,7 @@ const data = {
     color: '#aa33ff',
     vfx: 'boss_shadow_shuriken',
     effect: { kind: 'blind', duration: 1.5 },
-    cd: 1.2,
+    cd: 0.8,
     windup: 0.3
   },
   skill1: {
@@ -119,7 +119,7 @@ const data = {
   ultimate: {
     name: '萬影千殺陣',
     type: 'shadow_execution',
-    cd: 20.0,
+    cd: 30.0,
     windup: 1.5,
     color: '#8800ff',
     vfx: 'boss_shadow_ult',
