@@ -73,40 +73,23 @@ export function shadowstrike(ctx: ActionContext) {
   }
 }
 
+// 千影分身：召出 N 個無敵殘影分身，於 duration 內持續環繞最近目標斬擊（逐幀結算在 ninja/clones.ts 的 tick）。
+// 施法者本體的隱身＋無敵窗由 ult 的 action.self 套用（executor）。
 export function shadowflurry(ctx: ActionContext) {
   const { state, caster, silent } = ctx;
   const action = ctx.action as any;
-  const n = action.count || 7;
-  // 起手大爆（千影現身）：type 'ultimate' → vfx onCast 的大爆分支
+  (caster as any)._ninjaClones = {
+    remaining: action.duration || 3.5,
+    count: action.count || 5,
+    interval: action.interval || 0.26,
+    dmg: action.dmg || 9,
+    range: action.range || 460,
+    orbit: action.orbit || 66,
+    timer: 0,
+    phase: 0,
+  };
+  // 起手大爆（分身現身）：type 'ultimate' → vfx onCast 的大爆＋環狀分身俯衝
   if (!silent) addFx(state, { type: 'ultimate', x: caster.x, y: caster.y, facing: caster.facing, color: action.color, life: 0.6, vfx: action.vfx });
-  const cands = Object.values(state.players)
-    .filter((o: any) => isEnemy(state, caster.id, o) && o.hp > 0)
-    .sort((a: any, b: any) => {
-      // 被控優先，再距離，再 id
-      const ca = isControlled(a) ? 0 : 1, cb = isControlled(b) ? 0 : 1;
-      if (ca !== cb) return ca - cb;
-      const da = dist(caster.x, caster.y, a.x, a.y);
-      const db = dist(caster.x, caster.y, b.x, b.y);
-      if (da !== db) return da - db;
-      return Number(a.id) - Number(b.id);
-    });
-  if (!cands.length) {
-    if (!silent) addFx(state, { type: 'blink', x: caster.x, y: caster.y, color: action.color, life: 0.3, radius: PLAYER_RADIUS * 2, vfx: action.vfx });
-    return;
-  }
-  const m = outMult(caster, action);
-  for (let i = 0; i < n; i++) {
-    const target = cands[i % cands.length];
-    blinkBehind(caster, target);
-    dealDamage(state, target, (action.dmg || 0) * m, caster.id);
-    if (action.knockback) {
-      const dx = target.x - caster.x, dy = target.y - caster.y;
-      const d = Math.hypot(dx, dy) || 1;
-      target.kvx += dx / d * action.knockback;
-      target.kvy += dy / d * action.knockback;
-    }
-    if (!silent) addFx(state, { type: 'blink', x: caster.x, y: caster.y, facing: caster.facing, color: action.color, life: 0.22, radius: PLAYER_RADIUS * 1.7, vfx: action.vfx, clone: true });
-  }
 }
 
 export const handlers = { shadowstrike, shadowflurry };

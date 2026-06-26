@@ -95,18 +95,59 @@ registerVfx('ninja_ultimate', {
       ring(ctx, c, { color: '#9fd2ff', from: 16, to: 210, life: 0.6, y: 4, alpha: 0.9, ease: true });
       ring(ctx, c, { color: '#2c3e50', from: 8, to: 150, life: 0.45, y: 8, alpha: 0.8 });
       sphereFlash(ctx, c, { color: '#dff1ff', from: 10, to: 120, life: 0.34, alpha: 0.95 });
-      // 千影：一圈（含內外兩環、錯落出現）發光分身俯衝斬入 → 明確「無數殘影」
-      const N = 10;
-      for (let i = 0; i < N; i++) {
-        const a = (i / N) * Math.PI * 2;
-        spawnShadowClone(ctx, c, a, 150);
-        if (i % 2 === 0) spawnShadowClone(ctx, c, a + 0.32, 95);
-      }
-      burst(ctx, c, { color: ['#86bce6', '#cfeaff', '#2c3e50'], count: 50, speed: 340, up: 70, life: 0.7, size: 5 });
-      column(ctx, c, { color: ['#9fd2ff', '#dff1ff'], count: 18, radius: 30, speed: 150, life: 0.6, size: 4 });
+      // 施放瞬間的爆發（真正的「5 個分身」由 ninja_clones 在目標處持續顯示）
+      burst(ctx, c, { color: ['#86bce6', '#cfeaff', '#2c3e50'], count: 44, speed: 340, up: 70, life: 0.7, size: 5 });
+      column(ctx, c, { color: ['#9fd2ff', '#dff1ff'], count: 16, radius: 30, speed: 150, life: 0.6, size: 4 });
     } else {
       // 每次瞬斬命中：發光殘影 + 斬光
       shadowCloneStrike(ctx, c, f.facing || 0, { big: false, slashColor: '#eaf5ff' });
+    }
+  },
+});
+
+// 千影分身：在目標四周召出 5 個「持續存在」的發光人形殘影分身，各自週期性向目標斬擊。
+// 由 ninja/clones.ts 的 tick 在取得目標時發出一次（type 'buff'），整段大招期間都在。
+registerVfx('ninja_clones', {
+  onCast(ctx, f, c) {
+    const TH = ctx.THREE;
+    const N = 5;
+    const orbit = f.radius || 66;
+    const dur = f.life || 3.5;
+    addShake(ctx, 8);
+    addFlash(ctx, 0.18, '#1a2433');
+    for (let i = 0; i < N; i++) {
+      const ang = (i / N) * Math.PI * 2;
+      const cx = c.x + Math.cos(ang) * orbit;
+      const cz = c.z + Math.sin(ang) * orbit;
+      const faceIn = Math.atan2(c.z - cz, c.x - cx);
+      // 人形剪影（人物尺寸、清楚可見）：身體(錐狀斗篷) + 頭(球) + 兜帽(錐) + 腳邊光環，
+      //   亮青藍 additive → 暗場上發光、亮場上也讀得出輪廓。
+      const g = new TH.Group();
+      const mat = new TH.MeshBasicMaterial({ color: 0x6ab0ee, transparent: true, opacity: 0, blending: TH.AdditiveBlending, depthWrite: false, side: TH.DoubleSide });
+      const body = new TH.Mesh(new TH.CylinderGeometry(3.5, 10, 34, 6), mat); body.position.y = 17;
+      const head = new TH.Mesh(new TH.SphereGeometry(7, 10, 10), mat); head.position.y = 40;
+      const hood = new TH.Mesh(new TH.ConeGeometry(8, 12, 6), mat); hood.position.y = 47;
+      // 腳邊光環，把分身「釘」在地面、強化存在感
+      const ringMat = new TH.MeshBasicMaterial({ color: 0x9fd2ff, transparent: true, opacity: 0, blending: TH.AdditiveBlending, depthWrite: false, side: TH.DoubleSide });
+      const footRing = new TH.Mesh(new TH.RingGeometry(8, 12, 20), ringMat); footRing.rotation.x = -Math.PI / 2; footRing.position.y = 1;
+      g.add(body, head, hood, footRing);
+      g.position.set(cx, 0, cz);
+      g.rotation.y = -faceIn;
+      g.userData.geo = { dispose() { body.geometry.dispose(); head.geometry.dispose(); hood.geometry.dispose(); footRing.geometry.dispose(); } };
+      g.userData.mat = { dispose() { mat.dispose(); ringMat.dispose(); } };
+      let nextSlash = 0.15 + (i % N) * 0.05;          // 各分身錯開出刀
+      ctx.addTransient(g, dur, (m, t) => {
+        const age = t * dur;
+        const fadeIn = Math.min(1, age / 0.18), fadeOut = Math.min(1, (1 - t) / 0.12);
+        const a = Math.min(fadeIn, fadeOut);
+        mat.opacity = 0.9 * a;
+        ringMat.opacity = 0.5 * a * (0.7 + 0.3 * Math.sin(age * 5 + i));
+        m.position.y = Math.sin(age * 7 + i) * 2;     // 輕浮動
+        if (age >= nextSlash) {                        // 週期性向目標斬一刀
+          nextSlash = age + 0.3;
+          slashBlade(ctx, { x: cx + (c.x - cx) * 0.35, z: cz + (c.z - cz) * 0.35 }, faceIn, { color: '#dff1ff', len: 56, w: 8, swing: 1.6, life: 0.16 });
+        }
+      });
     }
   },
 });

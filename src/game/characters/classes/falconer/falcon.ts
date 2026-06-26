@@ -28,11 +28,11 @@ function effectiveRange(p: any): number {
 }
 
 // 一次飛行的「招式參數」。總傷害守恆：hits × hitDmg × crit。
-// 平時獵鷹突擊：10 × 5.4 × 1.7 ≈ 91.8（不帶擊退，避免把敵人推離自己的輸出範圍）。
-const BLITZ = { hits: 10, hitDmg: 5.4, hitGap: 0.035, strikeAt: 0.2, dur: 0.62, knockback: 0 };
+// 平時獵鷹突擊：10 × 7.0 × 1.7 ≈ 119（拉高鷹的輸出，老鷹是本角色主要 DPS 來源）。
+const BLITZ = { hits: 10, hitDmg: 7.0, hitGap: 0.035, strikeAt: 0.2, dur: 0.62, knockback: 0 };
 // 大絕鷹擊風暴：每趟更快（0.4s 來回）、6 段；風暴持續期間連續來回 → 打很多次。
 // 每趟首擊帶「中等擊退」（弱於 K 的鷹擊·震退），把敵群推開＝保命。
-const STORM = { hits: 6, hitDmg: 6.2, hitGap: 0.04, strikeAt: 0.12, dur: 0.4, knockback: 160 };
+const STORM = { hits: 6, hitDmg: 7.6, hitGap: 0.04, strikeAt: 0.12, dur: 0.4, knockback: 160 };
 
 // 整數 PRNG（Math.imul 全平台一致），回傳 0..1。
 function mulberry32(a: number): number {
@@ -113,6 +113,22 @@ export function startFalconStorm(state: any, p: Player, dur: number) {
   addFx(state, { type: 'skillname', x: p.x, y: p.y, color: '#ffd76a', life: 1.4, text: '鷹擊風暴', owner: p.id, ultimate: true });
 }
 
+// K「鷹擊·震退」：發動鷹的「衝鋒飛行」——沿 dir 飛出 range 再弧線飛回主人（模型自動處理去回程）。
+// 直接覆寫 f.flight（取代任何進行中的自動攻擊飛行）＋ 推遲平時計時 ⇒ 同時間只會有「一隻鳥」，不再重影。
+export function launchFalconCharge(p: Player, dir: number, opts: any = {}) {
+  const f = ensureFalcon(p);
+  const range = opts.range || 360;
+  const dur = opts.dur || 0.55;
+  f.flight = {
+    charge: true, t: 0, dur, trail: 0,
+    tdx: Math.cos(dir) * range, tdy: Math.sin(dir) * range,
+    dx: Math.cos(dir), dy: Math.sin(dir),
+    dmg: opts.dmg || 42, knockback: opts.knockback || 420, hitRadius: opts.hitRadius || 56,
+    hit: {},
+  };
+  f.timer = Math.max(f.timer || 0, dur + 0.2); // 衝鋒結束後不要立刻又冒自動攻擊的鷹
+}
+
 export function tickFalcon(state: any, p: Player, dt: number) {
   if (!p.alive) {
     const fst = (p as any)._falcon;
@@ -138,6 +154,32 @@ export function tickFalcon(state: any, p: Player, dt: number) {
   // 飛行進行中：推進時間軸、灑拖尾、落下各段連擊；結束時依狀態決定「立刻再飛(風暴)」或「進冷卻」。
   if (f.flight) {
     const fl = f.flight;
+    // K「鷹擊·震退」衝鋒飛行：鷹沿施法方向飛出 range（去程＋回程弧線，模型自動飛回主人），
+    // 沿途撞到的敵人各一次強力擊退（往衝鋒方向）。佔用同一個 f.flight ⇒ 不會同時又冒出自動攻擊的鷹。
+    if (fl.charge) {
+      fl.t += dt;
+      fl.trail += dt;
+      const u = Math.min(1, fl.t / fl.dur);
+      const arc = Math.sin(u * Math.PI);
+      const bx = p.x + fl.tdx * arc, by = p.y + fl.tdy * arc;
+      if (fl.trail >= 0.03) { fl.trail = 0; addFx(state, { type: 'hit', x: bx, y: by, color: '#ffd76a', life: 0.28, radius: 7, vfx: 'falconer_trail' }); }
+      for (const o of Object.values(state.players) as any[]) {
+        if (!o.alive || !isEnemy(state, p.id, o) || fl.hit[o.id]) continue;
+        if (Math.hypot(o.x - bx, o.y - by) <= (fl.hitRadius || 56)) {
+          fl.hit[o.id] = true;
+          dealDamage(state, o, fl.dmg, p.id, { noTalent: true, source: 'skill1' });
+          o.kvx += fl.dx * fl.knockback;
+          o.kvy += fl.dy * fl.knockback;
+          addFx(state, { type: 'hit', x: o.x, y: o.y, facing: Math.atan2(fl.dy, fl.dx), color: '#ffd76a', life: 0.32, radius: 26, vfx: 'falconer_kbird' });
+        }
+      }
+      if (fl.t >= fl.dur) {
+        f.flight = null;
+        if (f.frenzy) { if (!launchFlight(state, p, f, STORM)) f.frenzy = null; }
+        else f.timer = nextInterval(f);
+      }
+      return;
+    }
     // 每幀更新到鎖定目標的當前世界位移：棲位本就跟著玩家移動，故走位時鷹仍自然飛向敵人並飛回。
     const locked = state.players[fl.targetId];
     const aim = (locked && locked.alive) ? locked : nearestEnemy(state, p);

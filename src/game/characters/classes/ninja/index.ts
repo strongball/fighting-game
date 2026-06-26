@@ -6,6 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { attachSkinGear } from './gear.ts';
 import './vfx.ts';
 import './talent.ts';
+import { tickNinjaClones } from './clones.ts';
 
 const data = {
     id: 'ninja', order: 7, evadeType: 'blink', name: '忍者', color: '#2c3e50', shape: 'triangle', sprite: characterSprite('ninja', '#2c3e50', true, drawNinjaTexture),
@@ -17,7 +18,7 @@ const data = {
     basic: { name: '飛鏢', type: 'projectile', dmg: 22, speed: 680, radius: 9, lifetime: 1.0, knockback: 40, cd: 0.36, color: '#95a5a6', vfx: 'ninja_shuriken' },
     skill1: { name: '影縛符', type: 'projectile', dmg: 28, speed: 640, radius: 12, lifetime: 0.85, knockback: 20, manaCost: 25, cd: 8, color: '#636e72', effect: { kind: 'root', duration: 2.0 }, vfx: 'ninja_bind' },
     skill2: { name: '影襲·處決', type: 'shadowstrike', range: 360, dmg: 150, hitRadius: 100, knockback: 80, fallbackRange: 300, stealthDur: 1.5, manaCost: 30, cd: 8, color: '#2c3e50', vfx: 'ninja_shadowstrike' },
-    ultimate: { name: '千影', type: 'shadowflurry', count: 7, dmg: 52, knockback: 60, cd: 12, color: '#b0bec5', vfx: 'ninja_ultimate', self: { effects: [{ kind: 'invis', duration: 2.5 }, { kind: 'evading', duration: 2.5 }, { kind: 'haste', duration: 2.5, factor: 1.4 }] } },
+    ultimate: { name: '千影分身', type: 'shadowflurry', count: 5, dmg: 9, interval: 0.26, duration: 3.5, range: 460, orbit: 66, cd: 12, color: '#b0bec5', vfx: 'ninja_ultimate', self: { effects: [{ kind: 'invis', duration: 3.5 }, { kind: 'evading', duration: 3.5 }, { kind: 'haste', duration: 3.5, factor: 1.4 }] } },
   };
 
 export class NinjaCharacter extends BaseCharacter {
@@ -28,6 +29,7 @@ export class NinjaCharacter extends BaseCharacter {
       buildWeapon,
       paintTexture: drawNinjaTexture, attachSkinGear,
       loadVfx: () => undefined,
+      tick: tickNinjaClones,
     });
   }
 }
