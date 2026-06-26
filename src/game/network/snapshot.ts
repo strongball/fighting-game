@@ -27,6 +27,8 @@ export const NET_PLAYER_FIELDS = [
   'ownerId', 'partId', 'partColor', 'scale', 'reviveProg',
   // HUD / 渲染額外線索：倒地判定(aiId)、引導光束(channel)、破綻窗口、相位覆寫、鎖定目標
   'aiId', 'channel', 'recoverWindow', 'recoverHeavy', 'phaseTagsOverride', 'lockTargetId',
+  // Boss-specific multiplayer display markers.
+  'magneticPolarity', 'magnetOverload',
 ] as const;
 
 /** 要過網路、且「原樣複製」的頂層狀態欄位（players 與含預設值者另外處理）。 */

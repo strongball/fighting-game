@@ -9,15 +9,16 @@ const BOSS_ORDER = [
   'shadow-reaper',         // Round 5
   'tidal-siren',           // Round 6
   'frost-assassin',        // Round 7
-  'mecha-god',             // Round 8
-  'ancient-titan',         // Round 9
-  'necromancer-conductor', // Round 10
-  'storm-wolf',            // Round 11
-  'void-mage',             // Round 12
-  'fallen-angel',          // Round 13
-  'doppelganger',          // Round 14
-  'time-devourer',         // Round 15
-  'star-forge',            // Round 16
+  'magnet-artificer',      // Round 8
+  'mecha-god',             // Round 9
+  'ancient-titan',         // Round 10
+  'necromancer-conductor', // Round 11
+  'storm-wolf',            // Round 12
+  'void-mage',             // Round 13
+  'fallen-angel',          // Round 14
+  'doppelganger',          // Round 15
+  'time-devourer',         // Round 16
+  'star-forge',            // Round 17
 ];
 
 const bossesBySlug = new Map<string, any>();

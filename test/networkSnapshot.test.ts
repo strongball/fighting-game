@@ -48,4 +48,78 @@ describe('network snapshot serialization', () => {
     expect(snapshot.tethers).toEqual(state.tethers);
     expect(snapshot.destructibles).toEqual(state.destructibles);
   });
+
+  it('syncs magnet artificer multiplayer display objects', () => {
+    const state: any = createInitialState([
+      { id: 'p0', name: 'Host Player', charId: 'warrior', team: 1 },
+      { id: 'p1', name: 'Joiner Player', charId: 'mage', team: 1 },
+    ], {}, { mode: 'boss' });
+    state.players.p0.magneticPolarity = {
+      polarity: 'N',
+      color: '#58d7ff',
+      sourceBossId: 'boss-8',
+      remaining: 7.5,
+      expiresAt: 8,
+    };
+    state.players.p1.magneticPolarity = {
+      polarity: 'S',
+      color: '#ff5d6c',
+      sourceBossId: 'boss-8',
+      remaining: 7.5,
+      expiresAt: 8,
+    };
+    state.players['boss-8'] = {
+      id: 'boss-8',
+      name: '磁核匠師',
+      charId: 116,
+      team: 2,
+      magnetOverload: true,
+    };
+    state.bossCustom = {
+      magnetArtificer: {
+        polarities: {
+          p0: state.players.p0.magneticPolarity,
+          p1: state.players.p1.magneticPolarity,
+        },
+        anchors: [{ id: 100, x: 620, y: 420, polarity: 'N', radius: 130 }],
+      },
+    };
+    state.zones = [{
+      id: 100,
+      owner: 'boss-8',
+      x: 620,
+      y: 420,
+      radius: 130,
+      dmg: 34,
+      lifetime: 3,
+      tick: 3,
+      tickTimer: 0,
+      delay: 1.2,
+      color: '#58d7ff',
+      vfx: 'boss_magnet_collapse',
+      magneticAnchor: true,
+      polarity: 'N',
+    }];
+    state.fx = [{
+      id: 200,
+      type: 'buff',
+      x: 500,
+      y: 520,
+      life: 0.3,
+      color: '#58d7ff',
+      vfx: 'boss_magnet_polarity',
+      targetId: 'p0',
+      polarity: 'N',
+    }];
+
+    const snapshot = serializeNetworkSnapshot(state);
+
+    expect(snapshot.players.p0.magneticPolarity.polarity).toBe('N');
+    expect(snapshot.players.p1.magneticPolarity.polarity).toBe('S');
+    expect(snapshot.players['boss-8'].magnetOverload).toBe(true);
+    expect(snapshot.bossCustom.magnetArtificer.anchors[0].polarity).toBe('N');
+    expect(snapshot.zones[0].magneticAnchor).toBe(true);
+    expect(snapshot.zones[0].vfx).toBe('boss_magnet_collapse');
+    expect(snapshot.fx[0].vfx).toBe('boss_magnet_polarity');
+  });
 });

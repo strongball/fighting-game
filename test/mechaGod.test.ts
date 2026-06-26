@@ -6,9 +6,9 @@ import { executeAction } from '../src/game/actions/executor.ts';
 import { tickBossSystems } from '../src/game/bosses/systems.ts';
 import { applyBossDamageModifiers } from '../src/game/bosses/damage.ts';
 
-describe('Round 8 Mecha God', () => {
-  it('is registered as Round 8', () => {
-    const boss = getBossForRound(8);
+describe('Round 9 Mecha God', () => {
+  it('is registered as Round 9', () => {
+    const boss = getBossForRound(9);
     expect(boss).toBeTruthy();
     expect(boss.name).toBe('機械真神');
   });
@@ -16,7 +16,7 @@ describe('Round 8 Mecha God', () => {
   it('spawns pylons at 75% HP and reduces damage by 90%', () => {
     const state: any = createInitialState([], {}, { mode: 'boss' });
     state.roundPhase = 'fighting';
-    state.round = 8;
+    state.round = 9;
 
     const boss = makeBoss('mecha', 114, 200, 200, 2, { isBoss: true });
     const player = makePlayer('hero', 'Hero', 'warrior', 400, 400, 1);
@@ -52,7 +52,7 @@ describe('Round 8 Mecha God', () => {
   it('increases heat on casting and enters overheat at 100% heat', () => {
     const state: any = createInitialState([], {}, { mode: 'boss' });
     state.roundPhase = 'fighting';
-    state.round = 8;
+    state.round = 9;
 
     const boss = makeBoss('mecha', 114, 200, 200, 2, { isBoss: true });
     const player = makePlayer('hero', 'Hero', 'warrior', 300, 300, 1);

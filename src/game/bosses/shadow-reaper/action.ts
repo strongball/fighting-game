@@ -232,25 +232,24 @@ registerBossAction('shadow_execution', (state, boss, action, h) => {
     }
   }
 
-  // 1. 真身與分身消失並獲得無敵
+  // 1. 真身與分身消失 (但不套用無敵)
   boss.isUltDisappeared = true;
-  h.applyEffect(boss, 'evading', { duration: boss.isFake ? 6.2 : 8.2 });
 
   const clone = Object.values(state.players).find(
     (p: any) => p.alive && p.ownerId === boss.id && p.isFake && p.charId === boss.charId
   ) as any;
   if (clone) {
     clone.isUltDisappeared = true;
-    const cloneEvadeDuration = (boss.phaseIdx || 0) >= 1 ? 6.2 : 8.2;
-    h.applyEffect(clone, 'evading', { duration: cloneEvadeDuration });
   }
 
   // 2. 立即在目標玩家腳下生成第一道橫向暗影軌跡
   spawnUltZones(state, boss.id, target.x, target.y, 0);
 
   // 3. 設定計時器，進行後續直向/X預警與從空中重擊落下
-  boss._ultSlamTimer = boss.isFake ? 6.0 : 8.0;
+  if (!boss.isFake) {
+    boss._ultSlamTimer = 9.0;
+  }
   boss._ultSlamTargetId = target.id;
   boss._ultCrossRemaining = 2;
-  boss._ultCrossTimer = 2.0;
+  boss._ultCrossTimer = 3.0;
 });

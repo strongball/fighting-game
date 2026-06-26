@@ -7,10 +7,12 @@ import type { GameState, Player, Input } from '../types';
 // 但移動仍流暢不卡頓。recover 破綻期再額外減速。
 const BOSS_BASE_SPEED_MULT = 0.65;
 const BOSS_RECOVER_SPEED_MULT = 0.62;
+const PLAYER_BASE_SPEED_MULT = 1.06;
 
 export function speedOf(p: Player, difficulty = 0.5): number {
   const character = getCharacter(p.charId);
   let speed = character.speed;
+  if (!p.isBoss && !p.isMinion && !p.isPart) speed *= PLAYER_BASE_SPEED_MULT;
   if (p.effects.slow) speed *= p.effects.slow.factor;
   if (p.effects.chill) speed *= p.effects.chill.factor;
   if (p.effects.haste) speed *= p.effects.haste.factor;

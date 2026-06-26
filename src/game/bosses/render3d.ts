@@ -114,7 +114,7 @@ export function updateBossModelVisuals(group: any, ud: any, dt: number, info: an
 
   // 執行自訂模型更新 Hook (以解耦不同魔王/小兵的動畫實作)
   if (ud.parts && typeof ud.parts.customUpdate === 'function') {
-    ud.parts.customUpdate(dt, group, ud);
+    ud.parts.customUpdate(dt, group, ud, info);
   }
 }
 
