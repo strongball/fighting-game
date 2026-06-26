@@ -364,9 +364,13 @@ export function createCharacterModel(charId) {
 
   if (parts.barrageWings) group.add(parts.barrageWings);
   if (parts.falcon) group.add(parts.falcon);
+  if (parts.cape) group.add(parts.cape);
+  if (parts.capeTrim) group.add(parts.capeTrim);
+  if (parts.swordEnergyOrbs) { for (const o of parts.swordEnergyOrbs) group.add(o); }
+  if (parts.extraOrbs) { for (const e of parts.extraOrbs) group.add(e); }
 
   group.userData = {
-    parts: { torso, head, armL, armR, legL, legR, emblem, shieldRing, shieldShell, rageRing, burnRing, frozenRingLow, frozenRingHigh, stunRing, stunHalo, rootRing, handR, face, accents, starOrbitShards: parts.starOrbitShards, barrageWings: parts.barrageWings, falcon: parts.falcon, customUpdate: parts.customUpdate },
+    parts: { torso, head, armL, armR, legL, legR, emblem, shieldRing, shieldShell, rageRing, burnRing, frozenRingLow, frozenRingHigh, stunRing, stunHalo, rootRing, handR, face, accents, starOrbitShards: parts.starOrbitShards, swordEnergyOrbs: parts.swordEnergyOrbs, extraOrbs: parts.extraOrbs, barrageWings: parts.barrageWings, falcon: parts.falcon, customUpdate: parts.customUpdate, cape: parts.cape, capeTrim: parts.capeTrim },
     skinMats,
     phase: Math.random() * Math.PI * 2,
     breathe: Math.random() * Math.PI * 2,
@@ -768,6 +772,50 @@ export function animateModel(group, dt, info) {
       shard.rotation.z += dt * 0.8;
       shard.scale.setScalar(1 + Math.sin(ud.breathe * 2 + i) * 0.035);
     }
+  }
+
+  // 魔劍士劍氣球體：依 swordEnergy 數量顯示
+  if (parts.swordEnergyOrbs) {
+    const se = p && p.magicSwordsman;
+    const count = se ? Math.max(0, Math.min(5, se.swordEnergy || 0)) : 0;
+    const baseY = 18;
+    for (let i = 0; i < parts.swordEnergyOrbs.length; i++) {
+      const orb = parts.swordEnergyOrbs[i];
+      orb.visible = i < count;
+      if (!orb.visible) continue;
+      const a = ud.breathe * 1.4 + i * (Math.PI * 2 / Math.max(1, count));
+      const r = 48 + count * 3;
+      orb.position.set(Math.cos(a) * r, baseY + Math.sin(a * 1.5 + i * 1.2) * 8, Math.sin(a) * r);
+      orb.rotation.x += dt * 1.6;
+      orb.rotation.y += dt * 2.5;
+      orb.rotation.z += dt * 1.0;
+      const pulse = 1 + Math.sin(ud.breathe * 3 + i * 1.5) * 0.08;
+      orb.scale.setScalar(pulse);
+    }
+  }
+
+  // 魔劍士額外浮游小劍氣（3 顆，始終可見，低速公轉）
+  if (parts.extraOrbs) {
+    for (let i = 0; i < parts.extraOrbs.length; i++) {
+      const extra = parts.extraOrbs[i];
+      const a = ud.breathe * 0.6 + i * (Math.PI * 2 / 3);
+      const r = 62;
+      extra.position.set(Math.cos(a) * r, 22 + Math.sin(a * 2 + i) * 5, Math.sin(a) * r);
+      extra.rotation.x += dt * 0.8;
+      extra.rotation.y += dt * 1.2;
+      extra.rotation.z += dt * 0.4;
+      extra.scale.setScalar(1 + Math.sin(ud.breathe * 1.5 + i) * 0.05);
+    }
+  }
+
+  // 魔劍士披風飄動
+  if (parts.cape) {
+    const sway = Math.sin(ud.breathe * 0.8) * 0.06;
+    parts.cape.rotation.z = sway;
+  }
+  if (parts.capeTrim) {
+    const sway = Math.sin(ud.breathe * 0.8 + 0.3) * 0.08;
+    parts.capeTrim.rotation.z = sway;
   }
 
   // 天羽箭暴 — 磅礴雙翼：依 p.barrage 展開/收合，作為 player group 子物件自動跟隨移動。

@@ -3,6 +3,7 @@ import { applyEffect } from '../../../entities/effects.ts';
 import { applyHeal } from '../../../entities/heal.ts';
 import { applyShield } from '../../../entities/shield.ts';
 import { addFx } from '../../../entities/fx.ts';
+import { makeZone } from '../../../entities/factories.ts';
 import { isEnemy, isAlly } from '../../../entities/team.ts';
 import type { ActionContext } from '../../../types';
 
@@ -43,6 +44,7 @@ export function buff(ctx: ActionContext) {
     }
   }
   if (action.trail) caster.trail = { remaining: action.trail.duration || 3, spacing: action.trail.spacing || 42, lastx: caster.x, lasty: caster.y, zone: action.trail.zone, srcSlot: ctx.source };
+  if (action.castZone) state.zones.push(Object.assign(makeZone(caster.id, caster.x, caster.y, action.castZone), { srcSlot: ctx.source }));
   if (!silent) {
     addFx(state, {
       type: 'buff',

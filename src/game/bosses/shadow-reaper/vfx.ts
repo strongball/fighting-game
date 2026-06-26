@@ -92,6 +92,16 @@ export function loadVfx() {
   });
 
   // 5. 萬影千殺陣 (ultimate): 軌跡打擊與最終重擊落下
+  
+  // 暗影降臨預警: Boss/分身 reappear 時的暗影聚集效果
+  registerVfx('boss_shadow_ult_warning', {
+    onCast(ctx, f, c) {
+      const { sceneMgr } = ctx;
+      sphereFlash(ctx, c, { color: SHADOW, from: 6, to: 140, life: 0.35, alpha: 0.6 });
+      ring(ctx, c, { color: PURPLE, from: 10, to: 190, life: 0.45, y: 2, alpha: 0.5, ease: true });
+    },
+  });
+  
   // 十字軌跡打擊
   registerVfx('boss_shadow_ult_strike', {
     onCast(ctx, f, c) {

@@ -51,6 +51,9 @@ export function tryAction(state: GameState, p: Player, slot: string) {
   const character = getCharacter(p.charId);
   const action = character[slot];
   if (!action || p.cd[slot] > 0) return;
+  const talent = character.talent;
+  const canCast = getTalentHooks(talent?.id)?.canCast;
+  if (canCast && !canCast(state, p, slot, talent)) return;
   if (action.chargeMax) {
     tryStartCharge(p, action, slot);
     return;
@@ -63,7 +66,7 @@ export function tryAction(state: GameState, p: Player, slot: string) {
   if (action.hpCost) p.hp -= action.hpCost;
   p.cd[slot] = p.isBoss && p.phaseCdMult ? action.cd * p.phaseCdMult : action.cd;
 
-  const talent = character.talent;
+  // talent 已在 canCast 上方宣告
   if (talent && talent.id === 'iaido' && !action.noIaiReset) {
     p.iaiReady = p.iaiTimer >= (talent.delay || 2);
     p.iaiTimer = 0;
@@ -83,6 +86,9 @@ export function tryUltimate(state: GameState, p: Player) {
   const action = character.ultimate;
   if (!action) return;
   if (p.cd.ultimate > 0) return;
+  const talent = character.talent;
+  const canCast = getTalentHooks(talent?.id)?.canCast;
+  if (canCast && !canCast(state, p, 'ultimate', talent)) return;
   const freeMana = state.flags && state.flags.freeMana;
   const isAI = p.isBoss || p.aiId;
   if (!isAI) {
@@ -90,7 +96,6 @@ export function tryUltimate(state: GameState, p: Player) {
     if (!freeMana) p.ult = 0;
   }
   p.cd.ultimate = (action.cd || ULT_LOCKOUT) * (p.isBoss && p.phaseCdMult ? p.phaseCdMult : 1);
-  const talent = character.talent;
   if (talent && talent.id === 'iaido') {
     p.iaiReady = p.iaiTimer >= (talent.delay || 2);
     p.iaiTimer = 0;

@@ -50,6 +50,7 @@ export interface TalentHooks {
   onTimers?(state: any, p: any, dt: number, talent: any): void;      // 每幀計時 — tickCharacterTimers
   onRecovery?(state: any, p: any, dt: number, talent: any): void;    // 每幀被動回復 — tickPassiveRecovery
   onCastResolved?(state: any, p: any, action: any, slot: string, talent: any): void; // 施放後 — casting
+  canCast?(state: any, p: any, slot: string, talent: any): boolean;                  // 施放前判定（回 false 阻擋施放）— casting
 }
 
 const REGISTRY = new Map<string, TalentHooks>();

@@ -53,6 +53,9 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
   const furyWrapD = el('div', 'hud-bar fury', selfDesktop); // 坦克專屬怒氣條（非坦克隱藏）
   const furyFillD = el('i', '', furyWrapD);
   const furyTxtD = el('span', '', furyWrapD);
+  const seWrapD = el('div', 'hud-bar sword-energy', selfDesktop); // 魔劍士專屬劍氣條
+  const seFillD = el('i', '', seWrapD);
+  const seTxtD = el('span', '', seWrapD);
   const buffsD = el('div', 'hud-buffs', selfDesktop);
   const skillsContainerD = el('div', 'hud-skills-container', selfDesktop);
   const skillsD = el('div', 'hud-skills', skillsContainerD);
@@ -87,6 +90,9 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
   const furyWrapM = el('div', 'hud-mobile-bar fury', barsWrapM); // 坦克專屬怒氣條（非坦克隱藏）
   const furyFillM = el('i', '', furyWrapM);
   const furyTxtM = el('span', '', furyWrapM);
+  const seWrapM = el('div', 'hud-mobile-bar sword-energy', barsWrapM); // 魔劍士專屬劍氣條
+  const seFillM = el('i', '', seWrapM);
+  const seTxtM = el('span', '', seWrapM);
   const buffsM = el('div', 'hud-mobile-buffs', selfMobile);
 
   // ---- 行動端虛擬搖桿與按鍵 ----
@@ -631,6 +637,13 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
           furyWrapD.classList.toggle('boiling', (me.fury || 0) >= (c.talent.threshold ?? 55));
           setText(furyTxtD, `怒氣 ${Math.floor(me.fury || 0)}`);
         }
+        const isMagicSwordsmanD = !!(c.talent && c.talent.id === 'arcane_contract');
+        setStyle(seWrapD, 'display', isMagicSwordsmanD ? '' : 'none');
+        if (isMagicSwordsmanD) {
+          const seCount = (me.magicSwordsman && me.magicSwordsman.swordEnergy) || 0;
+          setStyle(seFillD, 'width', pct(seCount / (c.talent.maxSwordEnergy || 5)));
+          setText(seTxtD, `劍氣 ${seCount}/${c.talent.maxSwordEnergy || 5}`);
+        }
         setHtml(buffsD, buildBuffHtml(me));
         setChip(chip.basic,  c.basic,  me.cd.basic,   me.mana);
         setChip(chip.skill1, c.skill1, me.cd.skill1,  me.mana);
@@ -657,6 +670,13 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
           setStyle(furyFillM, 'width', pct(Math.min(1, (me.fury || 0) / FURY_MAX)));
           furyWrapM.classList.toggle('boiling', (me.fury || 0) >= (c.talent.threshold ?? 55));
           setText(furyTxtM, `怒氣 ${Math.floor(me.fury || 0)}`);
+        }
+        const isMagicSwordsmanM = !!(c.talent && c.talent.id === 'arcane_contract');
+        setStyle(seWrapM, 'display', isMagicSwordsmanM ? '' : 'none');
+        if (isMagicSwordsmanM) {
+          const seCount = (me.magicSwordsman && me.magicSwordsman.swordEnergy) || 0;
+          setStyle(seFillM, 'width', pct(seCount / (c.talent.maxSwordEnergy || 5)));
+          setText(seTxtM, `劍氣 ${seCount}/${c.talent.maxSwordEnergy || 5}`);
         }
         setHtml(buffsM, buildBuffHtml(me));
         

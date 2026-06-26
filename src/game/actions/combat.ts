@@ -59,7 +59,7 @@ export function meleeHit(state: GameState, p: Player, a: any, silent?: boolean, 
     const dx = o.x - p.x, dy = o.y - p.y;
     const d = Math.hypot(dx, dy);
     if (d > a.range + bodyR(o)) continue;
-    if (!full) {
+    if (!full && d > 0.1) {
       const ang = Math.atan2(dy, dx);
       if (Math.abs(angleDiff(ang, p.facing)) > a.arc / 2) continue;
     }
