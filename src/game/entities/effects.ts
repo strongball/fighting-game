@@ -94,6 +94,24 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
       };
     },
   },
+  // 劇毒：可「無限疊加」的 DoT（刺客專屬）。每層每 tick 造成 dmgPerStack 傷害（結算在 systems/effects.ts）。
+  poison: {
+    cleanseable: true,
+    hud: { icon: '🧪', name: '劇毒', buff: false },
+    apply: (p, _k, data, srcId) => {
+      const cur = p.effects.poison;
+      const tick = data.tick || 0.5;
+      p.effects.poison = {
+        remaining: Math.max(cur ? cur.remaining : 0, data.duration || 5),
+        stacks: (cur ? cur.stacks : 0) + (data.stacks || 1),   // 無上限疊加
+        dmgPerStack: Math.max(cur ? cur.dmgPerStack : 0, data.dmgPerStack || 3),
+        tick,
+        tickTimer: cur ? cur.tickTimer : tick,
+        srcId: srcId != null ? srcId : (cur ? cur.srcId : undefined),
+        srcSlot: data.srcSlot != null ? data.srcSlot : (cur ? cur.srcSlot : undefined),
+      };
+    },
+  },
   mark: {
     cleanseable: true,
     hud: { icon: '🎯', name: '標記', buff: false },

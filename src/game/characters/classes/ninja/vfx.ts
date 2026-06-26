@@ -40,8 +40,9 @@ function createCalligraphyTexture(text, colorStr = '#1a1a1a', size = 128) {
 // 一道「影分身」殘影（半透明三角錐）+ 斬擊刀光，用於處決與千影的每一擊
 function shadowCloneStrike(ctx, c, facing, { big = false, slashColor = '#eaf2ff' } = {}) {
   const TH = ctx.THREE;
-  const cloneGeo = new TH.ConeGeometry(big ? 12 : 9, big ? 30 : 22, 4);
-  const cloneMat = new TH.MeshBasicMaterial({ color: 0x10161f, transparent: true, opacity: 0.85, blending: TH.NormalBlending, depthWrite: false });
+  const cloneGeo = new TH.ConeGeometry(big ? 13 : 10, big ? 32 : 24, 5);
+  // 發光殘影（青白＋additive）→ 在暗場上也清楚可見（舊版近黑色 NormalBlending 幾乎看不到）
+  const cloneMat = new TH.MeshBasicMaterial({ color: big ? 0xcfeaff : 0x86bce6, transparent: true, opacity: 0.9, blending: TH.AdditiveBlending, depthWrite: false });
   const clone = new TH.Mesh(cloneGeo, cloneMat);
   clone.position.set(c.x, big ? 15 : 12, c.z);
   clone.rotation.x = Math.PI / 2;
@@ -61,21 +62,51 @@ function shadowCloneStrike(ctx, c, facing, { big = false, slashColor = '#eaf2ff'
   burst(ctx, c, { color: ['#10161f', '#2c3e50', '#9aa4b2'], count: big ? 18 : 10, speed: big ? 240 : 150, up: 30, life: 0.4, size: big ? 4.5 : 3 });
 }
 
-// 大絕 — 千影：影分身亂舞（cast 一發大爆＋每次瞬斬一道殘影）
+// 一道發光影分身：自環外位置俯衝向中心、過半程後斬一刀並淡出（青白 additive → 清楚可見）。
+function spawnShadowClone(ctx, c, angle, startR) {
+  const TH = ctx.THREE;
+  const g = new TH.Group();
+  const mat = new TH.MeshBasicMaterial({ color: 0x9fd2ff, transparent: true, opacity: 0, blending: TH.AdditiveBlending, depthWrite: false, side: TH.DoubleSide });
+  const body = new TH.Mesh(new TH.ConeGeometry(6, 30, 5), mat); body.rotation.x = Math.PI; // 尖朝下＝人形剪影
+  const head = new TH.Mesh(new TH.SphereGeometry(4.5, 8, 8), mat); head.position.y = 17;
+  g.add(body, head);
+  const sx = c.x + Math.cos(angle) * startR, sz = c.z + Math.sin(angle) * startR;
+  const faceIn = Math.atan2(c.z - sz, c.x - sx);
+  let slashed = false;
+  g.userData.geo = { dispose() { body.geometry.dispose(); head.geometry.dispose(); } };
+  g.userData.mat = mat;
+  ctx.addTransient(g, 0.46, (m, t) => {
+    m.position.set(sx + (c.x - sx) * t, 14, sz + (c.z - sz) * t); // 俯衝向中心
+    m.rotation.y = -faceIn;
+    mat.opacity = (t < 0.5 ? t / 0.5 : (1 - t) / 0.5) * 0.92;      // 淡入淡出
+    if (!slashed && t >= 0.55) {                                   // 抵達近中心時斬一刀
+      slashed = true;
+      slashBlade(ctx, { x: sx + (c.x - sx) * 0.8, z: sz + (c.z - sz) * 0.8 }, faceIn, { color: '#eaf5ff', len: 70, w: 9, swing: 1.7, life: 0.18 });
+    }
+  });
+}
+
+// 大絕 — 千影：召出一圈發光影分身俯衝亂斬（cast）＋每次瞬斬的命中閃光（strike）
 registerVfx('ninja_ultimate', {
   onCast(ctx, f, c) {
     if (f.type === 'ultimate') {
-      // 起手：全螢幕暗影爆閃 + 墨環
       addShake(ctx, 16);
-      addFlash(ctx, 0.3, '#1a2433');
-      ring(ctx, c, { color: '#b0bec5', from: 16, to: 200, life: 0.6, y: 4, alpha: 0.9, ease: true });
+      addFlash(ctx, 0.32, '#1a2433');
+      ring(ctx, c, { color: '#9fd2ff', from: 16, to: 210, life: 0.6, y: 4, alpha: 0.9, ease: true });
       ring(ctx, c, { color: '#2c3e50', from: 8, to: 150, life: 0.45, y: 8, alpha: 0.8 });
-      sphereFlash(ctx, c, { color: '#cfd8dc', from: 10, to: 120, life: 0.34, alpha: 0.9 });
-      burst(ctx, c, { color: ['#10161f', '#2c3e50', '#9aa4b2'], count: 56, speed: 360, up: 70, life: 0.7, size: 5.5 });
-      column(ctx, c, { color: '#8a93a3', count: 16, radius: 26, speed: 150, life: 0.5, size: 4 });
+      sphereFlash(ctx, c, { color: '#dff1ff', from: 10, to: 120, life: 0.34, alpha: 0.95 });
+      // 千影：一圈（含內外兩環、錯落出現）發光分身俯衝斬入 → 明確「無數殘影」
+      const N = 10;
+      for (let i = 0; i < N; i++) {
+        const a = (i / N) * Math.PI * 2;
+        spawnShadowClone(ctx, c, a, 150);
+        if (i % 2 === 0) spawnShadowClone(ctx, c, a + 0.32, 95);
+      }
+      burst(ctx, c, { color: ['#86bce6', '#cfeaff', '#2c3e50'], count: 50, speed: 340, up: 70, life: 0.7, size: 5 });
+      column(ctx, c, { color: ['#9fd2ff', '#dff1ff'], count: 18, radius: 30, speed: 150, life: 0.6, size: 4 });
     } else {
-      // 每次影分身瞬斬
-      shadowCloneStrike(ctx, c, f.facing || 0, { big: false, slashColor: '#dfe9f5' });
+      // 每次瞬斬命中：發光殘影 + 斬光
+      shadowCloneStrike(ctx, c, f.facing || 0, { big: false, slashColor: '#eaf5ff' });
     }
   },
 });

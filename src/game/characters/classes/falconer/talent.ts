@@ -5,7 +5,7 @@
 // 窗口計時由 onTimers 每幀遞減，於 onCastResolved 施放 skill2 時設定。
 // （老鷹的鷹擊另為必定爆擊，見 falcon.ts。）
 import { registerTalent } from '../../talents/registry';
-import { startFalconStorm, falconPeel } from './falcon.ts';
+import { startFalconStorm } from './falcon.ts';
 
 // 設定「鷹索敵範圍放大」buff（鷹眼凝視 / 大招期間；falcon.ts 的 effectiveRange 讀取、tick 遞減）。
 function setFalconRange(p: any, duration: number, mult: number) {
@@ -31,13 +31,11 @@ registerTalent('talonsight', {
     const s = talonState(p);
     if (s.eagleEye > 0) s.eagleEye = Math.max(0, s.eagleEye - dt);
   },
-  // skill1 鷹擊·震退 → 鷹飛出擊退周圍敵人（peel 保命）。
+  // skill1 鷹擊·震退 改為「往前衝的鳥」(projectile)，由 projectile handler 直接處理，這裡不再 hook。
   // skill2 鷹眼凝視 → 開啟必爆窗口 ＋ 放大鷹索敵範圍。
   // ultimate 鷹擊風暴 → 鷹連續來回俯衝 ＋ 放大鷹索敵範圍（故「包含大招」也吃到範圍 buff）。
   onCastResolved(state, p, action, slot) {
-    if (slot === 'skill1') {
-      falconPeel(state, p, { radius: action.radius, dmg: action.dmg, knockback: action.knockback });
-    } else if (slot === 'skill2') {
+    if (slot === 'skill2') {
       talonState(p).eagleEye = action.duration || 3;
       setFalconRange(p, action.duration || 3, action.falconRange || 1.6);
     } else if (slot === 'ultimate') {

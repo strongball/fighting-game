@@ -1,41 +1,40 @@
 // @ts-nocheck
-// 刺客：迅捷銳利、暗影。交叉快刀 / 瞬步殘影煙 / 背刺紫爆。
+// 刺客：毒刃疊毒收割。毒綠刀光 / 毒霧雲 / 淬毒紫綠爆 / 瘟疫爆發擴散。
 import * as THREE from 'three';
 import { registerVfx } from '../../../render3d/vfx/registry.js';
 import { slashBlade, ring, sphereFlash, burst, cone, column, addShake, addFlash, ultimateBurst } from '../../../render3d/vfx/lib.js';
 
-// 大絕招 — 死罪處決：殘血斬殺的血色處決爆斬
+// 大絕招 — 瘟疫爆發：全場中毒引爆＋擴散的毒綠瘟疫
 registerVfx('assassin_ultimate', {
+  // 施法者處的瘟疫爆發（type 'ultimate'）
   onCast(ctx, f, c) {
-    const TH = ctx.THREE;
-    const R = f.range || 160;
-    addShake(ctx, 18);
-    addFlash(ctx, 0.36, '#7a0f2a');
-
-    // 處決暴閃 + 雙色血環
-    sphereFlash(ctx, c, { color: '#ffffff', from: 10, to: R * 0.6, life: 0.3, alpha: 0.98 });
-    ring(ctx, c, { color: '#ff2d6b', from: 18, to: R * 1.35, life: 0.7, y: 4, alpha: 0.95, ease: true });
-    ring(ctx, c, { color: '#3a0f1f', from: 8, to: R * 1.05, life: 0.5, y: 8, alpha: 0.85 });
-
-    // 巨型死罪斬：交叉重刃（白 + 血色）
-    slashBlade(ctx, c, f.facing, { color: '#ffffff', len: R * 1.5, w: 26, swing: (f.arc || 2.8), life: 0.26 });
-    slashBlade(ctx, c, f.facing + 0.4, { color: '#ff2d6b', len: R * 1.35, w: 18, swing: -(f.arc || 2.8), life: 0.24 });
-
-    // 血色噴濺 + 前向錐爆
-    burst(ctx, c, { color: ['#ff2d6b', '#9b1030', '#3a0f1f'], count: 56, speed: 420, up: 70, gravity: -260, drag: 1.3, life: 0.7, size: 5 });
-    cone(ctx, c, f.facing, { color: ['#ff2d6b', '#ffffff', '#e056fd'], count: 30, speed: 460, spread: 0.7, offset: R * 0.3, up: 40, life: 0.5, size: 4.5 });
+    addShake(ctx, 16);
+    addFlash(ctx, 0.34, '#1e5a2a');
+    sphereFlash(ctx, c, { color: '#d8ffcf', from: 10, to: 120, life: 0.32, alpha: 0.95 });
+    ring(ctx, c, { color: '#7ee787', from: 18, to: 240, life: 0.75, y: 4, alpha: 0.9, ease: true });
+    ring(ctx, c, { color: '#2ecc71', from: 10, to: 170, life: 0.55, y: 8, alpha: 0.8 });
+    // 翻騰的毒氣（向上膨脹的綠雲）＋ 上升毒泡柱
+    burst(ctx, c, { color: ['#7ee787', '#2ecc71', '#1a7a3a', '#a06cff'], count: 60, speed: 300, up: 90, gravity: -14, drag: 1.5, life: 0.9, size: 6 });
+    column(ctx, c, { color: ['#7ee787', '#d8ffcf'], count: 28, radius: 60, speed: 150, life: 1.0, size: 5 });
+  },
+  // 每個中毒敵人被引爆＋擴散時的毒爆（type 'hit'，由 plaguenova 對每個目標發出）
+  onHit(ctx, f, c) {
+    sphereFlash(ctx, c, { color: '#d8ffcf', from: 4, to: 50, life: 0.26, alpha: 0.95 });
+    ring(ctx, c, { color: '#7ee787', from: 6, to: 78, life: 0.34, y: 6, alpha: 0.85, ease: true });
+    burst(ctx, c, { color: ['#7ee787', '#2ecc71', '#1a7a3a'], count: 22, speed: 240, up: 40, gravity: -10, drag: 1.4, life: 0.6, size: 4.5 });
   },
 });
 
 registerVfx('assassin_slash', {
   onCast(ctx, f, c) {
     const THREE = ctx.THREE;
-    slashBlade(ctx, c, f.facing + 0.35, { color: '#e9d5ff', len: f.range * 1.1, w: 6, swing: -0.7, life: 0.16 });
-    slashBlade(ctx, c, f.facing - 0.35, { color: f.color, len: f.range * 1.1, w: 6, swing: 0.7, life: 0.16 });
-    cone(ctx, c, f.facing, { color: '#c39bd3', count: 8, speed: 260, spread: 0.4, offset: f.range * 0.4, life: 0.22, size: 2.4 });
-    
+    // 毒刃：淡綠主刃 + 毒紫副刃 + 綠色毒沫
+    slashBlade(ctx, c, f.facing + 0.35, { color: '#d8ffcf', len: f.range * 1.1, w: 6, swing: -0.7, life: 0.16 });
+    slashBlade(ctx, c, f.facing - 0.35, { color: '#a06cff', len: f.range * 1.1, w: 6, swing: 0.7, life: 0.16 });
+    cone(ctx, c, f.facing, { color: ['#7ee787', '#2ecc71'], count: 9, speed: 260, spread: 0.4, offset: f.range * 0.4, life: 0.26, size: 2.6 });
+
     const slashGeo = new THREE.BoxGeometry(f.range * 1.2, 0.5, 2.5);
-    const slashMat = new THREE.MeshBasicMaterial({ color: 0x9b59b6, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending });
+    const slashMat = new THREE.MeshBasicMaterial({ color: 0x6ee07a, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending });
     
     const s1 = new THREE.Mesh(slashGeo, slashMat);
     s1.position.set(c.x + Math.cos(f.facing) * f.range * 0.4, 14, c.z + Math.sin(f.facing) * f.range * 0.4);
@@ -94,19 +93,50 @@ registerVfx('assassin_blink', {
   },
 });
 
+// 淬毒之刃 (skill2)：爆疊劇毒的毒綠重斬 + 毒沫噴濺
 registerVfx('assassin_backstab', {
   onCast(ctx, f, c) {
-    // 噬血爆刃 (引爆印記)：洋紅球爆 + 巨型碎刃 + 雙環 + 閃光 + 血濺
-    sphereFlash(ctx, c, { color: '#e056fd', from: 6, to: 58, life: 0.22, alpha: 0.98 });
+    sphereFlash(ctx, c, { color: '#d8ffcf', from: 6, to: 58, life: 0.22, alpha: 0.98 });
     slashBlade(ctx, c, f.facing, { color: '#ffffff', len: f.range * 1.4, w: 22, swing: (f.arc || 1.6), life: 0.24 });
-    cone(ctx, c, f.facing, { color: ['#e056fd', '#ff2d6b', '#9b59b6'], count: 28, speed: 380, spread: 0.7, offset: f.range * 0.3, up: 40, life: 0.45, size: 4 });
-    ring(ctx, c, { color: '#e056fd', from: 6, to: 90, life: 0.32, y: 8, ease: true });
+    slashBlade(ctx, c, f.facing + 0.3, { color: '#a06cff', len: f.range * 1.2, w: 14, swing: -(f.arc || 1.6), life: 0.22 });
+    cone(ctx, c, f.facing, { color: ['#7ee787', '#2ecc71', '#a06cff'], count: 30, speed: 380, spread: 0.7, offset: f.range * 0.3, up: 40, life: 0.5, size: 4 });
+    ring(ctx, c, { color: '#7ee787', from: 6, to: 92, life: 0.34, y: 8, ease: true });
     addShake(ctx, 9);
-    addFlash(ctx, 0.22, '#e056fd');
+    addFlash(ctx, 0.2, '#1e5a2a');
   },
 });
 
-// 影刺突 (skill1 dash 突進)：拉近補刀的紫色突刺殘影
+// 毒霧步 (skill1)：原地留下的毒綠毒霧雲（zone）＋ 落雲噴霧
+registerVfx('assassin_mist', {
+  zone(ctx, z) {
+    const TH = ctx.THREE;
+    const R = z.radius || 150;
+    const geo = new TH.CircleGeometry(R, 28);
+    const mat = new TH.MeshBasicMaterial({ color: 0x2ecc71, transparent: true, opacity: 0.22, depthWrite: false, side: TH.DoubleSide, blending: TH.AdditiveBlending });
+    const disc = new TH.Mesh(geo, mat); disc.rotation.x = -Math.PI / 2; disc.position.y = 1.5;
+    const g = new TH.Group(); g.add(disc);
+    g.userData.geo = geo; g.userData.mat = mat;
+    let first = true;
+    return {
+      object3D: g,
+      update() {
+        if (first) {
+          first = false;
+          const cc = { x: g.position.x, y: 6, z: g.position.z };
+          ring(ctx, cc, { color: '#7ee787', from: 8, to: R, life: 0.5, y: 3, ease: true, alpha: 0.6 });
+          burst(ctx, cc, { color: ['#7ee787', '#2ecc71', '#1a7a3a'], count: 20, speed: 110, up: 30, drag: 1.5, life: 0.7, size: 6 });
+        }
+        mat.opacity = 0.18 + 0.07 * Math.sin(performance.now() / 180);
+        if (Math.random() < 0.6) {
+          const a = Math.random() * Math.PI * 2, rr = Math.random() * R;
+          ctx.particles.spawn({ x: g.position.x + Math.cos(a) * rr, y: 3, z: g.position.z + Math.sin(a) * rr, vx: (Math.random() - 0.5) * 12, vy: 18 + Math.random() * 26, vz: (Math.random() - 0.5) * 12, drag: 1.4, gravity: -8, life: 0.9, size: 4 + Math.random() * 3, color: Math.random() < 0.5 ? '#7ee787' : '#2ecc71', fade: true });
+        }
+      },
+    };
+  },
+});
+
+// 影刺突 (舊 skill1 dash，已不使用；保留註冊無害)
 registerVfx('assassin_dash', {
   onCast(ctx, f, c) {
     const TH = ctx.THREE;

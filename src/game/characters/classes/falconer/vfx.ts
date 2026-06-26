@@ -73,6 +73,42 @@ registerVfx('falconer_arrow', {
   },
 });
 
+// 技能1：鷹擊·震退 — 往前衝的金鷹（projectile）＋拍翅羽尾；命中強擊退衝擊
+registerVfx('falconer_kbird', {
+  projectile(ctx, pr) {
+    const TH = ctx.THREE;
+    const g = new TH.Group();
+    const geos = [];
+    const mat = new TH.MeshBasicMaterial({ color: 0xffe39a, transparent: true, opacity: 0.96, blending: TH.AdditiveBlending, side: TH.DoubleSide, depthWrite: false });
+    const bodyGeo = new TH.ConeGeometry(pr.radius * 0.5, pr.radius * 2.4, 6); geos.push(bodyGeo);
+    const body = new TH.Mesh(bodyGeo, mat); body.rotation.z = -Math.PI / 2; g.add(body); // 朝 +X（前進方向）
+    const wings = [];
+    for (const sz of [-1, 1]) {
+      const wGeo = new TH.PlaneGeometry(pr.radius * 2.2, pr.radius * 0.9); geos.push(wGeo);
+      const wing = new TH.Mesh(wGeo, mat); wing.rotation.x = Math.PI / 2; wing.position.set(-pr.radius * 0.3, 0, sz * pr.radius * 0.6);
+      g.add(wing); wings.push({ m: wing, sz });
+    }
+    g.userData.geo = { dispose() { geos.forEach((gg) => gg.dispose()); } };
+    g.userData.mat = mat;
+    let flap = 0;
+    return {
+      object3D: g,
+      update(dt) {
+        flap += dt * 26;
+        const a = 0.35 + Math.sin(flap) * 0.5;
+        wings.forEach((w) => { w.m.rotation.z = w.sz * a; });
+        ctx.particles.spawn({ x: g.position.x, y: g.position.y, z: g.position.z, vx: (Math.random() - 0.5) * 16, vy: (Math.random() - 0.2) * 12, vz: (Math.random() - 0.5) * 16, drag: 2.6, life: 0.3, size: pr.radius * (0.8 + Math.random() * 0.6), color: Math.random() < 0.5 ? '#ffd76a' : '#ffe9a8', fade: true });
+      },
+    };
+  },
+  onHit(ctx, f, c) {
+    ctx.sceneMgr.addShake(7);
+    sphereFlash(ctx, c, { color: '#fff3c9', from: 4, to: 44, life: 0.22, alpha: 0.95 });
+    ring(ctx, c, { color: '#ffd76a', from: 6, to: 96, life: 0.36, y: 6, ease: true });
+    cone(ctx, c, f.facing || 0, { color: ['#ffd76a', '#ffe9a8', '#ffffff'], count: 20, speed: 380, spread: 0.6, up: 38, life: 0.42, size: 4 });
+  },
+});
+
 // 技能1：鷹隼俯衝 — 落地金色衝擊環 + 羽爆
 registerVfx('falconer_dive', {
   onCast(ctx, f, c) {

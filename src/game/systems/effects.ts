@@ -14,6 +14,15 @@ function dotLifesteal(state: GameState, srcId: EntityId | null | undefined, dmg:
   if (talent && talent.id === 'undeath') applyHeal(state, src, dmg * (talent.factor || 0.15));
 }
 
+// 刺客「劇毒」天賦（virulence）：對中毒目標的毒傷一部分轉為治療給來源（黏著續戰＝保命）。
+function poisonLifesteal(state: GameState, srcId: EntityId | null | undefined, dmg: number) {
+  if (srcId == null || !dmg) return;
+  const src = state.players[srcId];
+  if (!src || !src.alive) return;
+  const talent = getCharacter(src.charId).talent;
+  if (talent && talent.id === 'virulence') applyHeal(state, src, dmg * (talent.lifesteal || 0.3));
+}
+
 // 死靈「亡者之觸」收割：來源帶 undeath 天賦、且目標殘血(低於門檻)時，DoT 每跳傷害放大。
 // 把慢性 DoT 變成能真正收尾的處決手段（其餘來源回傳 1，不受影響）。
 function necroDotMult(state: GameState, srcId: EntityId | null | undefined, target: Player): number {
@@ -57,6 +66,16 @@ export function tickStatusEffects(state: GameState, p: Player, dt: number) {
         dealDamage(state, p, dmg, effect.srcId, { source: effect.srcSlot });
         dotLifesteal(state, effect.srcId, dmg);
         addFx(state, { type: 'burn', x: p.x, y: p.y, color: '#e84141', life: 0.3, radius: PLAYER_RADIUS });
+      }
+    } else if (kind === 'poison') {
+      // 劇毒：每 tick 依層數造成傷害（stacks × dmgPerStack），層數越高越痛。
+      effect.tickTimer -= dt;
+      if (effect.tickTimer <= 0) {
+        effect.tickTimer += effect.tick;
+        const dmg = (effect.stacks || 1) * (effect.dmgPerStack || 3) * necroDotMult(state, effect.srcId, p);
+        dealDamage(state, p, dmg, effect.srcId, { dot: true, source: effect.srcSlot });
+        poisonLifesteal(state, effect.srcId, dmg);
+        addFx(state, { type: 'burn', x: p.x, y: p.y, color: '#7ee787', life: 0.3, radius: PLAYER_RADIUS });
       }
     } else if (kind === 'parasite') {
       effect.tickTimer -= dt;

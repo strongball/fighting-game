@@ -32,7 +32,7 @@ function effectiveRange(p: any): number {
 const BLITZ = { hits: 10, hitDmg: 5.4, hitGap: 0.035, strikeAt: 0.2, dur: 0.62, knockback: 0 };
 // 大絕鷹擊風暴：每趟更快（0.4s 來回）、6 段；風暴持續期間連續來回 → 打很多次。
 // 每趟首擊帶「中等擊退」（弱於 K 的鷹擊·震退），把敵群推開＝保命。
-const STORM = { hits: 6, hitDmg: 6.2, hitGap: 0.04, strikeAt: 0.12, dur: 0.4, knockback: 90 };
+const STORM = { hits: 6, hitDmg: 6.2, hitGap: 0.04, strikeAt: 0.12, dur: 0.4, knockback: 160 };
 
 // 整數 PRNG（Math.imul 全平台一致），回傳 0..1。
 function mulberry32(a: number): number {
@@ -104,27 +104,6 @@ function strike(state: any, p: Player, target: Player, idx: number, hitDmg: numb
   }
   if (big) addFx(state, { type: 'dash', x: p.x, y: p.y, facing, color: '#ffd76a', life: 0.2, vfx: 'falconer_swoop' });
   addFx(state, { type: 'hit', x: target.x, y: target.y, facing, color: '#ffd76a', life: big ? 0.34 : 0.22, radius: big ? 30 : 18, width: idx, vfx: 'falconer_swoop' });
-}
-
-// K「鷹擊·震退」：鷹自肩飛出朝四周俯衝，把附近敵人強力擊退（弱傷、重在 peel 保命）。
-// 由 talent.onCastResolved（slot 'skill1'）呼叫。擊退強於大招的每趟首擊。
-export function falconPeel(state: any, p: Player, opts: any = {}) {
-  const radius = opts.radius || 240;
-  const dmg = opts.dmg || 36;
-  const kb = opts.knockback || 220;
-  for (const o of Object.values(state.players) as any[]) {
-    if (o === p || !o.alive || !isEnemy(state, p.id, o)) continue;
-    const dx = o.x - p.x, dy = o.y - p.y;
-    const d = Math.hypot(dx, dy);
-    if (d > radius) continue;
-    dealDamage(state, o, dmg, p.id, { noTalent: true, source: 'falcon' });
-    const dd = d || 1;
-    o.kvx += dx / dd * kb;
-    o.kvy += dy / dd * kb;
-    addFx(state, { type: 'hit', x: o.x, y: o.y, facing: Math.atan2(dy, dx), color: '#ffd76a', life: 0.3, radius: 24, vfx: 'falconer_swoop' });
-  }
-  // 鷹俯衝的落地金色衝擊環（重用 falconer_dive）
-  addFx(state, { type: 'dash', x: p.x, y: p.y, facing: p.facing, color: '#ffd76a', life: 0.3, vfx: 'falconer_dive' });
 }
 
 // 大絕：開啟「鷹擊風暴」——一段時間內鷹連續來回俯衝。由 talent.onCastResolved 呼叫。

@@ -17,7 +17,7 @@ const data = {
     synergy: '靠走位與鷹擊·震退自保、拉開安全距離；鷹眼凝視窗口集中秒脆皮，大招範圍俯衝清場兼推開威脅。鷹隼自動連擊讓你風箏時也持續吃傷。',
     talent: { id: 'talonsight', name: '鷹瞳', desc: '連續命中累積，每第三次命中必定爆擊，造成 +70% 傷害。攻速越快、爆擊越密。', bonus: 0.7, every: 3 },
     basic: { name: '連珠快矢', type: 'projectile', dmg: 6, speed: 660, radius: 12, lifetime: 1.3, knockback: 28, cd: 0.32, color: '#f5c542', vfx: 'falconer_arrow' },
-    skill1: { name: '鷹擊·震退', type: 'buff', radius: 240, dmg: 36, knockback: 220, manaCost: 30, cd: 9, color: '#ffd76a', effect: { kind: 'haste', duration: 1.6, factor: 1.22 } },
+    skill1: { name: '鷹擊·震退', type: 'projectile', dmg: 42, speed: 720, radius: 28, lifetime: 0.55, pierce: true, knockback: 420, manaCost: 30, cd: 9, color: '#ffd76a', vfx: 'falconer_kbird', self: { effect: { kind: 'haste', duration: 1.6, factor: 1.22 } } },
     skill2: { name: '鷹眼凝視', type: 'buff', duration: 3, falconRange: 1.6, manaCost: 35, cd: 12, color: '#ffe9a8', vfx: 'falconer_eagleeye', effect: { kind: 'overdrive', duration: 3, speed: 1.1, atkSpeed: 1.4 } },
     ultimate: { name: '鷹擊風暴', type: 'buff', duration: 4.0, falconRange: 1.4, cd: 12, color: '#ffd76a', vfx: 'falconer_ultimate', effect: { kind: 'overdrive', duration: 4.0, speed: 1.12, atkSpeed: 1.15 } },
   };
