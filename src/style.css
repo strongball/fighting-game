@@ -442,6 +442,9 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 .hud-bar.fury.boiling { box-shadow: 0 0 10px 1px rgba(255, 110, 50, 0.9); border-color: rgba(255, 150, 90, 0.9); }
 .hud-bar.fury.boiling > i { background: linear-gradient(#ffd07a, #ff6a2a); animation: furyboil 0.7s ease-in-out infinite; }
 @keyframes furyboil { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.55); } }
+.hud-bar.sword-energy { background: #1a0a2e; height: 13px; }
+.hud-bar.sword-energy > i { background: linear-gradient(#fd79a8, #a29bfe); transition: width 0.1s linear; }
+.hud-bar.sword-energy > span { line-height: 13px; font-size: 10px; }
 .hud-bar.charge { background: #071a24; height: 16px; margin-top: 6px; }
 .hud-bar.charge > i { background: linear-gradient(90deg, #7fefff, #00c8ff); transition: width 0.05s linear; }
 .hud-bar.charge.full { box-shadow: 0 0 12px 3px rgba(120, 230, 255, 0.95); border-color: rgba(160, 245, 255, 0.9); }
@@ -981,6 +984,12 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 }
 .hud-mobile-bar.fury.boiling > i {
   background: linear-gradient(#ffd07a, #ff6a2a);
+}
+.hud-mobile-bar.sword-energy {
+  background: #1a0a2e; height: 9px;
+}
+.hud-mobile-bar.sword-energy > i {
+  background: linear-gradient(#fd79a8, #a29bfe);
 }
 .hud-mobile-bar.charge {
   background: #071a24;
