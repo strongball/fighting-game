@@ -84,7 +84,7 @@ export function createInput(controlScheme = 'wasd-jkl') {
   // 行動端「轉視角」搖桿：水平偏移量 -1..1，於 getView() 依實時 dt 連續積分（按住即持續左右轉）
   let lookStickX = 0;
   let lastLookTs = 0;                  // 上次積分時間戳；停手歸零以重置 dt 基準
-  const LOOK_TOUCH_YAW = 2.8;         // 滿偏每秒左右旋轉弧度
+  const LOOK_TOUCH_YAW = 1.5;         // 滿偏每秒左右旋轉弧度
   let viewCfg = getViewSettings();    // 視角靈敏度（由設定面板即時更新）
   subscribeViewSettings((s) => { viewCfg = s; });
 

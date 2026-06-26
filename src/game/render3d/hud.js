@@ -8,6 +8,7 @@ import { ULT_MAX, FURY_MAX } from '../constants.js';
 import { sceneX, sceneZ } from './coords.js';
 import { el, setText, setStyle, setClass, setHtml, pct, hexA, esc } from './hud/dom.js';
 import { getHudWidgets } from './hud/widgets.js';
+import { getJoystickSettings, subscribeJoystickSettings } from '../../utils/joystickSettings';
 // 以 glob 自動載入所有 hud widget（side-effect 註冊到 widgets registry，仿 vfx）。
 import.meta.glob('./hud/widgets/*.js', { eager: true });
 
@@ -99,6 +100,7 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
   const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
   let joystickZone, joystickBase, joystickKnob, mobileButtonsZone, mBtns;
   let lookZone, lookBase, lookKnob;
+  let halfBase = 70, restOffset = 35;
 
   if (isMobile) {
     layer.classList.add('is-mobile');
@@ -129,19 +131,40 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
     
     // 搖桿事件處理
     let joystickActive = false;
+    let joystickTouchId = null;
     let joystickStartX = 0;
     let joystickStartY = 0;
-    const maxRadius = 30;
-    
+    let maxRadius = 52;
+
+    function applyJoystickScale() {
+      const s = getJoystickSettings().scale || 1.0;
+      const sz = Math.round(140 * s);
+      const knob = Math.round(48 * s);
+      const off = Math.round((sz - knob) / 2);
+      maxRadius = Math.round(52 * s);
+      halfBase = sz / 2;
+      restOffset = Math.round(35 * s);
+
+      joystickBase.style.setProperty('--js-size', sz + 'px');
+      joystickKnob.style.setProperty('--js-knob', knob + 'px');
+      joystickKnob.style.setProperty('--js-knob-offset', off + 'px');
+    }
+    applyJoystickScale();
+    subscribeJoystickSettings(applyJoystickScale);
+
     joystickZone.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
+      if (joystickTouchId !== null) return;
+      const touch = e.changedTouches[0];
+      joystickTouchId = touch.identifier;
       const rect = joystickZone.getBoundingClientRect();
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
       
-      setStyle(joystickBase, 'left', `${x - 40}px`);
-      setStyle(joystickBase, 'top', `${y - 40}px`);
-      setStyle(joystickBase, 'bottom', 'auto');
+      if (getJoystickSettings().mode === 'floating') {
+        setStyle(joystickBase, 'left', `${x - halfBase}px`);
+        setStyle(joystickBase, 'top', `${y - halfBase}px`);
+        setStyle(joystickBase, 'bottom', 'auto');
+      }
       setStyle(joystickBase, 'opacity', '1');
       setStyle(joystickBase, 'transform', 'scale(1)');
       
@@ -153,8 +176,9 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
     }, { passive: false });
 
     joystickZone.addEventListener('touchmove', (e) => {
-      if (!joystickActive) return;
-      const touch = e.touches[0];
+      if (!joystickActive || joystickTouchId === null) return;
+      const touch = Array.from(e.touches).find(t => t.identifier === joystickTouchId);
+      if (!touch) return;
       
       let dx = touch.clientX - joystickStartX;
       let dy = touch.clientY - joystickStartY;
@@ -178,14 +202,21 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
     }, { passive: false });
 
     const resetJoystick = (e) => {
-      if (!joystickActive) return;
+      if (!joystickActive || joystickTouchId === null) return;
+      if (e) {
+        const ended = Array.from(e.changedTouches).some(t => t.identifier === joystickTouchId);
+        if (!ended) return;
+      }
       joystickActive = false;
+      joystickTouchId = null;
       
       setStyle(joystickKnob, 'transform', 'translate(0px, 0px)');
       
-      setStyle(joystickBase, 'left', '35px');
-      setStyle(joystickBase, 'top', 'auto');
-      setStyle(joystickBase, 'bottom', '35px');
+      if (getJoystickSettings().mode === 'floating') {
+        setStyle(joystickBase, 'left', restOffset + 'px');
+        setStyle(joystickBase, 'top', 'auto');
+        setStyle(joystickBase, 'bottom', restOffset + 'px');
+      }
       setStyle(joystickBase, 'opacity', '0.4');
       setStyle(joystickBase, 'transform', 'scale(0.95)');
       
@@ -200,12 +231,15 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
 
     // 轉視角搖桿事件處理（rate-based：偏移量 → 旋轉速度，由 input.getView 依實時 dt 積分）
     let lookActive = false;
+    let lookTouchId = null;
     let lookStartX = 0;
     let lookStartY = 0;
     const lookMaxR = 30;
 
     lookZone.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
+      if (lookTouchId !== null) return;
+      const touch = e.changedTouches[0];
+      lookTouchId = touch.identifier;
       const rect = lookZone.getBoundingClientRect();
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
@@ -225,8 +259,9 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
     }, { passive: false });
 
     lookZone.addEventListener('touchmove', (e) => {
-      if (!lookActive) return;
-      const touch = e.touches[0];
+      if (!lookActive || lookTouchId === null) return;
+      const touch = Array.from(e.touches).find(t => t.identifier === lookTouchId);
+      if (!touch) return;
 
       // 只取水平位移：俯仰已鎖定，轉視角僅左右（旋鈕也只左右移動，明示「不能上下」）
       let dx = touch.clientX - lookStartX;
@@ -243,8 +278,13 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
     }, { passive: false });
 
     const resetLook = (e) => {
-      if (!lookActive) return;
+      if (!lookActive || lookTouchId === null) return;
+      if (e) {
+        const ended = Array.from(e.changedTouches).some(t => t.identifier === lookTouchId);
+        if (!ended) return;
+      }
       lookActive = false;
+      lookTouchId = null;
 
       setStyle(lookKnob, 'transform', 'translate(0px, 0px)');
 
@@ -699,17 +739,19 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
           setStyle(lookBase, 'bottom', '290px');
           setStyle(lookBase, 'opacity', '0.4');
           setStyle(lookBase, 'transform', 'scale(0.95)');
+          lookTouchId = null;
           if (hooks.input && hooks.input.setTouchLook) hooks.input.setTouchLook(0, 0);
         }
         
         if (!showControls && wasShown) {
           // Reset joystick position visually
           setStyle(joystickKnob, 'transform', 'translate(0px, 0px)');
-          setStyle(joystickBase, 'left', '35px');
+          setStyle(joystickBase, 'left', restOffset + 'px');
           setStyle(joystickBase, 'top', 'auto');
-          setStyle(joystickBase, 'bottom', '35px');
+          setStyle(joystickBase, 'bottom', restOffset + 'px');
           setStyle(joystickBase, 'opacity', '0.4');
           setStyle(joystickBase, 'transform', 'scale(0.95)');
+          joystickTouchId = null;
           
           // Clear logical inputs to prevent stuck movement/actions
           if (hooks.input) {

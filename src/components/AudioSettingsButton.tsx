@@ -21,16 +21,24 @@ import {
   type CameraView,
   type CameraMode,
 } from '../utils/cameraView';
+import {
+  getJoystickSettings,
+  subscribeJoystickSettings,
+  updateJoystickSettings,
+  type JoystickSettings,
+} from '../utils/joystickSettings';
 
 export function AudioSettingsButton() {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<AudioSettings>(getAudioSettings());
   const [viewCfg, setViewCfg] = useState<ViewSettings>(getViewSettings());
   const [cameraView, setCameraView] = useState<CameraView>(getCameraView());
+  const [joystickCfg, setJoystickCfg] = useState<JoystickSettings>(getJoystickSettings());
 
   useEffect(() => subscribeAudioSettings(setSettings), []);
   useEffect(() => subscribeViewSettings(setViewCfg), []);
   useEffect(() => subscribeCameraView(setCameraView), []);
+  useEffect(() => subscribeJoystickSettings(setJoystickCfg), []);
 
   // ESC 開/關設定（戰鬥中也能用；開啟時解除滑鼠鎖定，讓游標可操作面板）
   useEffect(() => {
@@ -91,6 +99,14 @@ export function AudioSettingsButton() {
             <AutoAimRow
               enabled={viewCfg.autoAim}
               onToggle={(v) => updateViewSettings({ autoAim: v })}
+            />
+            <JoystickModeRow
+              mode={joystickCfg.mode}
+              onMode={(m) => updateJoystickSettings({ mode: m })}
+            />
+            <JoystickScaleRow
+              scale={joystickCfg.scale}
+              onScale={(v) => updateJoystickSettings({ scale: v })}
             />
             <FullscreenRow />
           </div>
@@ -226,6 +242,63 @@ function AutoAimRow({ enabled, onToggle }: AutoAimRowProps) {
         >
           關
         </button>
+      </div>
+    </div>
+  );
+}
+
+interface JoystickModeRowProps {
+  mode: 'fixed' | 'floating';
+  onMode: (m: 'fixed' | 'floating') => void;
+}
+
+function JoystickModeRow({ mode, onMode }: JoystickModeRowProps) {
+  const opts: { m: 'fixed' | 'floating'; label: string }[] = [
+    { m: 'fixed', label: 'Fixed' },
+    { m: 'floating', label: 'Floating' },
+  ];
+  return (
+    <div className="settings-row">
+      <div className="settings-row-top">
+        <span className="settings-label">搖桿模式<span style={{ color: '#7b8a97', fontSize: '11px', marginLeft: '6px' }}>手機用</span></span>
+      </div>
+      <div className="settings-seg">
+        {opts.map((o) => (
+          <button
+            key={o.m}
+            className={`settings-seg-btn${mode === o.m ? ' active' : ''}`}
+            aria-pressed={mode === o.m}
+            onClick={() => onMode(o.m)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface JoystickScaleRowProps {
+  scale: number;
+  onScale: (v: number) => void;
+}
+
+function JoystickScaleRow({ scale, onScale }: JoystickScaleRowProps) {
+  return (
+    <div className="settings-row">
+      <div className="settings-row-top">
+        <span className="settings-label">搖桿大小</span>
+        <span className="settings-pct">{scale.toFixed(1)}×</span>
+      </div>
+      <div className="settings-row-ctrl">
+        <input
+          type="range"
+          min={0.6}
+          max={2.0}
+          step={0.1}
+          value={scale}
+          onChange={(e) => onScale(Number(e.target.value))}
+        />
       </div>
     </div>
   );

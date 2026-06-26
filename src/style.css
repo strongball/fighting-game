@@ -1078,8 +1078,8 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   position: absolute;
   left: 35px;
   bottom: 35px;
-  width: 80px;
-  height: 80px;
+  width: var(--js-size, 140px);
+  height: var(--js-size, 140px);
   background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 70%, rgba(255,255,255,0.04) 100%);
   border: 2px solid rgba(255, 255, 255, 0.12);
   border-radius: 50%;
@@ -1093,10 +1093,10 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
 }
 .mobile-joystick-knob {
   position: absolute;
-  left: 26px;
-  top: 26px;
-  width: 28px;
-  height: 28px;
+  left: var(--js-knob-offset, 46px);
+  top: var(--js-knob-offset, 46px);
+  width: var(--js-knob, 48px);
+  height: var(--js-knob, 48px);
   background: radial-gradient(circle at 35% 35%, #e8eef4 0%, #a3b2c0 60%, #7b8e9d 100%);
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
@@ -1159,6 +1159,9 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.4);
   pointer-events: none;
   transition: transform 0.05s ease;
+}
+.mobile-look-base, .mobile-look-knob {
+  display: none !important;
 }
 
 /* Mobile Action Buttons (Tighter Arc) */
@@ -1551,16 +1554,15 @@ code { background: #0e1722; padding: 3px 9px; border-radius: 6px; color: var(--a
   .mobile-joystick-base {
     left: 24px;
     bottom: 24px;
-    width: 68px;
-    height: 68px;
+    width: var(--js-size, 100px);
+    height: var(--js-size, 100px);
   }
 
-  .mobile-joystick-knob,
-  .mobile-look-knob {
-    left: 22px;
-    top: 22px;
-    width: 24px;
-    height: 24px;
+  .mobile-joystick-knob {
+    left: var(--js-knob-offset, 32px);
+    top: var(--js-knob-offset, 32px);
+    width: var(--js-knob, 36px);
+    height: var(--js-knob, 36px);
   }
 
   .mobile-look-base {
