@@ -55,6 +55,8 @@ export interface GameState {
   zones: Zone[];
   fx: Fx[];
   destructibles: Destructible[];
+  /** 靜態圓形障礙 (世界座標)：擋住玩家移動，如神殿基座。Boss 回合開始時由 boss data.colliders 設定。 */
+  colliders?: { x: number; y: number; r: number }[];
   items: DropItem[];
   time: number;
   winner: EntityId | null;

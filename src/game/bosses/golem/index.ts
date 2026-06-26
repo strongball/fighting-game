@@ -3,6 +3,7 @@ import { BURN, STUN, SLOW, ROOT, CHILL } from '../effects.js';
 import { aiProfile } from './ai.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { loadVfx } from './vfx.ts';
+import { arena } from './arena.ts';
 
 const data = {
     id: 100, round: 1, name: '巨木傀儡', subtitle: '森林守護者',
@@ -25,18 +26,9 @@ const data = {
     ],
     hazardText: '⚠️ 快離開攻擊範圍！',
     hazardColor: '#e6b352',
-    theme: {
-      sky: 0x2a3d2a, fog: 0x1f2e22, fogNear: 800, fogFar: 2400,
-      floor: 0x5d6a3a, ring: 0x3a4626,
-      wallStone: 0x4a3a28, wallTrim: 0x7ac050,
-      hemiSky: 0xa6c84a, hemiGround: 0x2a3010, hemiInt: 0.5,
-      sunColor: 0xfff4c0, sunInt: 2.0, rimColor: 0x6a9d40, rimInt: 0.35,
-      decorations: ['tree', 'rock'],
-      tree: { count: 28, trunk: 0x4a2f1d, leaf: 0x4a7a2c },
-      rock: { count: 16, color: 0x6b6660 },
-      atmosphere: { kind: 'leaves', color: '#a6c84a', rate: 14 },
-      floorDecal: { kind: 'rings', color: '#4a7a2c', opacity: 0.35, glow: 0.1 },
-    },
+    // 場地（場景主題 + 神殿基座碰撞）定義於 ./arena.ts
+    colliders: arena.colliders,
+    theme: arena.theme,
 
     phases: [
       { hpPct: 0.66, name: '狂亂之根', sub: '怒火覺醒', color: '#a6d749', dmgMult: 1.0, speedMult: 1.1, cdMult: 0.85,

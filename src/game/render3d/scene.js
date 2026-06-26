@@ -102,6 +102,7 @@ export function createSceneManager(canvas) {
     hemiSky: 0xd8e2f0, hemiGround: 0x2a2622, hemiInt: 0.35,
     sunColor: 0xffe6c4, sunInt: 2.3,
     rimColor: 0x9fb4d6, rimInt: 0.28,
+    floorStyle: 'tiled', wallStyle: 'stone', wallTrimGlow: 1.1,
   };
   let activeTheme = DEFAULT_THEME;
 
@@ -118,6 +119,11 @@ export function createSceneManager(canvas) {
     hemi.color.setHex(t.hemiSky); hemi.groundColor.setHex(t.hemiGround); hemi.intensity = t.hemiInt;
     dir.color.setHex(t.sunColor); dir.intensity = t.sunInt;
     rim.color.setHex(t.rimColor); rim.intensity = t.rimInt;
+    // 牆頂飾條發光強度 (0 = 關掉霓虹感)；牆體可整體隱藏
+    wallsGroup.userData.trimMat.emissiveIntensity = t.wallTrimGlow != null ? t.wallTrimGlow : 1.1;
+    wallsGroup.visible = t.wallStyle !== 'none';
+    // 地板風格 (tiled 石磚 / mossy 有機苔蘚地)
+    floorGroup.userData.applyStyle?.(t);
   }
 
   // ---- 泛光後處理鏈 (收斂：僅高亮特效發光，場景不過曝) ----
@@ -310,29 +316,129 @@ export function createSceneManager(canvas) {
 
 function buildFloor() {
   const g = new THREE.Group();
-  const albedo = stoneTexture();
-  albedo.wrapS = albedo.wrapT = THREE.RepeatWrapping;
-  albedo.repeat.set(ARENA.width / 200, ARENA.height / 200);
-  albedo.anisotropy = 8;
-  const rough = stoneRoughTexture();
-  rough.wrapS = rough.wrapT = THREE.RepeatWrapping;
-  rough.repeat.set(ARENA.width / 200, ARENA.height / 200);
+  // 預設：石磚 (tiled)
+  const tiledAlbedo = stoneTexture();
+  tiledAlbedo.wrapS = tiledAlbedo.wrapT = THREE.RepeatWrapping;
+  tiledAlbedo.repeat.set(ARENA.width / 200, ARENA.height / 200);
+  tiledAlbedo.anisotropy = 8;
+  const tiledRough = stoneRoughTexture();
+  tiledRough.wrapS = tiledRough.wrapT = THREE.RepeatWrapping;
+  tiledRough.repeat.set(ARENA.width / 200, ARENA.height / 200);
   const mat = new THREE.MeshStandardMaterial({
-    map: albedo, roughnessMap: rough, roughness: 1.0, metalness: 0.04, color: 0x9a948c,
+    map: tiledAlbedo, roughnessMap: tiledRough, roughness: 1.0, metalness: 0.04, color: 0x9a948c,
   });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(ARENA.width, ARENA.height), mat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   g.add(floor);
-  // 中央競技場圓紋 (低調石刻)
+  // 中央競技場圓紋 (低調石刻；mossy 風格時隱藏)
   const ringMat = new THREE.MeshStandardMaterial({ color: 0x6f6862, roughness: 0.85, metalness: 0.05, transparent: true, opacity: 0.6 });
   const ring = new THREE.Mesh(new THREE.RingGeometry(118, 130, 64), ringMat);
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.5;
   g.add(ring);
+
+  // 場外延伸地坪：填滿邊界外的虛空 (避免外圈裝飾物懸空 / 硬邊)，遠處沒入霧中。
+  // 單一大平面，極省資源；略低於場內地板、由邊界牆遮住接縫。
+  const apronMat = new THREE.MeshStandardMaterial({ color: 0x3a3a34, roughness: 1.0, metalness: 0.0 });
+  const apron = new THREE.Mesh(new THREE.PlaneGeometry(7200, 7200), apronMat);
+  apron.rotation.x = -Math.PI / 2;
+  apron.position.y = -1.5;
+  apron.receiveShadow = true;
+  g.add(apron);
+
+  // 有機苔蘚地 (mossy)：延遲建立並快取，避免無謂開銷
+  let organicAlbedo = null, apronTex = null;
+  function applyStyle(theme) {
+    const style = (theme && theme.floorStyle) || 'tiled';
+    if (style === 'mossy' || style === 'organic') {
+      if (!organicAlbedo) {
+        organicAlbedo = organicGroundTexture();
+        organicAlbedo.wrapS = organicAlbedo.wrapT = THREE.RepeatWrapping;
+        organicAlbedo.repeat.set(3, 2);
+        organicAlbedo.anisotropy = 8;
+      }
+      mat.map = organicAlbedo;
+      mat.roughnessMap = null;
+      mat.roughness = 1.0;
+      mat.metalness = 0.0;
+      mat.color.setHex(theme.floorTint != null ? theme.floorTint : 0xffffff);
+      ring.visible = false;
+      // 外延地坪沿用同一張有機貼圖 (大平鋪，略暗讓視線往外沉)
+      if (!apronTex) {
+        apronTex = organicAlbedo.clone();
+        apronTex.wrapS = apronTex.wrapT = THREE.RepeatWrapping;
+        apronTex.repeat.set(16, 16);
+        apronTex.needsUpdate = true;
+      }
+      apronMat.map = apronTex;
+      apronMat.color.setHex(theme.outerGround != null ? theme.outerGround : 0x7e8268);
+    } else {
+      mat.map = tiledAlbedo;
+      mat.roughnessMap = tiledRough;
+      mat.roughness = 1.0;
+      mat.metalness = 0.04;
+      mat.color.setHex(theme && theme.floor != null ? theme.floor : 0x9a948c);
+      ring.visible = true;
+      // 外延地坪：場內地板色壓暗 (融入霧，避免硬邊與懸空)
+      apronMat.map = null;
+      const fc = new THREE.Color(theme && theme.floor != null ? theme.floor : 0x9a948c);
+      fc.multiplyScalar(0.6);
+      apronMat.color.copy(fc);
+    }
+    mat.needsUpdate = true;
+    apronMat.needsUpdate = true;
+  }
+
   g.userData.floorMat = mat;
   g.userData.ringMat = ringMat;
+  g.userData.applyStyle = applyStyle;
   return g;
+}
+
+// 有機地面 albedo：潮濕泥岩 + 苔斑 + 落葉暗斑 + 砂礫 + 不規則裂縫 (無格線/無磚縫)
+function organicGroundTexture() {
+  const S = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d');
+  x.fillStyle = '#4f4d3b';
+  x.fillRect(0, 0, S, S);
+  // 大面積柔邊色斑 (徑向漸層、可跨越邊界 wrap 無縫感)
+  const blob = (cols, n, rmin, rmax, amax) => {
+    for (let i = 0; i < n; i++) {
+      const px = Math.random() * S, py = Math.random() * S;
+      const r = rmin + Math.random() * (rmax - rmin);
+      const col = cols[(Math.random() * cols.length) | 0];
+      for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) { // wrap 平鋪 3x3 讓邊界連續
+        const grd = x.createRadialGradient(px + dx, py + dy, 0, px + dx, py + dy, r);
+        grd.addColorStop(0, `rgba(${col},${(0.1 + Math.random() * amax).toFixed(2)})`);
+        grd.addColorStop(1, `rgba(${col},0)`);
+        x.fillStyle = grd;
+        x.beginPath(); x.arc(px + dx, py + dy, r, 0, 7); x.fill();
+      }
+    }
+  };
+  blob(['74,110,52', '90,125,58', '58,90,40'], 26, 50, 150, 0.34);  // 苔綠
+  blob(['62,50,34', '46,38,26', '72,58,38'], 20, 40, 120, 0.3);     // 泥土/落葉
+  blob(['140,134,116', '120,116,100'], 14, 30, 95, 0.2);            // 磨損淺石
+  // 細苔點 + 砂礫
+  for (let i = 0; i < 1500; i++) { const v = 70 + (Math.random() * 70 | 0); x.fillStyle = `rgba(${v - 14},${v + 22},${v - 34},0.16)`; x.fillRect(Math.random() * S, Math.random() * S, 2, 2); }
+  for (let i = 0; i < 1000; i++) { const v = 28 + (Math.random() * 40 | 0); x.fillStyle = `rgba(${v},${v - 4},${v - 10},0.22)`; x.fillRect(Math.random() * S, Math.random() * S, 2, 2); }
+  // 不規則裂縫 (稀疏、非格線)
+  x.strokeStyle = 'rgba(26,22,16,0.5)'; x.lineCap = 'round';
+  for (let i = 0; i < 11; i++) {
+    x.lineWidth = 1 + Math.random() * 2;
+    x.beginPath();
+    let cx = Math.random() * S, cy = Math.random() * S, a = Math.random() * 7;
+    x.moveTo(cx, cy);
+    const segs = 4 + (Math.random() * 5 | 0);
+    for (let s = 0; s < segs; s++) { a += (Math.random() - 0.5) * 1.2; cx += Math.cos(a) * (15 + Math.random() * 28); cy += Math.sin(a) * (15 + Math.random() * 28); x.lineTo(cx, cy); }
+    x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 // 石材地磚 albedo：暖灰底 + 磚縫 + 雜訊斑駁

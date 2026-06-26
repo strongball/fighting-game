@@ -76,6 +76,8 @@ export function startBossRound(state, round) {
   const bossData = getBossForRound(round);
   const envCfg = bossData && bossData.environment;
   if (envCfg && envCfg.pillars) scatterPillars(state, envCfg.pillars.count || 4, envCfg.pillars);
+  // 靜態障礙 (神殿基座等)：擋住玩家移動，世界座標
+  state.colliders = (bossData && bossData.colliders) || [];
   state.bossId = boss ? boss.id : null;
   state.bossHp = boss ? boss.hp : 0;
   state.bossMaxHp = boss ? boss.maxHp : 0;
