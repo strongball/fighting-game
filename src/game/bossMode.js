@@ -121,6 +121,11 @@ export function checkBossRound(state, dt) {
       state.roundPhase = 'cleared';
       state.roundTimer = 3.0;
       clearBossSide(state);
+      // Boss 一死立刻清掉場上殘留的地面區域與投射物。否則這些（多為加法混色、半透明的
+      // 毒沼/危險區）會在 cleared→victory 期間持續被渲染 → 大量 overdraw 讓「結算後 FPS
+      // 掉下去回不來」（單挑模式沒有下一關的 startBossRound 來清，會一直卡）。
+      state.zones = [];
+      state.projectiles = [];
       reviveAndHealAll(state);
       const challengeComplete = state.bossMode === 'challenge';
       state.banner = { text: 'ROUND ' + state.round + ' 擊破！', sub: challengeComplete ? 'Boss 挑戰完成' : (state.round >= BOSS_COUNT ? '全部魔王已討伐' : '準備迎戰下一位魔王…'), life: 3.0 };

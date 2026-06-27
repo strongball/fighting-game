@@ -30,7 +30,9 @@ export function createSceneManager(canvas) {
     console.warn('[render3d] WebGL init failed with preferred settings, retrying safe renderer.', err);
     renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'default' });
   }
-  const dprCap = constrainedGpu ? 1.25 : 2;
+  // 手機限制在 1.0：戰鬥時大量加法混色的毒沼/特效是 fill-rate(overdraw)瓶頸，
+  // 1.25→1.0 等於少畫 ~36% 的像素，對 overdraw 直接見效（DOM HUD 文字另一層、不受影響）。
+  const dprCap = constrainedGpu ? 1.0 : 2;
   const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
   renderer.setPixelRatio(dpr);
   renderer.shadowMap.enabled = !constrainedGpu;
