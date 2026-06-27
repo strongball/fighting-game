@@ -29,20 +29,23 @@ export function tickNinjaClones(state: any, p: Player, dt: number) {
   cl.remaining -= dt;
   cl.timer -= dt;
 
-  // 首次取得目標 → 在「目標處」召出持續存在的 N 個殘影分身（VFX 自行存活整段時間、圍繞斬擊）。
+  // 首次取得目標 → 鎖定該目標 id，於目標處召出殘影分身；VFX 之後每幀跟隨此目標移動（targetId 帶給 render 端）。
+  // strikeInterval 帶給 VFX，使分身的斬擊節奏與傷害節奏一致（避免「動畫與掉血不同步」）。
   if (!cl.spawned) {
     const t0 = nearestEnemy(state, p, cl.range);
     if (t0) {
       cl.spawned = true;
-      addFx(state, { type: 'buff', x: t0.x, y: t0.y, color: '#9fd2ff', life: cl.remaining, radius: cl.orbit, vfx: 'ninja_clones' });
+      cl.targetId = t0.id;
+      addFx(state, { type: 'buff', x: t0.x, y: t0.y, color: '#9fd2ff', life: cl.remaining, radius: cl.orbit, targetId: t0.id, strikeInterval: cl.interval, vfx: 'ninja_clones' });
     }
   }
 
-  // 每 interval 由分身對最近目標造成一輪傷害（count 段；對被控目標走天賦增傷）。
+  // 每 interval 對「鎖定的同一目標」造成一輪傷害（count 段）。分身視覺也跟隨同一目標 →
+  // 傷害與分身同目標、同節奏，不再出現「目標移動後分身留在原地、血量卻不動」。
   if (cl.timer <= 0 && cl.remaining > 0) {
     cl.timer += cl.interval;
-    const target = nearestEnemy(state, p, cl.range);
-    if (target) {
+    const target = cl.targetId != null ? state.players[cl.targetId] : null;
+    if (target && target.alive) {
       for (let i = 0; i < cl.count; i++) dealDamage(state, target, cl.dmg, p.id, { source: 'ultimate' });
     }
   }

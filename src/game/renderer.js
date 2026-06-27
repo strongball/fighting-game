@@ -51,7 +51,12 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
 
   const particles = createParticleSystem(scene, { capacity: 5000 });
   particles.setDpr(sceneMgr.renderer.getPixelRatio());
-  const fxbus = createFxBus({ scene, particles, sceneMgr });
+  // getEntityPos：給特效查某實體「render 端平滑後的場景座標」（如忍者千影分身跟隨移動中的目標）。
+  // models 在下方才宣告，但此 closure 僅於每幀繪製時呼叫（屆時 models 已初始化）。
+  const fxbus = createFxBus({
+    scene, particles, sceneMgr,
+    getEntityPos: (id) => { const e = models.get(id); return e ? { x: sceneX(e.rx), z: sceneZ(e.ry) } : null; },
+  });
   const entities = createEntityLayer(scene, particles, { addTransient: fxbus.addTransient, sceneMgr });
   const hud = createHud({ stage: sceneMgr.stage, scene, camera, controlScheme, hooks });
   const atmosphere = createAtmosphere(particles);

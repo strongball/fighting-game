@@ -106,9 +106,10 @@ registerVfx('ninja_ultimate', {
   },
 });
 
-// 千影分身：在最近目標四周「拉開到普攻射程的環」上召出 5 個半透明忍者本體殘影分身，
-//   整段大招期間站在環上、各自錯開節奏朝目標突進斬一刀再退回（看得到 5 個真．忍者圍攻）。
-//   由 ninja/clones.ts 的 tick 在取得目標時發出一次（type 'buff'），orbit 由 ult 的 orbit 帶入。
+// 千影分身：在「鎖定目標」四周拉開到普攻射程的環上召出 5 個半透明忍者本體殘影分身。
+//   ・每幀經 ctx.getEntityPos(targetId) 取目標即時位置 → 目標移動時整圈分身跟著移動（不再留在原地）。
+//   ・每 strikeInt（= 傷害 interval）一輪、五分身近乎同步朝目標突進斬擊 → 斬擊與掉血同節奏。
+//   由 ninja/clones.ts 的 tick 在鎖定目標時發出一次（type 'buff'，帶 targetId / strikeInterval / orbit）。
 registerVfx('ninja_clones', {
   onCast(ctx, f, c) {
     const N = 5;
@@ -118,41 +119,42 @@ registerVfx('ninja_clones', {
     addFlash(ctx, 0.16, '#1a2433');
     const createModel = ctx.createCharacterModel;
     if (!createModel) return;                        // 保險：render 層未注入則略過（不致崩潰）
+    const targetId = f.targetId;                     // 鎖定的目標 id（clones.ts 帶入）→ 每幀跟隨其活體位置
+    const getPos = ctx.getEntityPos;                 // (id) → 場景座標（render 端平滑後）或 null
+    const strikeInt = f.strikeInterval || 0.26;      // 斬擊節奏 = 傷害節奏（與 clones.ts interval 同步）
     for (let i = 0; i < N; i++) {
       const ang = (i / N) * Math.PI * 2 - Math.PI / 2;       // 由正上方均分一圈
-      const cx = c.x + Math.cos(ang) * orbit;
-      const cz = c.z + Math.sin(ang) * orbit;
-      const ux = (c.x - cx) / orbit, uz = (c.z - cz) / orbit; // 指向目標的單位向量
-      const faceIn = Math.atan2(c.z - cz, c.x - cx);
+      const offX = Math.cos(ang) * orbit, offZ = Math.sin(ang) * orbit; // 環上「相對目標」的固定偏移
+      const ux = -offX / orbit, uz = -offZ / orbit;          // 指向目標（圓心）的單位向量
+      const faceIn = Math.atan2(-offZ, -offX);               // 面向目標（相對偏移固定 → 朝向固定）
       const { model, mats } = buildCloneModel(createModel);
-      model.position.set(cx, 0, cz);
-      model.rotation.y = -faceIn;                            // 面向目標
+      model.rotation.y = -faceIn;
+      model.position.set(c.x + offX, 0, c.z + offZ);
       // 只 dispose 逐實例 geometry / material；貼圖由 _texCache 共用，不可 dispose
       model.userData.geo = { dispose() { model.traverse((o) => { if (o.geometry && o.geometry.dispose) o.geometry.dispose(); }); } };
       model.userData.mat = { dispose() { for (const m of mats) m.dispose(); } };
-      const st = { phase: 'idle', next: 0.3 + i * 0.12, start: 0, struck: false }; // 突進狀態機（錯開）
+      const phase = i * 0.03;                                // 各分身極小錯開（仍近乎同步＝一輪傷害一齊斬）
+      let struckCycle = -1;
       ctx.addTransient(model, dur, (m, t) => {
         const age = t * dur;
         const fadeIn = Math.min(1, age / 0.22), fadeOut = Math.min(1, (1 - t) / 0.3);
         const alpha = Math.min(fadeIn, fadeOut);
         for (const mt of mats) mt.opacity = 0.68 * alpha;
-        // 突進斬：到時間 → 朝目標衝一小段、半程斬一刀、再退回 → 回 idle 等下一輪
-        let lunge = 0;
-        if (st.phase === 'idle' && age >= st.next) { st.phase = 'lunge'; st.start = age; st.struck = false; }
-        if (st.phase === 'lunge') {
-          const lt = (age - st.start) / 0.26;
-          if (lt >= 1) { st.phase = 'idle'; st.next = age + 0.4 + (i % 3) * 0.08; }
-          else {
-            lunge = Math.sin(lt * Math.PI) * 54;
-            if (!st.struck && lt >= 0.45) {                  // 衝到半程 → 在目標處斬一刀
-              st.struck = true;
-              slashBlade(ctx, { x: c.x, z: c.z }, faceIn, { color: '#dff1ff', len: 70, w: 9, swing: 1.7, life: 0.16 });
-            }
-          }
+        // 跟隨目標即時位置（目標移動 → 分身整圈跟著移動，取不到就用施放當下位置）
+        const tc = getPos ? getPos(targetId) : null;
+        const cenX = tc ? tc.x : c.x, cenZ = tc ? tc.z : c.z;
+        // 連續突進斬：每 strikeInt 一輪、五分身近乎同步 → 與傷害掉血同節奏，半程在目標處斬一刀
+        const cyc = (age + phase) / strikeInt;
+        const lt = cyc - Math.floor(cyc);
+        const cycleIdx = Math.floor(cyc);
+        const lunge = Math.sin(lt * Math.PI) * 50;
+        if (cycleIdx !== struckCycle && lt >= 0.4) {
+          struckCycle = cycleIdx;
+          slashBlade(ctx, { x: cenX, z: cenZ }, faceIn, { color: '#dff1ff', len: 70, w: 9, swing: 1.7, life: 0.16 });
         }
         const slideIn = (1 - fadeIn) * orbit * 0.3;           // 入場：自外側淡入滑進定位
-        m.position.x = cx + ux * (lunge - slideIn);
-        m.position.z = cz + uz * (lunge - slideIn);
+        m.position.x = cenX + offX + ux * (lunge - slideIn);
+        m.position.z = cenZ + offZ + uz * (lunge - slideIn);
         m.position.y = Math.sin(age * 5 + i) * 1.5;           // 輕浮動
       });
     }

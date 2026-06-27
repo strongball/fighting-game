@@ -11,7 +11,8 @@ import { getSfxManager } from '../../utils/sfxManager';
 // 由 render 層（fxbus）匯入 models.js，避免角色層 vfx 直接 import 造成角色註冊表載入期循環依賴。
 import { createCharacterModel } from './models.js';
 
-export function createFxBus({ scene, particles, sceneMgr }) {
+// getEntityPos(id) → { x, z } 場景座標（render 端平滑後位置）或 null；供需要「跟隨活體目標」的 vfx 使用。
+export function createFxBus({ scene, particles, sceneMgr, getEntityPos = null }) {
   let seen = new Set();
   const sfx = getSfxManager();
   const transients = []; // { mesh, age, maxLife, update }
@@ -254,7 +255,7 @@ export function createFxBus({ scene, particles, sceneMgr }) {
   function onSpawn(f) {
     // 角色專屬 vfx 覆寫 (Phase 3)；缺省走通用
     const vfx = getVfx(f.vfx);
-    const ctx = { THREE, scene, particles, sceneMgr, addTransient, sceneVec: _v, createCharacterModel };
+    const ctx = { THREE, scene, particles, sceneMgr, addTransient, sceneVec: _v, createCharacterModel, getEntityPos };
     const h = f.type === 'melee' ? 18 : (f.type === 'buff' || f.type === 'ultimate') ? 4 : PROJECTILE_Y;
     setVecFromWorld(_v, f.x, f.y, h);
     const c = { x: _v.x, y: _v.y, z: _v.z };
