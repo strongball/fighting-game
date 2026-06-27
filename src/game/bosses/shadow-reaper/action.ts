@@ -151,10 +151,10 @@ registerBossAction('summon_shadow_clone', (state, boss, action, h) => {
     }
   }
 
-  // 隨機角度偏移生成分身
+  // 隨機角度偏移生成分身 (與本尊拉開 280px 距離)
   const ang = Math.random() * Math.PI * 2;
-  const cx = h.clamp(boss.x + Math.cos(ang) * 120, h.PLAYER_RADIUS, h.ARENA.width - h.PLAYER_RADIUS);
-  const cy = h.clamp(boss.y + Math.sin(ang) * 120, h.PLAYER_RADIUS, h.ARENA.height - h.PLAYER_RADIUS);
+  const cx = h.clamp(boss.x + Math.cos(ang) * 280, h.PLAYER_RADIUS, h.ARENA.width - h.PLAYER_RADIUS);
+  const cy = h.clamp(boss.y + Math.sin(ang) * 280, h.PLAYER_RADIUS, h.ARENA.height - h.PLAYER_RADIUS);
   const cloneId = boss.id + '-clone-' + Math.random().toString(36).slice(2, 7);
   
   // 分身為無敵狀態（無 HP，不與本尊共用 HP），並給予 8 秒存活時間，且會追擊目標
@@ -171,6 +171,65 @@ registerBossAction('summon_shadow_clone', (state, boss, action, h) => {
   clone.invulnerable = true;
   clone.chaseTarget = true;
   clone.lifetime = 8.0; // 存活 8 秒後自動死亡/消失
+  clone.damageDealtMult = 0.5; // 降低分身打到人的傷害
+
+  // 覆寫分身 AI 決策邏輯：追擊玩家的同時與本尊保持 250px 的排斥距離
+  clone.computeInput = (state: any, ent: any, dt: number, input: any) => {
+    let target = null;
+    let bd = Infinity;
+    for (const o of Object.values(state.players) as any[]) {
+      if (o.alive && o.team === 1) {
+        const d = Math.hypot(ent.x - o.x, ent.y - o.y);
+        if (d < bd) {
+          bd = d;
+          target = o;
+        }
+      }
+    }
+
+    if (target) {
+      input.aim = Math.atan2(target.y - ent.y, target.x - ent.x);
+
+      let tx = target.x;
+      let ty = target.y;
+
+      const bossEnt = state.players[ent.ownerId];
+      if (bossEnt && bossEnt.alive) {
+        const dx = ent.x - bossEnt.x;
+        const dy = ent.y - bossEnt.y;
+        const distToBoss = Math.hypot(dx, dy);
+        if (distToBoss < 250) {
+          const chaseX = bd > 0 ? (target.x - ent.x) / bd : 0;
+          const chaseY = bd > 0 ? (target.y - ent.y) / bd : 0;
+
+          const repX = distToBoss > 0 ? dx / distToBoss : 0;
+          const repY = distToBoss > 0 ? dy / distToBoss : 0;
+
+          const force = (250 - distToBoss) / 250;
+          const blendX = chaseX * (1 - force * 0.6) + repX * force * 1.2;
+          const blendY = chaseY * (1 - force * 0.6) + repY * force * 1.2;
+
+          tx = ent.x + blendX * 100;
+          ty = ent.y + blendY * 100;
+
+          const mdx = tx - ent.x, mdy = ty - ent.y;
+          const dz = 8;
+          if (mdx > dz) input.right = true; else if (mdx < -dz) input.left = true;
+          if (mdy > dz) input.down = true; else if (mdy < -dz) input.up = true;
+          return input;
+        }
+      }
+
+      if (bd > 70) {
+        const mdx = tx - ent.x, mdy = ty - ent.y;
+        const dz = 8;
+        if (mdx > dz) input.right = true; else if (mdx < -dz) input.left = true;
+        if (mdy > dz) input.down = true; else if (mdy < -dz) input.up = true;
+      }
+      return input;
+    }
+    return null;
+  };
 
   state.players[cloneId] = clone;
   h.addFx(state, { type: 'blink', x: cx, y: cy, color: '#aa33ff', life: 0.5, radius: 80, vfx: 'boss_shadow_swap' });

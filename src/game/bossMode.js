@@ -6,6 +6,7 @@
 //   startBossRound(state, n)   進入第 n 關 (生成魔王 + 部位、滿血全隊、過場橫幅)
 
 import { getBossForRound, BOSS_COUNT } from './bosses.js';
+import { BOSS_POTION_FLOOR, POTION_MAX } from './constants.js';
 import {
   BOSS_TEAM,
   PLAYER_TEAM,
@@ -14,7 +15,8 @@ import {
   spawnBoss,
   teamPlayers,
 } from './bosses/lifecycle.ts';
-import { reviveAndHealAll, tickBossSystems } from './bosses/systems.ts';
+import { reviveAndHealAll } from './bosses/systems.ts';
+import { runBossPipeline } from './systems/pipeline/boss.ts';
 import { scatterPillars } from './systems/destructibles.ts';
 import { initRunStats, ensureAllPlayerStats, recordRoundStart, recordRoundEnd, recordRetry } from './entities/stats.ts';
 
@@ -53,17 +55,13 @@ export function startBossRound(state, round) {
       if (p.itemMp == null) p.itemMp = 0;
 
       if (round === 1 && !isNewRound) {
-        // Initial game start: exactly 1 of each
-        p.itemHp = 1;
-        p.itemMp = 1;
-      } else if (isNewRound) {
-        // Advancing to next round: carry over and add 1
-        p.itemHp = Math.min(3, p.itemHp + 1);
-        p.itemMp = Math.min(3, p.itemMp + 1);
+        // Initial game start: floor count of each
+        p.itemHp = BOSS_POTION_FLOOR;
+        p.itemMp = BOSS_POTION_FLOOR;
       } else {
-        // Retry same round: make sure they have at least 1
-        p.itemHp = Math.max(1, p.itemHp);
-        p.itemMp = Math.max(1, p.itemMp);
+        // Retry or new round: ensure at least floor count of each, cap at max limit
+        p.itemHp = Math.min(POTION_MAX, Math.max(BOSS_POTION_FLOOR, p.itemHp));
+        p.itemMp = Math.min(POTION_MAX, Math.max(BOSS_POTION_FLOOR, p.itemMp));
       }
     });
   }
@@ -92,7 +90,7 @@ export function startBossRound(state, round) {
 // ---- 每個 fighting tick 的維護 ----
 export function bossTick(state, dt) {
   if (state.roundPhase !== 'fighting') return;
-  tickBossSystems(state, dt);
+  runBossPipeline(state, dt);
 }
 
 // ---- 回合階段機 ----

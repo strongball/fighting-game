@@ -83,7 +83,7 @@ export const BOSS_PACING = {
   loiterRandom: 0.6,
 };
 
-// ---- 難易度參數 (0~1, 0=簡單 0.5=普通 1=困難) ----
+// ---- 難易度參數 (-0.3=簡單 0=普通 0.5=困難) ----
 // 由 state.flags.difficulty 讀取，執行時期經由此函式推導各項倍率。
 export function difficultyMult(d: number) {
   return {
@@ -106,6 +106,15 @@ export function difficultyMult(d: number) {
 export const COOLDOWN_MULTIPLIER = 0.7;  // 技能冷卻時間乘數 (< 1 = 冷卻減少 / > 1 = 冷卻增加)
                                          // 1.0 = 採用 characters.js 中的誠實冷卻值 (平衡基準)
                                          // 例：0.5 = 所有技能冷卻時間減半、1.5 = 冷卻時間延長 50%
+
+// ---- 藥水與掉落道具 (Potions & Drop Items) ----
+export const POTION_MAX = 10;                 // 玩家藥水背包上限
+export const BOSS_POTION_FLOOR = 5;          // Boss 關卡起始/最低補給藥水數
+export const SKY_DROP_INTERVAL = 12;         // 戰鬥中天空掉落道具間隔 (秒)
+export const MAX_DROP_ITEMS = 5;             // 競技場中最大掉落道具數量
+export const DROP_ITEM_LIFETIME = 12;        // 掉落道具存活時間 (秒)
+export const DROP_ITEM_WARNING_TIME = 1.5;   // 天空掉落預警時間 (秒)
+export const DROP_ITEM_RADIUS = 15;          // 掉落道具碰撞半徑
 
 // ============================================================
 // RENDER — 僅 renderer 使用，調整不影響模擬/連線

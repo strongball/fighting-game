@@ -112,8 +112,8 @@ export interface Player {
   aiState?: Record<string, any>;
 
   // 藥水背包系統
-  itemHp: number; // 0..3
-  itemMp: number; // 0..3
+  itemHp: number; // 0..10
+  itemMp: number; // 0..10
 
   // 本地暫存（不入 snapshot）
   _chronoHist?: Array<{ x: number; y: number; hp: number }>;

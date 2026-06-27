@@ -7,6 +7,7 @@ import { CHARACTERS, getCharacter } from '../src/game/characters.js';
 import { BOSSES, BOSS_COUNT, getBossForRound } from '../src/game/bosses.js';
 import { ACTION_HANDLERS } from '../src/game/actions/handlers/index.ts';
 import { getTalentHooks } from '../src/game/characters/talents/registry.ts';
+import { BOSS_PIPELINE_STEP_IDS, PLAYER_PIPELINE_STEP_IDS, WORLD_PIPELINE_STEP_IDS } from '../src/game/systems/pipeline/index.ts';
 
 const SLOTS = ['basic', 'skill1', 'skill2', 'ultimate', 'evade'] as const;
 
@@ -80,5 +81,53 @@ describe('boss registry', () => {
       expect(getBossForRound(round), `boss for round ${round}`).toBeTruthy();
     }
     expect(getBossForRound(18)).toBeNull();
+  });
+});
+
+describe('simulation pipeline', () => {
+  it('keeps player lifecycle order explicit', () => {
+    expect([...PLAYER_PIPELINE_STEP_IDS]).toEqual([
+      'summon-life',
+      'resolve-input',
+      'character-timers',
+      'cooldowns',
+      'status-effects',
+      'passive-recovery',
+      'channels',
+      'barrage',
+      'scripted-action',
+      'items',
+      'auto-lock',
+      'movement',
+      'trail',
+      'cast-input-actions',
+    ]);
+  });
+
+  it('keeps boss lifecycle order explicit', () => {
+    expect([...BOSS_PIPELINE_STEP_IDS]).toEqual([
+      'parts',
+      'phases',
+      'time-anchors',
+      'tethers',
+      'revive',
+      'boss-specific-tick',
+      'history',
+    ]);
+  });
+
+  it('keeps world lifecycle order explicit', () => {
+    expect([...WORLD_PIPELINE_STEP_IDS]).toEqual([
+      'collisions',
+      'static-colliders',
+      'projectiles',
+      'zones',
+      'temporal-echoes',
+      'destructibles',
+      'drop-items',
+      'fx',
+      'dead-summon-cleanup',
+      'mode-resolution',
+    ]);
   });
 });

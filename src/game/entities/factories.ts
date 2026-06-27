@@ -1,4 +1,4 @@
-import { ARENA, PLAYER_RADIUS } from '../constants.js';
+import { ARENA, PLAYER_RADIUS, DROP_ITEM_LIFETIME, DROP_ITEM_RADIUS, DROP_ITEM_WARNING_TIME } from '../constants.js';
 import { getCharacter } from '../characters.js';
 import { getBossEntityHitRadius } from '../bosses/hitbox.ts';
 import { uid } from './math.ts';
@@ -159,11 +159,11 @@ export function makeDropItem(kind: 'heal' | 'mana', x: number, y: number, opt: R
     x,
     y,
     kind,
-    lifetime: opt.lifetime || 12,
-    maxLifetime: opt.lifetime || 12,
-    radius: opt.radius || 15,
+    lifetime: opt.lifetime || DROP_ITEM_LIFETIME,
+    maxLifetime: opt.lifetime || DROP_ITEM_LIFETIME,
+    radius: opt.radius || DROP_ITEM_RADIUS,
     color: kind === 'heal' ? '#ff4d4d' : '#3aa0ff',
-    warningTime: opt.warningTime != null ? opt.warningTime : 1.5,
-    maxWarningTime: opt.warningTime != null ? opt.warningTime : 1.5,
+    warningTime: opt.warningTime != null ? opt.warningTime : DROP_ITEM_WARNING_TIME,
+    maxWarningTime: opt.warningTime != null ? opt.warningTime : DROP_ITEM_WARNING_TIME,
   };
 }

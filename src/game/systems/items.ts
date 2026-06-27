@@ -1,17 +1,15 @@
-import { PLAYER_RADIUS, ARENA } from '../constants.js';
+import { PLAYER_RADIUS, ARENA, MAX_DROP_ITEMS, SKY_DROP_INTERVAL, POTION_MAX } from '../constants.js';
 import { applyHeal } from '../entities/heal.ts';
 import { applyEffect } from '../entities/effects.ts';
 import { addFx } from '../entities/fx.ts';
 import { makeDropItem } from '../entities/factories.ts';
 import type { GameState, Player } from '../types';
 
-const MAX_ITEMS = 5;
-
 export function spawnDropItem(state: GameState, kind: 'heal' | 'mana', x: number, y: number, opt: any = {}) {
   if (!state.items) state.items = [];
   
   // Clean oldest if exceeding maximum
-  if (state.items.length >= MAX_ITEMS) {
+  if (state.items.length >= MAX_DROP_ITEMS) {
     state.items.shift();
   }
   
@@ -97,7 +95,7 @@ export function tickDropItems(state: GameState, dt: number) {
   // Handle periodically spawning sky drops (every 12 seconds)
   if (state.roundPhase === 'fighting') {
     skyDropTimer += dt;
-    if (skyDropTimer >= 12) {
+    if (skyDropTimer >= SKY_DROP_INTERVAL) {
       skyDropTimer = 0;
       spawnSkyDrop(state);
     }
@@ -129,10 +127,10 @@ export function tickDropItems(state: GameState, dt: number) {
       if (d <= PLAYER_RADIUS + item.radius) {
         let pickedUp = false;
         
-        if (item.kind === 'heal' && p.itemHp < 3) {
+        if (item.kind === 'heal' && p.itemHp < POTION_MAX) {
           p.itemHp++;
           pickedUp = true;
-        } else if (item.kind === 'mana' && p.itemMp < 3) {
+        } else if (item.kind === 'mana' && p.itemMp < POTION_MAX) {
           p.itemMp++;
           pickedUp = true;
         }

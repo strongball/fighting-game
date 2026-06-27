@@ -1,6 +1,8 @@
 // React UI 殼與命令式遊戲引擎之間的邊界型別。
 // 引擎模組（game/*.js）維持 JavaScript，這裡只描述跨界傳遞用到的形狀。
 
+import type { ActionDef, ActionType } from './game/types/actions';
+
 export type AppPhase = 'menu' | 'lobby' | 'game' | 'gameover';
 export type ControlScheme = 'wasd-jkl' | 'arrows-asdf' | 'wasd-ijkl';
 
@@ -8,7 +10,7 @@ export interface GameFlags {
   freeMana: boolean;
   noCooldown: boolean;
   noDamage: boolean;
-  difficulty: number;  // 0~1, 0=簡單 0.5=普通 1=困難
+  difficulty: number;  // -0.3=簡單 0=普通 0.5=困難
 }
 
 export interface LobbyEntry {
@@ -101,18 +103,19 @@ export interface TrainingStatsView {
   retaliate: boolean;
 }
 
+export type SkillSlot = 'basic' | 'skill1' | 'skill2' | 'ultimate' | 'evade';
+
 // 角色資料：characters.js 為 .js，這裡描述 UI 會用到的欄位。
-export interface SkillMeta {
+export interface SkillMeta extends Partial<Omit<ActionDef, 'name' | 'type'>> {
   name: string;
   desc?: string;
-  type?: string;
-  cd?: number;
-  manaCost?: number;
+  type?: ActionType;
 }
 
 export interface TalentMeta {
   name: string;
   desc: string;
+  [key: string]: any;
 }
 
 export interface CharacterMeta {
@@ -134,6 +137,7 @@ export interface CharacterMeta {
   skill2: SkillMeta;
   ultimate?: SkillMeta;
   evade?: SkillMeta;
+  [key: string]: any;
 }
 
 // Controller → React 推送的事件。
