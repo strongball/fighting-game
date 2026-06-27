@@ -71,23 +71,36 @@ export function loadVfx() {
     zone(ctx, z) {
       const R = z.radius || 120;
       const g = new THREE.Group();
-      const ringMesh = addRing(LAVA); ringMesh.scale.setScalar(R * 0.8); ringMesh.position.y = 1; g.add(ringMesh);
-      const wave = addRing(SPARK, 0.65); wave.position.y = 1.5; g.add(wave);
+      // 持續熔岩池（地表發光圓盤）：整個傷害期間都看得到、臨近結束才淡出
+      //   → 修正「特效已消失但站上去仍會受傷（看起來是正常地板）」。
+      const poolMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(LAVA), transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(R, 32), poolMat); pool.rotation.x = -Math.PI / 2; pool.position.y = 1; g.add(pool);
+      const coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(EMBER), transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+      const poolCore = new THREE.Mesh(new THREE.CircleGeometry(R * 0.62, 28), coreMat); poolCore.rotation.x = -Math.PI / 2; poolCore.position.y = 1.3; g.add(poolCore);
+      const ringMesh = addRing(LAVA); ringMesh.scale.setScalar(R * 0.8); ringMesh.position.y = 1.6; g.add(ringMesh);
+      const wave = addRing(SPARK, 0.65); wave.position.y = 1.8; g.add(wave);
       const col = addCol(GLOW, 0, R * 0.45, R * 0.7, R * 1.7); col.position.y = R * 0.85; g.add(col);
       const colCore = addCol('#ffffff', 0, R * 0.2, R * 0.34, R * 1.7); colCore.position.y = R * 0.85; g.add(colCore);
       let t = 0, em = 0, erupted = false;
       return {
         object3D: g,
-        update(dt) {
+        update(dt, zone) {
           t += dt;
+          const life = zone ? zone.lifetime : 4;          // 剩餘傷害時間（活體 zone）
+          // 噴發柱（前 ~1.1s 的爆發感）
           const e = Math.min(1, t / 0.28); const fade = 1 - Math.max(0, (t - 0.4) / 0.7);
           col.material.opacity = Math.max(0, 0.7 * e * fade); col.scale.y = 0.4 + e;
           colCore.material.opacity = Math.max(0, 0.85 * e * fade); colCore.scale.y = 0.4 + e;
           ringMesh.material.opacity = Math.max(0, 0.8 * (1 - t));
           wave.scale.setScalar(R * (0.6 + t * 1.6)); wave.material.opacity = Math.max(0, 0.65 * (1 - t * 1.2));
           if (!erupted && t > 0.02) { erupted = true; column(ctx, { x: g.position.x, y: 0, z: g.position.z }, { color: [LAVA, SPARK], count: 30, radius: R * 0.5, speed: 320, life: 0.85, size: 5.5 }); }
+          // 持續熔岩池：傷害整段恆亮（脈動），剩餘時間 < 0.8s 才淡出 → 視覺與傷害一致。
+          const endFade = Math.max(0, Math.min(1, life / 0.8));
+          const fadeIn = Math.min(1, t / 0.2);
+          poolMat.opacity = 0.46 * endFade * fadeIn * (0.78 + 0.22 * Math.sin(t * 7));
+          coreMat.opacity = 0.3 * endFade * fadeIn * (0.8 + 0.2 * Math.sin(t * 11));
           em -= dt;
-          if (em <= 0) { em = 0.05; const a = Math.random() * 6.283, rr = Math.random() * R * 0.6; ctx.particles.spawn({ x: g.position.x + Math.cos(a) * rr, y: 2, z: g.position.z + Math.sin(a) * rr, vx: (Math.random() - 0.5) * 30, vy: 150 + Math.random() * 170, vz: (Math.random() - 0.5) * 30, gravity: 60, drag: 1, life: 0.6, size: 4.5, color: Math.random() < 0.5 ? LAVA : EMBER, fade: true }); }
+          if (em <= 0 && endFade > 0.15) { em = 0.05; const a = Math.random() * 6.283, rr = Math.random() * R * 0.6; ctx.particles.spawn({ x: g.position.x + Math.cos(a) * rr, y: 2, z: g.position.z + Math.sin(a) * rr, vx: (Math.random() - 0.5) * 30, vy: 130 + Math.random() * 150, vz: (Math.random() - 0.5) * 30, gravity: 60, drag: 1, life: 0.6, size: 4.5, color: Math.random() < 0.5 ? LAVA : EMBER, fade: true }); }
         },
       };
     },

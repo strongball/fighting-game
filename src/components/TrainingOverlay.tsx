@@ -5,6 +5,7 @@
 import { useMemo, useState } from 'react';
 import { CHARACTERS } from '../game/characters.js';
 import { SkillCodexList, type SkillKeyDisplay } from './SkillCodexList';
+import { getCodexEntry } from '../utils/characterCodex';
 import type { CharacterMeta, GameController, TrainingStatsView, TrainingSkillRow } from '../types';
 
 // 練功房用預設按鍵字（wasd-jkl）；與面板底部操作提示一致。
@@ -33,6 +34,13 @@ export function TrainingOverlay({ stats, controller }: Props) {
     [stats.charId],
   );
   const [showSkills, setShowSkills] = useState(true);
+  // 天賦（被動）：與技能同源自「角色圖鑑.md」(getCodexEntry)，解析不到時 fallback 至角色資料。
+  const talent = useMemo(() => {
+    const ct = charMeta?.order != null ? getCodexEntry(charMeta.order)?.talent : null;
+    if (ct) return ct;
+    const t = (charMeta as any)?.talent;
+    return t ? { name: t.name as string, desc: t.desc as string } : null;
+  }, [charMeta]);
   const blur = (e: React.MouseEvent) => (e.currentTarget as HTMLElement).blur();
 
   return (
@@ -90,11 +98,25 @@ export function TrainingOverlay({ stats, controller }: Props) {
       {charMeta && (
         <div style={skillSection}>
           <button style={skillToggle} onClick={(e) => { blur(e); setShowSkills((v) => !v); }}>
-            <span>📖 技能說明</span>
+            <span>📖 天賦 · 技能說明</span>
             <span style={{ opacity: 0.6, fontWeight: 400 }}>{showSkills ? '收起 ▾' : '展開 ▸'}</span>
           </button>
           {showSkills && (
             <div style={skillScroll}>
+              {talent && (
+                <div className="skill-list" style={{ marginBottom: 4 }}>
+                  <div className="skill-row">
+                    <span className="skill-key" style={{ background: 'rgba(255,209,102,0.18)', borderColor: 'rgba(255,209,102,0.4)' }}>天賦</span>
+                    <div className="skill-body">
+                      <div className="skill-head">
+                        <span className="skill-name">{talent.name}</span>
+                        <span className="skill-tag ult">被動</span>
+                      </div>
+                      <div className="skill-explain">{talent.desc}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <SkillCodexList char={charMeta} skillDisplay={TRAIN_KEYS} />
             </div>
           )}
