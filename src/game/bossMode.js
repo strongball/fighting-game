@@ -6,6 +6,7 @@
 //   startBossRound(state, n)   進入第 n 關 (生成魔王 + 部位、滿血全隊、過場橫幅)
 
 import { getBossForRound, BOSS_COUNT } from './bosses.js';
+import { BOSS_POTION_FLOOR, POTION_MAX } from './constants.js';
 import {
   BOSS_TEAM,
   PLAYER_TEAM,
@@ -53,13 +54,13 @@ export function startBossRound(state, round) {
       if (p.itemMp == null) p.itemMp = 0;
 
       if (round === 1 && !isNewRound) {
-        // Initial game start: 5 of each
-        p.itemHp = 5;
-        p.itemMp = 5;
+        // Initial game start: floor count of each
+        p.itemHp = BOSS_POTION_FLOOR;
+        p.itemMp = BOSS_POTION_FLOOR;
       } else {
-        // Retry or new round: ensure at least 5 of each, cap at 10
-        p.itemHp = Math.min(10, Math.max(5, p.itemHp));
-        p.itemMp = Math.min(10, Math.max(5, p.itemMp));
+        // Retry or new round: ensure at least floor count of each, cap at max limit
+        p.itemHp = Math.min(POTION_MAX, Math.max(BOSS_POTION_FLOOR, p.itemHp));
+        p.itemMp = Math.min(POTION_MAX, Math.max(BOSS_POTION_FLOOR, p.itemMp));
       }
     });
   }

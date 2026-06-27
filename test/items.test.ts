@@ -3,16 +3,16 @@ import { createInitialState, makePlayer, makeDropItem } from '../src/game/entiti
 import { tickDropItems, useHpPotion, useMpPotion } from '../src/game/systems/items.ts';
 import { startBossRound } from '../src/game/bossMode.js';
 import { step } from '../src/game/simulation.ts';
-import { DT } from '../src/game/constants.js';
+import { DT, POTION_MAX, BOSS_POTION_FLOOR, SKY_DROP_INTERVAL, DROP_ITEM_LIFETIME, DROP_ITEM_WARNING_TIME } from '../src/game/constants.js';
 
 describe('Potion and Drop Item System', () => {
   it('correctly spawns dropped items via makeDropItem', () => {
-    const item = makeDropItem('heal', 100, 200, { warningTime: 1.5, lifetime: 12 });
+    const item = makeDropItem('heal', 100, 200, { warningTime: DROP_ITEM_WARNING_TIME, lifetime: DROP_ITEM_LIFETIME });
     expect(item.kind).toBe('heal');
     expect(item.x).toBe(100);
     expect(item.y).toBe(200);
-    expect(item.warningTime).toBe(1.5);
-    expect(item.lifetime).toBe(12);
+    expect(item.warningTime).toBe(DROP_ITEM_WARNING_TIME);
+    expect(item.lifetime).toBe(DROP_ITEM_LIFETIME);
   });
 
   it('handles item pick up collisions and inventory limits', () => {
@@ -21,9 +21,9 @@ describe('Potion and Drop Item System', () => {
     p.x = 100;
     p.y = 100;
     
-    // Set itemHp to 2, itemMp to 2
-    p.itemHp = 2;
-    p.itemMp = 2;
+    // Set itemHp to POTION_MAX - 1, itemMp to POTION_MAX - 1
+    p.itemHp = POTION_MAX - 1;
+    p.itemMp = POTION_MAX - 1;
     
     // Drop HP potion at player's location (no warning time so it's active immediately)
     state.items = [
@@ -33,26 +33,26 @@ describe('Potion and Drop Item System', () => {
     // Process items tick
     tickDropItems(state, DT);
     
-    // Player should pick it up since itemHp < 3
-    expect(p.itemHp).toBe(3);
+    // Player should pick it up since itemHp < POTION_MAX
+    expect(p.itemHp).toBe(POTION_MAX);
     expect(state.items.length).toBe(0);
     
-    // Drop another HP potion, player is now full (3)
+    // Drop another HP potion, player is now full (POTION_MAX)
     state.items = [
       makeDropItem('heal', 100, 100, { warningTime: 0 }),
     ];
     tickDropItems(state, DT);
     
-    // Player should NOT pick it up because itemHp is 3
-    expect(p.itemHp).toBe(3);
+    // Player should NOT pick it up because itemHp is POTION_MAX
+    expect(p.itemHp).toBe(POTION_MAX);
     expect(state.items.length).toBe(1);
     
-    // Drop Mana potion, player is at 2, should pick up
+    // Drop Mana potion, player is at POTION_MAX - 1, should pick up
     state.items = [
       makeDropItem('mana', 100, 100, { warningTime: 0 }),
     ];
     tickDropItems(state, DT);
-    expect(p.itemMp).toBe(3);
+    expect(p.itemMp).toBe(POTION_MAX);
     expect(state.items.length).toBe(0);
   });
 
@@ -130,39 +130,40 @@ describe('Potion and Drop Item System', () => {
     const p = state.players.p1;
     
     // 1. Initial round start (Round 1)
-    // We expect startBossRound to initialize potions to 1 of each.
+    // We expect startBossRound to initialize potions to BOSS_POTION_FLOOR of each.
     startBossRound(state, 1);
-    expect(p.itemHp).toBe(1);
-    expect(p.itemMp).toBe(1);
+    expect(p.itemHp).toBe(BOSS_POTION_FLOOR);
+    expect(p.itemMp).toBe(BOSS_POTION_FLOOR);
     
     // 2. Transition to next round (Round 2)
-    // Potion counts should carry over and increment by 1.
-    p.itemHp = 1; // say player used none and picked up none, count is 1
-    p.itemMp = 0; // say player used one, count is 0
+    // Potion counts should be replenished to at least BOSS_POTION_FLOOR.
+    p.itemHp = BOSS_POTION_FLOOR - 1;
+    p.itemMp = 0;
     startBossRound(state, 2);
-    expect(p.itemHp).toBe(2); // 1 + 1 = 2
-    expect(p.itemMp).toBe(1); // 0 + 1 = 1
+    expect(p.itemHp).toBe(BOSS_POTION_FLOOR);
+    expect(p.itemMp).toBe(BOSS_POTION_FLOOR);
     
-    // 3. Increment capping at 3 (Round 3)
-    p.itemHp = 3;
-    p.itemMp = 3;
+    // 3. Counts cap at POTION_MAX.
+    p.itemHp = POTION_MAX + 2;
+    p.itemMp = POTION_MAX;
     startBossRound(state, 3);
-    expect(p.itemHp).toBe(3); // capped at 3
-    expect(p.itemMp).toBe(3); // capped at 3
+    expect(p.itemHp).toBe(POTION_MAX);
+    expect(p.itemMp).toBe(POTION_MAX);
     
     // 4. Retry the same round (Round 3 retry)
-    // If they had 0 potions, it should reset to at least 1.
+    // If they had 0 potions, it should reset to at least BOSS_POTION_FLOOR.
     p.itemHp = 0;
     p.itemMp = 0;
     startBossRound(state, 3); // retry round 3
-    expect(p.itemHp).toBe(1); // restored to 1
-    expect(p.itemMp).toBe(1); // restored to 1
+    expect(p.itemHp).toBe(BOSS_POTION_FLOOR); // restored to floor
+    expect(p.itemMp).toBe(BOSS_POTION_FLOOR); // restored to floor
     
-    // If they had 2 potions, they should keep them (since 2 >= 1).
-    p.itemHp = 2;
-    p.itemMp = 2;
+    // If they had more than BOSS_POTION_FLOOR but <= POTION_MAX, they should keep them.
+    const keepValue = BOSS_POTION_FLOOR + 2;
+    p.itemHp = keepValue;
+    p.itemMp = keepValue;
     startBossRound(state, 3); // retry round 3
-    expect(p.itemHp).toBe(2);
-    expect(p.itemMp).toBe(2);
+    expect(p.itemHp).toBe(keepValue);
+    expect(p.itemMp).toBe(keepValue);
   });
 });

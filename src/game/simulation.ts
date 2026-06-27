@@ -1,25 +1,7 @@
 // 權威模擬：僅由房主執行。applyMovement 也供加入者本機預測使用。
 
-import { getCharacter } from './characters.js';
-import { EMPTY_INPUT } from './input.js';
-import { computeBossInput } from './bossAI.js';
-import { computeNpcInput } from './npcAI.ts';
-import { bossTick, checkBossRound } from './bossMode.js';
-import { castInputActions } from './actions/casting.ts';
-import { executeAction } from './actions/executor.ts';
-import { tickTemporalEchoes } from './bosses/echoes.ts';
-import { processBarrage, processChannel, processScripted, processTrail } from './actions/runtime.ts';
-import { resolveCollisions, resolveStaticColliders } from './systems/collisions.ts';
-import { tickStatusEffects } from './systems/effects.ts';
-import { updateFx } from './systems/fx.ts';
 import { applyMovement, speedOf } from './systems/movement.ts';
-import { applyPlayerAutoLock } from './systems/autoLock.ts';
-import { tickCharacterTimers, tickCooldowns, tickPassiveRecovery, tickSummonLife } from './systems/playerState.ts';
-import { updateProjectiles } from './systems/projectiles.ts';
-import { checkWin } from './systems/win.ts';
-import { updateZones } from './systems/zones.ts';
-import { tickDestructibles } from './systems/destructibles.ts';
-import { tickDropItems, useHpPotion, useMpPotion } from './systems/items.ts';
+import { runPlayerPipeline, runWorldPipeline } from './systems/pipeline/index.ts';
 import type { GameState, Input } from './types';
 
 export { applyMovement, speedOf };
@@ -36,78 +18,6 @@ export function step(state: GameState, inputs: Record<string, Input>, dt: number
   }
   state.time += dt;
 
-  for (const p of Object.values(state.players)) {
-    if (!p.alive) continue;
-    if (tickSummonLife(state, p, dt)) continue;
-    let input = inputs[p.id] || EMPTY_INPUT;
-    // 魔王/召喚物/镳像：以 AI 計算輸入取代鍵盤 (host-only 運算)
-    if (p.aiId) {
-      if (state.mode === 'boss') input = state.roundPhase === 'fighting' ? computeBossInput(state, p, dt) : EMPTY_INPUT;
-      else input = computeBossInput(state, p, dt); // FFA 召喚物 AI
-    } else if (state.mode === 'boss' && state.roundPhase !== 'fighting') {
-      // 闖關 intro/cleared/wiped：人類玩家與 NPC 輸入皆凍結 (登場動畫期間不能動)
-      input = EMPTY_INPUT;
-    } else if (p.isNpc) {
-      // 大廳加入的電腦玩家：以決策樹 AI 計算輸入取代鍵盤 (host-only 運算)
-      input = computeNpcInput(state, p, dt);
-    }
-    const character = getCharacter(p.charId);
-    const talent = character.talent;
-    tickCharacterTimers(state, p, character, talent, dt);
-    tickCooldowns(state, p, talent, dt);
-
-    tickStatusEffects(state, p, dt);
-    if (!p.alive) continue; // 燃燒/流血等 DoT 可能在本迴圈擊殺
-
-    tickPassiveRecovery(state, p, talent, dt);
-
-    processChannel(state, p, dt); // 汲取鏈 (不限制移動)
-    processBarrage(state, p, dt); // 天羽箭暴連射 (不限制移動)
-
-    const scripted = processScripted(state, p, dt); // 衝鋒/躍擊進行中接管移動
-    if (!scripted) {
-      // 處理藥水使用輸入（僅限人類玩家）
-      if (!p.aiId) {
-        if (p.itemHp == null) p.itemHp = 0;
-        if (p.itemMp == null) p.itemMp = 0;
-        if (!p._lastInput) p._lastInput = {};
-        
-        const item1Pressed = !!input.item1 && !p._lastInput.item1;
-        const item2Pressed = !!input.item2 && !p._lastInput.item2;
-        
-        if (item1Pressed && p.itemHp > 0) {
-          useHpPotion(state, p);
-        }
-        if (item2Pressed && p.itemMp > 0) {
-          useMpPotion(state, p);
-        }
-        
-        p._lastInput.item1 = !!input.item1;
-        p._lastInput.item2 = !!input.item2;
-      }
-
-      applyPlayerAutoLock(state, p, input); // 自動瞄準/鎖定：在轉向前合成 input.aim（僅本地真人）
-      applyMovement(p, input, dt, state.flags.difficulty ?? 0.5);
-
-      processTrail(state, p, dt); // 移動留痕 (冰霜足跡)
-
-      castInputActions(state, p, input, dt);
-    }
-  }
-
-  resolveCollisions(state);
-  resolveStaticColliders(state);
-  updateProjectiles(state, dt);
-  updateZones(state, dt);
-  tickTemporalEchoes(state, dt, executeAction);
-  tickDestructibles(state, dt);
-  tickDropItems(state, dt);
-  updateFx(state, dt);
-  // 清除已死亡的玩家召喚物 (避免累積；一般玩家死亡保留供結算)
-  for (const id of Object.keys(state.players)) {
-    const o = state.players[id];
-    if (o.isSummon && !o.alive) delete state.players[id];
-  }
-  if (state.mode === 'boss') { bossTick(state, dt); checkBossRound(state, dt); }
-  else checkWin(state);
+  runPlayerPipeline(state, inputs, dt);
+  runWorldPipeline(state, dt);
 }

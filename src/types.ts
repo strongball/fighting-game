@@ -113,6 +113,7 @@ export interface SkillMeta {
 export interface TalentMeta {
   name: string;
   desc: string;
+  [key: string]: any;
 }
 
 export interface CharacterMeta {
@@ -134,6 +135,7 @@ export interface CharacterMeta {
   skill2: SkillMeta;
   ultimate?: SkillMeta;
   evade?: SkillMeta;
+  [key: string]: any;
 }
 
 // Controller → React 推送的事件。
