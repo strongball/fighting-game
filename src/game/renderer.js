@@ -16,6 +16,7 @@ import { applyDecorations, updateDecorationFade } from './render3d/decorations.j
 import { createAtmosphere } from './render3d/atmosphere.js';
 import { createBossUltimateAura } from './render3d/bossUltimateAura.js';
 import { createTimeAnchorLayer } from './render3d/timeAnchors.js';
+import { createPerfHud } from './render3d/perfHud.js';
 import { getBossForRound, getBoss } from './bosses.js';
 import { createCharacterModel, animateModel, attachSkin } from './render3d/models.js';
 import { computeBossVisualState, createBossPartModel } from './bosses/render3d.ts';
@@ -62,6 +63,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
   const atmosphere = createAtmosphere(particles);
   const bossUltimateAura = createBossUltimateAura({ scene, particles, sceneMgr });
   const timeAnchorLayer = createTimeAnchorLayer(scene);
+  const perfHud = createPerfHud(sceneMgr, sceneMgr.stage); // ?perf=1 才啟用，否則為 null
   let hideSelf = false; // 第一人稱(mode 2)時藏自身模型
   let appliedThemeRound = -1;
   let appliedThemeMode = '';
@@ -590,6 +592,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
 
     sceneMgr.render();
     hud.render();
+    perfHud?.tick(dt, state);
   }
 
   return { render, dispose: () => { bossUltimateAura.dispose(); timeAnchorLayer.dispose(); for (const line of tetherLines.values()) { scene.remove(line.group); line.geo.dispose(); line.coreMat.dispose(); line.glowMat.dispose(); } } };
