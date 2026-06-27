@@ -202,6 +202,8 @@ system 順序會影響手感與結果，所以它是 gameplay contract。
 
 ### Phase 2: Centralize Gameplay Constants
 
+狀態：已完成。
+
 目標：
 
 把容易漂移的平衡/規格值集中到 constants 或 domain config。
@@ -214,13 +216,16 @@ system 順序會影響手感與結果，所以它是 gameplay contract。
 - drop item max count
 - drop item warning/lifetime defaults
 
-建議新增：
+已集中：
 
 ```ts
 export const POTION_MAX = 10;
 export const BOSS_POTION_FLOOR = 5;
 export const SKY_DROP_INTERVAL = 12;
 export const MAX_DROP_ITEMS = 5;
+export const DROP_ITEM_LIFETIME = 12;
+export const DROP_ITEM_WARNING_TIME = 1.5;
+export const DROP_ITEM_RADIUS = 15;
 ```
 
 原因：
@@ -236,6 +241,8 @@ export const MAX_DROP_ITEMS = 5;
 
 ### Phase 3: System Profiling
 
+狀態：已完成初版。
+
 目標：
 
 利用 `system.id` 加 system-level profiling，方便查卡頓。
@@ -245,11 +252,12 @@ export const MAX_DROP_ITEMS = 5;
 - 僅在 `?perf=1` 啟用。
 - 每秒輸出 player/world system 耗時摘要。
 - 不影響正常路徑。
+- 正常路徑不讀取時間、不輸出 console。
 
 可能輸出：
 
 ```txt
-[sim systems] player:movement=0.12ms player:cast-input-actions=0.20ms world:projectiles=0.34ms world:zones=0.18ms world:mode-resolution=0.08ms
+[sim systems] player:movement=0.42ms/30x worst=0.04ms world:projectiles=0.34ms/30x worst=0.03ms
 ```
 
 注意：
@@ -266,9 +274,18 @@ export const MAX_DROP_ITEMS = 5;
 
 ### Phase 4: Better Types For Character/Talent Runtime
 
+狀態：部分完成。
+
 目標：
 
 減少 `any`，讓新增角色、talent、system 時更安全。
+
+已完成：
+
+- `PlayerPipelineContext.character` / `talent` 已改為 `CharacterMeta | null` / `TalentMeta | null`。
+- `SkillMeta.type` 已對齊 engine `ActionType`。
+- `SkillMeta` 已沿用 engine `ActionDef` 的寬鬆 action data shape。
+- 新增 `SkillSlot` 描述角色 action slot 名稱。
 
 優先順序：
 
@@ -291,15 +308,19 @@ export const MAX_DROP_ITEMS = 5;
 
 ### Phase 5: System Debug Controls
 
+狀態：已完成初版。
+
 目標：
 
 提供開發時快速停用/觀察 system 的能力。
 
-可能形式：
+目前形式：
 
 ```txt
 ?disableSystem=zones,projectiles
+?disableSystem=world:zones,player:movement
 ?traceSystem=projectiles
+?traceSystem=world:zones,player:movement
 ```
 
 用途：
@@ -320,11 +341,24 @@ export const MAX_DROP_ITEMS = 5;
 - 正常遊玩不受影響。
 - full test green。
 
+可與 profiling 摘要一起使用：
+
+```txt
+?traceSystem=projectiles&perf=1
+```
+
 ### Phase 6: Move More Cross-Cutting Special Cases Into Registries
+
+狀態：進行中。
 
 目標：
 
 減少中央檔案裡的角色/Boss 特例。
+
+已完成：
+
+- HUD self-alert registry：`hud/selfAlerts/*` 可新增自我警示，不再直接擴張 `hud.js` 的 self-alert 分支。
+- HUD resource-bar registry：`hud/resourceBars/*` 可新增角色專屬資源條，怒氣/劍氣不再直接寫在 `hud.js` 的更新分支。
 
 候選：
 
@@ -458,4 +492,3 @@ specific behavior: character/boss/action/talent hooks
 render-only state: renderer/vfx layer
 network: snapshot manifest
 ```
-

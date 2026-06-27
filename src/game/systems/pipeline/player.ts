@@ -11,7 +11,7 @@ import { applyMovement } from '../movement.ts';
 import { tickCharacterTimers, tickCooldowns, tickPassiveRecovery, tickSummonLife } from '../playerState.ts';
 import type { GameState, Input, Player } from '../../types';
 import type { PlayerPipelineContext, PlayerSystem } from './types.ts';
-import { profileSystem } from './profiling.ts';
+import { isSystemDisabled, profileSystem } from './profiling.ts';
 
 function resolvePlayerInput(ctx: PlayerPipelineContext) {
   let input = ctx.inputs[ctx.player.id] || EMPTY_INPUT;
@@ -137,6 +137,7 @@ export function runPlayerPipeline(state: GameState, inputs: Record<string, Input
       talent: null,
     };
     for (const system of PLAYER_SYSTEMS) {
+      if (isSystemDisabled('player', system.id)) continue;
       // 執行各個玩家系統。如果傳回 'skip-player'，代表該玩家本 tick 的後續處理被中斷（例如死亡或被腳本接管）
       if (profileSystem('player', system.id, () => system.tick(ctx)) === 'skip-player') break;
     }

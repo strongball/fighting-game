@@ -1,6 +1,8 @@
 // React UI 殼與命令式遊戲引擎之間的邊界型別。
 // 引擎模組（game/*.js）維持 JavaScript，這裡只描述跨界傳遞用到的形狀。
 
+import type { ActionDef, ActionType } from './game/types/actions';
+
 export type AppPhase = 'menu' | 'lobby' | 'game' | 'gameover';
 export type ControlScheme = 'wasd-jkl' | 'arrows-asdf' | 'wasd-ijkl';
 
@@ -101,13 +103,13 @@ export interface TrainingStatsView {
   retaliate: boolean;
 }
 
+export type SkillSlot = 'basic' | 'skill1' | 'skill2' | 'ultimate' | 'evade';
+
 // 角色資料：characters.js 為 .js，這裡描述 UI 會用到的欄位。
-export interface SkillMeta {
+export interface SkillMeta extends Partial<Omit<ActionDef, 'name' | 'type'>> {
   name: string;
   desc?: string;
-  type?: string;
-  cd?: number;
-  manaCost?: number;
+  type?: ActionType;
 }
 
 export interface TalentMeta {

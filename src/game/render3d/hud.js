@@ -4,13 +4,17 @@
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { getCharacter } from '../characters.js';
 import { getEffectHud } from '../entities/effects.ts';
-import { ULT_MAX, FURY_MAX } from '../constants.js';
+import { ULT_MAX } from '../constants.js';
 import { sceneX, sceneZ } from './coords.js';
 import { el, setText, setStyle, setClass, setHtml, pct, hexA, esc } from './hud/dom.js';
+import { updateHudResourceBars } from './hud/resourceBars.js';
+import { getSelfAlert } from './hud/selfAlerts.js';
 import { getHudWidgets } from './hud/widgets.js';
 import { getJoystickSettings, subscribeJoystickSettings } from '../../utils/joystickSettings';
 // 以 glob 自動載入所有 hud widget（side-effect 註冊到 widgets registry，仿 vfx）。
 import.meta.glob('./hud/widgets/*.js', { eager: true });
+import.meta.glob('./hud/resourceBars/*.js', { eager: true });
+import.meta.glob('./hud/selfAlerts/*.js', { eager: true });
 
 const HEAD_Y = 90;
 
@@ -594,13 +598,9 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
         for (const p of players) if (p.team === 1 && p.alive && p.hp < lo) { lo = p.hp; huntedId = p.id; }
       }
     }
-    // 自身狀態警示：R7 被獵殺 / R9 被靈魂綁定 (鎖鏈連線本身由 bossMode 畫，這裡提醒被綁的人拉開)
-    let selfAlert = '';
+    // 自身狀態警示：各警示由 hud/selfAlerts registry 決定，HUD 主檔只負責顯示。
     const meForAlert = state.players[selfId];
-    if (huntedId && huntedId === selfId) selfAlert = '🐺 你被盯上了！快拉開距離';
-    else if (state.tethers && state.tethers.some((t) => t.a === selfId || t.b === selfId)) selfAlert = '🔗 你被靈魂綁定 — 與隊友拉開距離';
-    else if (isLavaBurning(state, meForAlert)) selfAlert = '🔥 熔岩灼燒中 — 先拉開恢復空間';
-    else if (meForAlert && meForAlert.effects && meForAlert.effects.blind) selfAlert = '🌚 你被致盲了！畫面一片漆黑';
+    const selfAlert = getSelfAlert({ state, selfId, self: meForAlert, players, huntedId });
     setStyle(huntWarn, 'display', selfAlert ? '' : 'none');
     if (selfAlert) setText(huntWarn, selfAlert);
     for (const p of players) {
@@ -670,20 +670,13 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
         setStyle(ultFillD, 'width', pct(ultR));
         ultWrapD.classList.toggle('ready', ultReady);
         setText(ultTxtD, ultReady ? '終極 就緒！' : `終極 ${Math.floor(ultR * 100)}%`);
-        const isBulwarkD = !!(c.talent && c.talent.id === 'bulwark');
-        setStyle(furyWrapD, 'display', isBulwarkD ? '' : 'none');
-        if (isBulwarkD) {
-          setStyle(furyFillD, 'width', pct(Math.min(1, (me.fury || 0) / FURY_MAX)));
-          furyWrapD.classList.toggle('boiling', (me.fury || 0) >= (c.talent.threshold ?? 55));
-          setText(furyTxtD, `怒氣 ${Math.floor(me.fury || 0)}`);
-        }
-        const isMagicSwordsmanD = !!(c.talent && c.talent.id === 'arcane_contract');
-        setStyle(seWrapD, 'display', isMagicSwordsmanD ? '' : 'none');
-        if (isMagicSwordsmanD) {
-          const seCount = (me.magicSwordsman && me.magicSwordsman.swordEnergy) || 0;
-          setStyle(seFillD, 'width', pct(seCount / (c.talent.maxSwordEnergy || 5)));
-          setText(seTxtD, `劍氣 ${seCount}/${c.talent.maxSwordEnergy || 5}`);
-        }
+        updateHudResourceBars(
+          { state, selfId, player: me, character: c, isMobile: false },
+          {
+            fury: { wrap: furyWrapD, fill: furyFillD, text: furyTxtD },
+            'sword-energy': { wrap: seWrapD, fill: seFillD, text: seTxtD },
+          },
+        );
         setHtml(buffsD, buildBuffHtml(me));
         setChip(chip.basic,  c.basic,  me.cd.basic,   me.mana);
         setChip(chip.skill1, c.skill1, me.cd.skill1,  me.mana);
@@ -704,20 +697,13 @@ export function createHud({ stage, scene, camera, controlScheme = 'wasd-jkl', ho
         setText(hpTxtM, `${Math.ceil(me.hp)}/${me.maxHp}${me.shield > 0 ? ` +${Math.ceil(me.shield)}` : ''}`);
         setStyle(mpFillM, 'width', pct(me.mana / me.maxMana));
         setText(mpTxtM, `${Math.ceil(me.mana)}/${me.maxMana}`);
-        const isBulwarkM = !!(c.talent && c.talent.id === 'bulwark');
-        setStyle(furyWrapM, 'display', isBulwarkM ? '' : 'none');
-        if (isBulwarkM) {
-          setStyle(furyFillM, 'width', pct(Math.min(1, (me.fury || 0) / FURY_MAX)));
-          furyWrapM.classList.toggle('boiling', (me.fury || 0) >= (c.talent.threshold ?? 55));
-          setText(furyTxtM, `怒氣 ${Math.floor(me.fury || 0)}`);
-        }
-        const isMagicSwordsmanM = !!(c.talent && c.talent.id === 'arcane_contract');
-        setStyle(seWrapM, 'display', isMagicSwordsmanM ? '' : 'none');
-        if (isMagicSwordsmanM) {
-          const seCount = (me.magicSwordsman && me.magicSwordsman.swordEnergy) || 0;
-          setStyle(seFillM, 'width', pct(seCount / (c.talent.maxSwordEnergy || 5)));
-          setText(seTxtM, `劍氣 ${seCount}/${c.talent.maxSwordEnergy || 5}`);
-        }
+        updateHudResourceBars(
+          { state, selfId, player: me, character: c, isMobile: true },
+          {
+            fury: { wrap: furyWrapM, fill: furyFillM, text: furyTxtM },
+            'sword-energy': { wrap: seWrapM, fill: seFillM, text: seTxtM },
+          },
+        );
         setHtml(buffsM, buildBuffHtml(me));
         
         const showControls = me.alive && state.roundPhase !== 'wiped' && state.roundPhase !== 'cleared';
@@ -1166,12 +1152,4 @@ function buildBuffHtml(p) {
     const ex = b.extra != null ? `<u>${esc(b.extra)}</u>` : '';
     return `<span class="bchip ${cls}"><em>${b.icon}</em><b>${esc(b.name)}</b>${ex}${t}</span>`;
   }).join('');
-}
-
-function isLavaBurning(state, me) {
-  const burn = me && me.effects && me.effects.burn;
-  if (!burn || burn.remaining <= 0) return false;
-  if (state.mode !== 'boss') return false;
-  const boss = Object.values(state.players || {}).find((p) => p && p.isBoss && getCharacter(p.charId)?.lavaBurn);
-  return !!boss && (burn.srcId == null || burn.srcId === boss.id);
 }

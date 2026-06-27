@@ -10,6 +10,7 @@ import { checkWin } from '../win.ts';
 import { updateZones } from '../zones.ts';
 import type { GameState } from '../../types';
 import type { WorldSystem } from './types.ts';
+import { isSystemDisabled, profileSystem } from './profiling.ts';
 
 function cleanupDeadSummons(state: GameState) {
   for (const id of Object.keys(state.players)) {
@@ -43,5 +44,8 @@ export const WORLD_SYSTEMS = [
 export const WORLD_PIPELINE_STEP_IDS = WORLD_SYSTEMS.map((system) => system.id);
 
 export function runWorldPipeline(state: GameState, dt: number) {
-  for (const system of WORLD_SYSTEMS) system.tick(state, dt);
+  for (const system of WORLD_SYSTEMS) {
+    if (isSystemDisabled('world', system.id)) continue;
+    profileSystem('world', system.id, () => system.tick(state, dt));
+  }
 }
