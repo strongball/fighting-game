@@ -97,6 +97,8 @@ export function difficultyMult(d: number) {
     bossHp: 0.6 + d * 0.8,
     /** 魔王移動速度倍率 */
     bossSpeed: 0.85 + d * 0.3,
+    /** 召喚物(分身/小怪)數量倍率 */
+    minionCount: 0.7 + d * 0.6,
   };
 }
 
