@@ -7,7 +7,7 @@ import { applyEffect } from '../../entities/effects.ts';
 import { addFx } from '../../entities/fx.ts';
 import { teamPlayers } from '../lifecycle.ts';
 
-const burnNearby = (radius = 360, dmg = 8, duration = 4) => (state: any, boss: any) => {
+const burnNearby = (radius = 280, dmg = 5, duration = 3) => (state: any, boss: any) => {
   for (const p of teamPlayers(state)) {
     if (!p.alive) continue;
     const dx = p.x - boss.x, dy = p.y - boss.y;
@@ -57,19 +57,19 @@ const data = {
     },
 
     phases: [
-      { hpPct: 0.5, name: '熔岩沸騰', sub: '裝甲剝落', color: '#ff5a1f', dmgMult: 1.15, speedMult: 1.2, cdMult: 0.8,
-        onEnter: burnNearby(360, 8, 4),
+      { hpPct: 0.5, name: '熔岩沸騰', sub: '裝甲剝落', color: '#ff5a1f', dmgMult: 1.10, speedMult: 1.2, cdMult: 0.85,
+        onEnter: burnNearby(280, 5, 3),
         tagsOverride: [
           { icon: '🔥', text: '熔岩四溢 — 進入後燃燒' },
-          { icon: '⚔️', text: '攻擊強化 +40%' },
+          { icon: '⚔️', text: '攻擊強化 +10%' },
           { icon: '💢', text: '衝鋒更頻繁' },
         ] },
     ],
 
-    basic: { name: '熔岩劈斬', type: 'melee', dmg: 50, range: 300, arc: 1.2, knockback: 200, cd: 1.4, windup: 0.5, telegraph: 'arc', color: '#ff7043', effect: BURN(8, 2), vfx: 'boss_juggernaut_slash' },
-    skill1: { name: '烈焰衝鋒', type: 'charge', speed: 900, range: 740, dmg: 80, hitRadius: 130, knockback: 320, stopOnHit: true, effect: STUN(1.0), cd: 7.5, windup: 0.5, telegraph: 'line', color: '#ff5a1f', wallStun: 2.2, vfx: 'boss_juggernaut_charge' },
-    skill2: { name: '震地烈焰', type: 'zone', range: 220, radius: 240, dmgPct: 0.035, lifetime: 2.4, tick: 0.5, delay: 0.8, moving: 0, effect: BURN(12, 3), cd: 9.0, windup: 0.5, telegraph: 'circle', color: '#e74c3c', vfx: 'boss_juggernaut_quake' },
-    ultimate: { name: '熔岩噴發', type: 'zone', range: 220, radius: 200, dmg: 60, lifetime: 4, tick: 0.5, delay: 0.9, count: 10, scatter: 450, stagger: 0.12, effect: BURN(14, 3), cd: 14.3, windup: 0.6, telegraph: 'circle', color: '#ff5a1f', vfx: 'boss_juggernaut_ult' },
+    basic: { name: '熔岩劈斬', type: 'melee', dmg: 50, range: 300, arc: 1.2, knockback: 200, cd: 1.4, windup: 0.5, recover: 0.4, telegraph: 'arc', color: '#ff7043', effect: BURN(8, 2), vfx: 'boss_juggernaut_slash' },
+    skill1: { name: '烈焰衝鋒', type: 'charge', speed: 900, range: 740, dmg: 80, hitRadius: 130, knockback: 320, stopOnHit: true, effect: STUN(1.0), cd: 7.5, windup: 0.5, recover: 0.7, telegraph: 'line', color: '#ff5a1f', wallStun: 2.2, vfx: 'boss_juggernaut_charge' },
+    skill2: { name: '震地烈焰', type: 'zone', range: 220, radius: 240, dmgPct: 0.025, lifetime: 2.0, tick: 0.5, delay: 0.5, moving: 0, effect: BURN(12, 3), cd: 9.0, windup: 0.5, recover: 0.6, telegraph: 'circle', color: '#e74c3c', vfx: 'boss_juggernaut_quake' },
+    ultimate: { name: '熔岩噴發', type: 'zone', range: 220, radius: 200, dmg: 60, lifetime: 4, tick: 0.5, delay: 0.9, count: 10, scatter: 450, stagger: 0.12, effect: BURN(14, 3), cd: 14.3, windup: 0.6, recover: 1.0, telegraph: 'circle', color: '#ff5a1f', vfx: 'boss_juggernaut_ult' },
   };
 
 export default new BaseBoss(data, { aiProfile, modelConfig, buildModel, buildWeapon, loadVfx });
