@@ -1,4 +1,4 @@
-type ProfileScope = 'player' | 'world';
+type ProfileScope = 'player' | 'boss' | 'world';
 
 interface ProfileEntry {
   total: number;

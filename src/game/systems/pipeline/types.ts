@@ -24,6 +24,11 @@ export interface PlayerSystem {
   tick(ctx: PlayerPipelineContext): PlayerSystemResult;
 }
 
+export interface BossSystem {
+  readonly id: string;
+  tick(state: GameState, dt: number): void;
+}
+
 export interface WorldSystem {
   readonly id: string;
   tick(state: GameState, dt: number): void;

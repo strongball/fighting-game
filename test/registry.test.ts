@@ -7,7 +7,7 @@ import { CHARACTERS, getCharacter } from '../src/game/characters.js';
 import { BOSSES, BOSS_COUNT, getBossForRound } from '../src/game/bosses.js';
 import { ACTION_HANDLERS } from '../src/game/actions/handlers/index.ts';
 import { getTalentHooks } from '../src/game/characters/talents/registry.ts';
-import { PLAYER_PIPELINE_STEP_IDS, WORLD_PIPELINE_STEP_IDS } from '../src/game/systems/pipeline/index.ts';
+import { BOSS_PIPELINE_STEP_IDS, PLAYER_PIPELINE_STEP_IDS, WORLD_PIPELINE_STEP_IDS } from '../src/game/systems/pipeline/index.ts';
 
 const SLOTS = ['basic', 'skill1', 'skill2', 'ultimate', 'evade'] as const;
 
@@ -101,6 +101,18 @@ describe('simulation pipeline', () => {
       'movement',
       'trail',
       'cast-input-actions',
+    ]);
+  });
+
+  it('keeps boss lifecycle order explicit', () => {
+    expect([...BOSS_PIPELINE_STEP_IDS]).toEqual([
+      'parts',
+      'phases',
+      'time-anchors',
+      'tethers',
+      'revive',
+      'boss-specific-tick',
+      'history',
     ]);
   });
 

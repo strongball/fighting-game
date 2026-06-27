@@ -8,6 +8,8 @@ import { tickBossPhases } from './phases.ts';
 import { tickTimeAnchors } from './time-anchors.ts';
 import { getBoss } from '../bosses.js';
 
+export { followBossParts } from './lifecycle.ts';
+
 const REVIVE_RADIUS = 100;
 const REVIVE_TIME = 3.0;
 const HIST_CAP = 150;
@@ -35,7 +37,11 @@ export function tickBossSystems(state: any, dt: number) {
   tickTimeAnchors(state, dt);
   tetherTick(state, dt);
   reviveTick(state, dt);
+  tickBossSpecific(state, dt);
+  recordBossHistory(state);
+}
 
+export function tickBossSpecific(state: any, dt: number) {
   const boss = findBossEntity(state);
   if (boss && boss.alive) {
     const bossData = getBoss(boss.charId);
@@ -43,11 +49,9 @@ export function tickBossSystems(state: any, dt: number) {
       bossData.tick(state, boss, dt);
     }
   }
-
-  recordHistory(state);
 }
 
-function tetherTick(state: any, dt: number) {
+export function tetherTick(state: any, dt: number) {
   if (!state.tethers || !state.tethers.length) return;
   const keep = [];
   for (const t of state.tethers) {
@@ -77,7 +81,7 @@ function tetherTick(state: any, dt: number) {
   state.tethers = keep;
 }
 
-function reviveTick(state: any, dt: number) {
+export function reviveTick(state: any, dt: number) {
   const humans = teamPlayers(state);
   for (const p of humans) {
     if (p.alive) continue;
@@ -107,7 +111,7 @@ function reviveTick(state: any, dt: number) {
   }
 }
 
-function recordHistory(state: any) {
+export function recordBossHistory(state: any) {
   for (const p of teamPlayers(state)) {
     if (!p._hist) p._hist = [];
     p._hist.push({ x: p.x, y: p.y });

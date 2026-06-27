@@ -15,7 +15,8 @@ import {
   spawnBoss,
   teamPlayers,
 } from './bosses/lifecycle.ts';
-import { reviveAndHealAll, tickBossSystems } from './bosses/systems.ts';
+import { reviveAndHealAll } from './bosses/systems.ts';
+import { runBossPipeline } from './systems/pipeline/boss.ts';
 import { scatterPillars } from './systems/destructibles.ts';
 import { initRunStats, ensureAllPlayerStats, recordRoundStart, recordRoundEnd, recordRetry } from './entities/stats.ts';
 
@@ -89,7 +90,7 @@ export function startBossRound(state, round) {
 // ---- 每個 fighting tick 的維護 ----
 export function bossTick(state, dt) {
   if (state.roundPhase !== 'fighting') return;
-  tickBossSystems(state, dt);
+  runBossPipeline(state, dt);
 }
 
 // ---- 回合階段機 ----
