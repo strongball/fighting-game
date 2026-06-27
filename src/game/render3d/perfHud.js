@@ -1,10 +1,10 @@
-// 開發用效能浮層：在網址加 ?perf=1 開啟（手機也能開）。即時顯示 FPS / draw call /
-// 三角形 / 貼圖數 / 幾何數 / shader program 數 + 當前關卡與階段。
+// 開發用效能浮層：在網址加 ?perf=1 開啟（手機也能開）。
 //
-// 怎麼用來定位卡頓：
-//   - 「tex (max …)」每換一關持續往上爬 → 貼圖洩漏沒修好（或測的不是含修正的版本）。
-//   - FPS 只在「轉場那一下」掉、之後回穩 → 是建場 CPU 尖峰（建幾何）。
-//   - 進到某關 FPS 持續偏低 → 是該關穩態負擔（draw call / overdraw）。
+// 重點：FPS 用「真實牆鐘時間」量（performance.now），不吃引擎把 dt 鎖在 0.05s 的上限，
+// 所以低於 20fps 也照實顯示。另外拆出 cpu(render 的 JS 執行時間) vs gpu/wait(其餘)，
+// 用來判斷瓶頸：
+//   - cpu ≈ frame  → CPU 綁死（JS 太重）→ 要優化邏輯/同步，不是降畫質。
+//   - cpu ≪ frame  → GPU 綁死（多半是 overdraw/fill-rate）→ 降 DPR、砍透明特效。
 export function createPerfHud(sceneMgr, stage) {
   if (typeof window === 'undefined') return null;
   let q;
@@ -15,38 +15,42 @@ export function createPerfHud(sceneMgr, stage) {
   el.style.cssText = [
     'position:absolute', 'top:6px', 'left:6px', 'z-index:50', 'pointer-events:none',
     'font:11px/1.35 ui-monospace,Menlo,Consolas,monospace', 'color:#9effa0',
-    'background:rgba(0,0,0,0.62)', 'padding:5px 8px', 'border-radius:6px',
-    'white-space:pre', 'text-shadow:0 1px 0 #000', 'min-width:150px',
+    'background:rgba(0,0,0,0.66)', 'padding:5px 8px', 'border-radius:6px',
+    'white-space:pre', 'text-shadow:0 1px 0 #000', 'min-width:168px',
   ].join(';');
   (stage || document.body).appendChild(el);
 
   const renderer = sceneMgr.renderer;
-  let acc = 0, frames = 0, fps = 0;
-  let worst = 999, worstWin = 0;
-  let maxTex = 0, maxGeo = 0;
+  let last = 0, renderStart = 0;
+  let acc = 0, cpuAcc = 0, frames = 0;
+  let fps = 0, frameMs = 0, cpuMs = 0;
+  let worstMs = 0, worstWin = 0;
 
-  function tick(dt, state) {
-    frames++; acc += dt;
-    const inst = dt > 0 ? 1 / dt : 0;
-    if (inst < worst) worst = inst;
-    worstWin += dt;
-    if (acc >= 0.5) { fps = frames / acc; acc = 0; frames = 0; }
-    if (worstWin >= 2) { worst = inst; worstWin = 0; }   // 每 2 秒重置「最差幀」視窗
+  // render() 一開始呼叫，標記 CPU 計時起點
+  function markStart() { renderStart = performance.now(); }
+
+  // render() 最後呼叫
+  function tick(_dt, state) {
+    const now = performance.now();
+    const fMs = last ? now - last : 16.7;            // 真實幀間隔（含 GPU/vsync 等待）
+    const cMs = renderStart ? now - renderStart : 0; // render() 的 JS 執行時間（CPU）
+    last = now;
+    frames++; acc += fMs; cpuAcc += cMs;
+    if (fMs > worstMs) worstMs = fMs;
+    worstWin += fMs;
+    if (acc >= 500) { fps = frames * 1000 / acc; frameMs = acc / frames; cpuMs = cpuAcc / frames; acc = 0; cpuAcc = 0; frames = 0; }
+    if (worstWin >= 2000) { worstMs = fMs; worstWin = 0; }
 
     const info = renderer.info;
-    const tex = info.memory.textures, geo = info.memory.geometries;
-    if (tex > maxTex) maxTex = tex;
-    if (geo > maxGeo) maxGeo = geo;
-
+    const gpuMs = Math.max(0, frameMs - cpuMs);
     el.style.color = (fps && fps < 30) ? '#ff7a7a' : '#9effa0';
     el.textContent =
-      `FPS ${fps.toFixed(0)}  (min ${worst === 999 ? '-' : worst.toFixed(0)})\n` +
+      `FPS ${fps.toFixed(0)}  frame ${frameMs.toFixed(0)}ms (worst ${worstMs.toFixed(0)})\n` +
+      `cpu ${cpuMs.toFixed(0)}ms   gpu/wait ${gpuMs.toFixed(0)}ms\n` +
       `calls ${info.render.calls}  tri ${(info.render.triangles / 1000).toFixed(1)}k\n` +
-      `tex ${tex}  (max ${maxTex})\n` +
-      `geo ${geo}  (max ${maxGeo})\n` +
-      `prog ${info.programs ? info.programs.length : '-'}\n` +
+      `tex ${info.memory.textures}  geo ${info.memory.geometries}  prog ${info.programs ? info.programs.length : '-'}\n` +
       `R${state?.round ?? '-'} ${state?.roundPhase ?? '-'} / ${state?.mode ?? '-'}`;
   }
 
-  return { tick };
+  return { tick, markStart };
 }

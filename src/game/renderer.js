@@ -503,6 +503,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     let dt = lastT ? (now - lastT) / 1000 : 0;
     lastT = now;
     if (dt > 0.05) dt = 0.05;
+    perfHud?.markStart(); // 效能浮層：標記本幀 render 的 CPU 計時起點
     hideSelf = !!(view && view.mode === 2); // 第一人稱藏自身模型
 
     if (sceneMgr.resize()) hud.resize();
