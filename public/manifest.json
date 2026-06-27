@@ -3,17 +3,17 @@
   "name": "幾何鬥技場 — 多人連線格鬥",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "./icon-192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/icon-512.png",
+      "src": "./icon-512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
-  "start_url": "/",
+  "start_url": ".",
   "background_color": "#0b1118",
   "theme_color": "#0b1118",
   "display": "standalone",
