@@ -15,15 +15,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ARENA } from '../constants.js';
+import { isConstrainedGpuDevice } from './quality.js';
 
 const BG = '#0c0f14';
-
-function isConstrainedGpuDevice() {
-  if (typeof window === 'undefined') return false;
-  const coarse = window.matchMedia?.('(hover: none), (pointer: coarse), (max-width: 820px)')?.matches;
-  const ua = navigator.userAgent || '';
-  return !!coarse || /Android|iPhone|iPad|iPod/i.test(ua);
-}
 
 export function createSceneManager(canvas) {
   const stage = canvas.parentElement || canvas;

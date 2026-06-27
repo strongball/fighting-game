@@ -103,7 +103,9 @@ function mossSplotchTexture() {
     g.addColorStop(0, `rgba(${col},0.55)`); g.addColorStop(1, `rgba(${col},0)`);
     x.fillStyle = g; x.beginPath(); x.arc(px, py, r, 0, 7); x.fill();
   }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; _mossTex = t; return t;
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  t.userData.shared = true;        // 跨關共用快取：換關清理時不可 dispose
+  _mossTex = t; return t;
 }
 
 // 青苔地被：法陣外環的平鋪苔斑 (貼地) + 立體苔蕨叢，營造被叢林吞沒感。

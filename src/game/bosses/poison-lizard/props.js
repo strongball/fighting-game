@@ -5,6 +5,7 @@
 
 import * as THREE from 'three';
 import { noisify, drumColumn, mossSlab } from '../../render3d/decorations.js';
+import { LOW_GPU } from '../../render3d/quality.js';
 
 // 放射狀石板祭壇貼圖：同心環帶 × 放射切割的砌石板，板間留暗苔接縫 + 中央徽紋 + 風化苔斑。
 // 「人造祭壇」結構，刻意有別於 R1 連續天然苔泥地（後者是整片地面 + 散裂紋）。
@@ -89,7 +90,7 @@ export function buildDais(theme) {
 // 這是本場主角（參考圖的圈狀毒沼）。以石緣呈現為「永久建築井口」，與技能動態毒池區隔。
 export function buildPoisonPools(theme) {
   const cfg = theme.pools || {};
-  const count = cfg.count || 6;
+  const count = LOW_GPU ? Math.min(4, cfg.count || 6) : (cfg.count || 6);
   const ringR = cfg.radius || 410;
   const poolCol = new THREE.Color(cfg.color || 0x86ff3a);
   const glow = cfg.glow != null ? cfg.glow : 1.9;
@@ -103,6 +104,10 @@ export function buildPoisonPools(theme) {
     color: poolCol, transparent: true, opacity: 0.08, depthWrite: false,
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false, toneMapped: false,
   });
+  // 氣泡改用單一 InstancedMesh（所有毒池共用一顆球，半徑用 per-instance scale）→ 一次 draw call。
+  const bubbleGeo = new THREE.SphereGeometry(1, 8, 6);
+  const bubbleMats = [];
+  const _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + 0.3;
     const x = Math.cos(a) * ringR, z = Math.sin(a) * ringR * 0.78;  // 略壓成橢圓環，貼合俯視構圖
@@ -116,18 +121,26 @@ export function buildPoisonPools(theme) {
     surf.scale(1, 0.04, 1);
     const liq = new THREE.Mesh(surf, liquidMat);
     liq.position.set(x, 2.0, z); liq.renderOrder = 3; group.add(liq);
-    // 翻騰氣泡
-    const nb = 3 + (Math.random() * 4 | 0);
+    // 翻騰氣泡（收集矩陣，迴圈外一次 instancing）
+    const nb = LOW_GPU ? 2 : (3 + (Math.random() * 4 | 0));
     for (let b = 0; b < nb; b++) {
       const br = 4 + Math.random() * 8;
-      const bub = new THREE.Mesh(new THREE.SphereGeometry(br, 8, 6), liquidMat);
-      bub.position.set(x + (Math.random() - 0.5) * r * 1.1, 2.4 + br * 0.4, z + (Math.random() - 0.5) * r * 1.1);
-      bub.scale.y = 0.7; group.add(bub);
+      _p.set(x + (Math.random() - 0.5) * r * 1.1, 2.4 + br * 0.4, z + (Math.random() - 0.5) * r * 1.1);
+      _s.set(br, br * 0.7, br);
+      bubbleMats.push(new THREE.Matrix4().compose(_p, _q, _s));
     }
-    // 升起的綠色毒氣（加法混色軟柱，低矮輕薄、向上漸散，避免俯視變實心錐）
-    const plumeH = 80 + Math.random() * 55;
-    const plume = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.7, r * 0.5, plumeH, 12, 1, true), gasMat);
-    plume.position.set(x, plumeH / 2 + 2, z); plume.renderOrder = 5; group.add(plume);
+    // 升起的綠色毒氣（加法混色、雙面、透明 → overdraw 大宗）— 手機降載時略過
+    if (!LOW_GPU) {
+      const plumeH = 80 + Math.random() * 55;
+      const plume = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.7, r * 0.5, plumeH, 12, 1, true), gasMat);
+      plume.position.set(x, plumeH / 2 + 2, z); plume.renderOrder = 5; group.add(plume);
+    }
+  }
+  if (bubbleMats.length) {
+    const bubIM = new THREE.InstancedMesh(bubbleGeo, liquidMat, bubbleMats.length);
+    for (let i = 0; i < bubbleMats.length; i++) bubIM.setMatrixAt(i, bubbleMats[i]);
+    bubIM.instanceMatrix.needsUpdate = true;
+    group.add(bubIM);
   }
   return group;
 }
@@ -191,26 +204,35 @@ export function buildSerpentThrone(theme) {
 // 暖冷對比是本場與 R1（神殿光束）的關鍵區隔；火焰吃 bloom。
 export function buildTorches(theme) {
   const cfg = theme.torches || {};
-  const count = cfg.count || 7;
+  // 手機降載：少幾根火把。整圈火把改用 InstancedMesh：原本 count×4 個獨立 draw call → 固定 4 個。
+  const count = LOW_GPU ? Math.min(5, cfg.count || 7) : (cfg.count || 7);
   const rx = cfg.rx || 770, rz = cfg.rz || 620;
   const group = new THREE.Group();
   const poleMat = new THREE.MeshStandardMaterial({ color: cfg.pole || 0x2c2117, roughness: 0.95, metalness: 0.05 });
   const stoneMat = new THREE.MeshStandardMaterial({ color: cfg.base || 0x555b4e, roughness: 0.95 });
   const flameMat = new THREE.MeshStandardMaterial({ color: cfg.flame || 0xffa64d, emissive: cfg.flameGlow || 0xff6a1f, emissiveIntensity: 2.6, roughness: 0.4 });
+  // 共用幾何（一次建立，instancing 重複擺放）。桿身用單位高度 + per-instance scale.y 控制高低。
+  const footGeo = noisify(new THREE.CylinderGeometry(14, 18, 16, 8), 2);
+  const poleGeo = new THREE.CylinderGeometry(4, 5, 1, 6);
+  const basketGeo = new THREE.TorusGeometry(9, 2.4, 5, 10); basketGeo.rotateX(Math.PI / 2);
+  const flameGeo = new THREE.IcosahedronGeometry(10, 1);
+  const footIM = new THREE.InstancedMesh(footGeo, stoneMat, count); footIM.castShadow = true;
+  const poleIM = new THREE.InstancedMesh(poleGeo, poleMat, count); poleIM.castShadow = true;
+  const basketIM = new THREE.InstancedMesh(basketGeo, poleMat, count);
+  const flameIM = new THREE.InstancedMesh(flameGeo, flameMat, count);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), scl = new THREE.Vector3();
+  const up = new THREE.Vector3(0, 1, 0);
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + 0.45;
-    const t = new THREE.Group(); t.position.set(Math.cos(a) * rx, 0, Math.sin(a) * rz);
-    const foot = new THREE.Mesh(noisify(new THREE.CylinderGeometry(14, 18, 16, 8), 2), stoneMat);
-    foot.position.y = 8; foot.castShadow = true; t.add(foot);
+    const bx = Math.cos(a) * rx, bz = Math.sin(a) * rz;
     const poleH = 92 + Math.random() * 16;
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(4, 5, poleH, 6), poleMat);
-    pole.position.y = 16 + poleH / 2; pole.castShadow = true; t.add(pole);
-    const basket = new THREE.Mesh(new THREE.TorusGeometry(9, 2.4, 5, 10), poleMat);
-    basket.rotation.x = Math.PI / 2; basket.position.y = 16 + poleH; t.add(basket);
-    const flame = new THREE.Mesh(new THREE.IcosahedronGeometry(10, 1), flameMat);
-    flame.scale.set(0.9, 1.4, 0.9); flame.position.y = 16 + poleH + 8; t.add(flame);
-    t.rotation.y = Math.random() * Math.PI;
-    group.add(t);
+    q.setFromAxisAngle(up, Math.random() * Math.PI);
+    footIM.setMatrixAt(i, m4.compose(pos.set(bx, 8, bz), q, scl.set(1, 1, 1)));
+    poleIM.setMatrixAt(i, m4.compose(pos.set(bx, 16 + poleH / 2, bz), q, scl.set(1, poleH, 1)));
+    basketIM.setMatrixAt(i, m4.compose(pos.set(bx, 16 + poleH, bz), q, scl.set(1, 1, 1)));
+    flameIM.setMatrixAt(i, m4.compose(pos.set(bx, 16 + poleH + 8, bz), q, scl.set(0.9, 1.4, 0.9)));
   }
+  for (const im of [footIM, poleIM, basketIM, flameIM]) im.instanceMatrix.needsUpdate = true;
+  group.add(footIM, poleIM, basketIM, flameIM);
   return group;
 }

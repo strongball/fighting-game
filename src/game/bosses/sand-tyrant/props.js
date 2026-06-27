@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { noisify, scatterPositions } from '../../render3d/decorations.js';
+import { LOW_GPU } from '../../render3d/quality.js';
 
 // 塵沙龍捲貼圖：斜向旋流條紋（繞柱即成螺旋）＋ 垂直透明包絡（頂端消散、底部柔化）。快取。
 let _dustTex = null;
@@ -46,6 +47,7 @@ function dustColumnTexture() {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping;
+  t.userData.shared = true;        // 跨關共用快取：換關清理時不可 dispose
   _dustTex = t; return t;
 }
 
@@ -53,18 +55,23 @@ function dustColumnTexture() {
 // 正常混色的沙色、半透明、吃霧 → 融入塵霾，避免加法混色糊成白彈簧。散佈於中場至邊緣鬆散環、避開正中央。
 export function buildSandVortices(theme) {
   const cfg = theme.vortices || {};
-  const count = cfg.count || 5;
+  // 手機降載：減少龍捲數量（透明雙面圓柱是 overdraw 大宗）
+  const count = LOW_GPU ? Math.min(3, cfg.count || 5) : (cfg.count || 5);
   const baseOp = cfg.opacity != null ? cfg.opacity : 0.55;
   const sand = new THREE.Color(cfg.color || 0xf2e2bc);
   const tex = dustColumnTexture();
-  const texInner = tex.clone(); texInner.needsUpdate = true; texInner.repeat.set(3, 1);
   tex.repeat.set(2, 1);
   const mkMat = (map, op) => new THREE.MeshBasicMaterial({
     map, color: sand, transparent: true, opacity: op,
     depthWrite: false, side: THREE.DoubleSide, fog: true, toneMapped: false,
   });
   const outerMat = mkMat(tex, baseOp);
-  const innerMat = mkMat(texInner, baseOp * 0.8);
+  // 手機降載：省掉內層漏斗，少一層全螢幕透明 overdraw
+  let innerMat = null;
+  if (!LOW_GPU) {
+    const texInner = tex.clone(); texInner.needsUpdate = true; texInner.repeat.set(3, 1);
+    innerMat = mkMat(texInner, baseOp * 0.8);
+  }
   const puffMat = new THREE.MeshBasicMaterial({ color: sand, transparent: true, opacity: baseOp * 0.45, depthWrite: false, fog: true, toneMapped: false });
   const group = new THREE.Group();
   for (let i = 0; i < count; i++) {
@@ -77,9 +84,11 @@ export function buildSandVortices(theme) {
     // 外層漏斗（上寬下窄）
     const outer = new THREE.Mesh(new THREE.CylinderGeometry(baseR * 1.7, baseR * 0.5, H, 22, 1, true), outerMat);
     outer.position.y = H / 2; outer.rotation.y = Math.random() * Math.PI * 2; outer.renderOrder = 5; v.add(outer);
-    // 內層漏斗（較緊實、加深核心）
-    const inner = new THREE.Mesh(new THREE.CylinderGeometry(baseR * 1.05, baseR * 0.3, H * 0.95, 18, 1, true), innerMat);
-    inner.position.y = H * 0.475; inner.rotation.y = Math.random() * Math.PI * 2; inner.renderOrder = 6; v.add(inner);
+    // 內層漏斗（較緊實、加深核心）— 手機降載時略過
+    if (innerMat) {
+      const inner = new THREE.Mesh(new THREE.CylinderGeometry(baseR * 1.05, baseR * 0.3, H * 0.95, 18, 1, true), innerMat);
+      inner.position.y = H * 0.475; inner.rotation.y = Math.random() * Math.PI * 2; inner.renderOrder = 6; v.add(inner);
+    }
     // 底部揚塵
     const puff = new THREE.Mesh(new THREE.SphereGeometry(baseR * 1.35, 12, 8), puffMat);
     puff.scale.set(1.4, 0.42, 1.4); puff.position.y = baseR * 0.32; puff.renderOrder = 4; v.add(puff);
@@ -153,12 +162,13 @@ export function buildOasis(theme) {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 6, tH, 6), trunkMat);
       trunk.position.set(0, tH / 2, 0); trunk.rotation.z = lean; trunk.castShadow = true; palm.add(trunk);
       const cw = new THREE.Group(); cw.position.set(Math.sin(-lean) * tH, tH, 0);
-      for (let f = 0; f < 7; f++) { const fr = new THREE.Mesh(frondGeo, frondMat); fr.rotation.set(1.62, (f / 7) * Math.PI * 2, 0); cw.add(fr); }
+      const nFrond = LOW_GPU ? 4 : 7;
+      for (let f = 0; f < nFrond; f++) { const fr = new THREE.Mesh(frondGeo, frondMat); fr.rotation.set(1.62, (f / nFrond) * Math.PI * 2, 0); cw.add(fr); }
       for (let k = 0; k < 3; k++) { const co = new THREE.Mesh(new THREE.SphereGeometry(4.5, 8, 6), coconutMat); co.position.set(Math.cos(k * 2.1) * 6, -3, Math.sin(k * 2.1) * 6); cw.add(co); }
       palm.add(cw); group.add(palm);
     }
     // 水邊綠草叢
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < (LOW_GPU ? 3 : 8); i++) {
       const a = Math.random() * Math.PI * 2;
       let tuft = noisify(new THREE.IcosahedronGeometry(9, 1), 3); tuft.scale(1.1, 0.7, 1.1); tuft.translate(0, 4, 0);
       const t = new THREE.Mesh(tuft, grassMat);

@@ -57,7 +57,9 @@ function shaftTexture() {
   gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(0.5, 'rgba(0,0,0,1)'); gx.addColorStop(1, 'rgba(0,0,0,0)');
   x.globalCompositeOperation = 'destination-in'; x.fillStyle = gx; x.fillRect(0, 0, W, H);
   x.globalCompositeOperation = 'source-over';
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; _shaftTex = t; return t;
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  t.userData.shared = true;        // 跨關共用快取：換關清理時不可 dispose
+  _shaftTex = t; return t;
 }
 
 // 神殿光束 (god-ray)：加法混色錐柱，自樹冠灑下；微閃爍 + 緩慢自轉 (見 updateDecorationFade)。

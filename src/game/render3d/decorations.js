@@ -39,6 +39,24 @@ registerProp('foliage', buildFoliage);
 registerProp('godrays', buildLightShafts);
 registerProp('groundcover', buildGroundcover);
 
+// 釋放材質「及其貼圖」。Three.js 的 material.dispose() 不會連帶釋放貼圖，必須逐張 dispose，
+// 否則每關程序生成的 CanvasTexture（祭壇盤、符文地刻…各 1024²）會永久佔住 GPU 記憶體，
+// 換關累積且永不回收 → 手機越往後關卡越卡、連沒貼皮的關卡也回不來。
+// 跨關共用的快取貼圖（userData.shared）不可釋放，否則下一關該裝飾變黑。
+const TEX_SLOTS = ['map', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'normalMap', 'bumpMap', 'alphaMap', 'aoMap', 'displacementMap', 'lightMap', 'specularMap'];
+function disposeMaterial(m) {
+  if (!m) return;
+  const seen = new Set();
+  for (const slot of TEX_SLOTS) {
+    const t = m[slot];
+    if (t && t.isTexture && !seen.has(t)) {
+      seen.add(t);
+      if (!t.userData || !t.userData.shared) t.dispose();
+    }
+  }
+  m.dispose?.();
+}
+
 // 依 theme.decorations 組裝裝飾，並建立中央地刻。會先清掉舊的 (換關時)。
 export function applyDecorations(themeGroup, theme) {
   for (let i = themeGroup.children.length - 1; i >= 0; i--) {
@@ -46,10 +64,12 @@ export function applyDecorations(themeGroup, theme) {
     if (c.userData.isDecoration) {
       themeGroup.remove(c);
       if (c.geometry) c.geometry.dispose?.();
-      if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach((m) => m.dispose?.());
+      if (c.material) (Array.isArray(c.material) ? c.material : [c.material]).forEach(disposeMaterial);
+      if (c.isInstancedMesh) c.dispose?.();   // 釋放 instanceMatrix 緩衝（geometry.dispose 不含）
       if (c.isGroup) c.traverse((o) => {
         if (o.geometry) o.geometry.dispose?.();
-        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.());
+        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(disposeMaterial);
+        if (o.isInstancedMesh) o.dispose?.();
       });
     }
   }
