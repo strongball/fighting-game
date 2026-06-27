@@ -15,6 +15,7 @@ import { createHud } from './render3d/hud.js';
 import { applyDecorations, updateDecorationFade } from './render3d/decorations.js';
 import { createAtmosphere } from './render3d/atmosphere.js';
 import { createBossUltimateAura } from './render3d/bossUltimateAura.js';
+import { createFighterChiLayer } from './render3d/fighterChi.js';
 import { createTimeAnchorLayer } from './render3d/timeAnchors.js';
 import { createPerfHud } from './render3d/perfHud.js';
 import { getBossForRound, getBoss } from './bosses.js';
@@ -52,16 +53,15 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
 
   const particles = createParticleSystem(scene, { capacity: 5000 });
   particles.setDpr(sceneMgr.renderer.getPixelRatio());
-  // getEntityPos：給特效查某實體「render 端平滑後的場景座標」（如忍者千影分身跟隨移動中的目標）。
-  // models 在下方才宣告，但此 closure 僅於每幀繪製時呼叫（屆時 models 已初始化）。
-  const fxbus = createFxBus({
-    scene, particles, sceneMgr,
-    getEntityPos: (id) => { const e = models.get(id); return e ? { x: sceneX(e.rx), z: sceneZ(e.ry) } : null; },
-  });
+  // getEntityPos：給特效/圖層查某實體「render 端平滑後的場景座標」（忍者分身跟隨、格鬥家氣球環繞…）。
+  // models 在下方才宣告，但本函式僅於每幀繪製時呼叫（屆時 models 已初始化）。
+  function getEntityScenePos(id) { const e = models.get(id); return e ? { x: sceneX(e.rx), z: sceneZ(e.ry) } : null; }
+  const fxbus = createFxBus({ scene, particles, sceneMgr, getEntityPos: getEntityScenePos });
   const entities = createEntityLayer(scene, particles, { addTransient: fxbus.addTransient, sceneMgr });
   const hud = createHud({ stage: sceneMgr.stage, scene, camera, controlScheme, hooks });
   const atmosphere = createAtmosphere(particles);
   const bossUltimateAura = createBossUltimateAura({ scene, particles, sceneMgr });
+  const fighterChi = createFighterChiLayer(scene);
   const timeAnchorLayer = createTimeAnchorLayer(scene);
   const perfHud = createPerfHud(sceneMgr, sceneMgr.stage); // ?perf=1 才啟用，否則為 null
   let hideSelf = false; // 第一人稱(mode 2)時藏自身模型
@@ -560,6 +560,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
     syncPlayers(state, selfId, dt);
     syncTethers(state, dt);
     bossUltimateAura.sync(state.players, dt);
+    fighterChi.sync(state.players, dt, getEntityScenePos);
     timeAnchorLayer.sync(state.timeAnchors || [], state.timeAnchorRitual, dt);
 
     updateHuntMarker(state, dt);

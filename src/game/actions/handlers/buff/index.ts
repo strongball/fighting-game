@@ -54,6 +54,7 @@ export function buff(ctx: ActionContext) {
       life: 0.4,
       radius: PLAYER_RADIUS * 2.2,
       allyRadius: action.ally ? action.ally.radius : undefined,
+      owner: caster.id, // 供需跟隨施法者的持續增益特效（如格鬥家不動明王金身）使用
       vfx: action.vfx
     });
   }
