@@ -83,7 +83,7 @@ export const BOSS_PACING = {
   loiterRandom: 0.6,
 };
 
-// ---- 難易度參數 (0~1, 0=簡單 0.5=普通 1=困難) ----
+// ---- 難易度參數 (-0.3=簡單 0=普通 0.5=困難) ----
 // 由 state.flags.difficulty 讀取，執行時期經由此函式推導各項倍率。
 export function difficultyMult(d: number) {
   return {

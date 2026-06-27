@@ -236,9 +236,9 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
         <h3>難度{!isHost && <span className="dim">（由房主設定）</span>}</h3>
         <div className="difficulty-selector">
           {[
-            { label: '簡單', value: 0, icon: '🌱', desc: '魔王傷害降低、血量減少、攻速變慢' },
-            { label: '普通', value: 0.5, icon: '⚖️', desc: '預設平衡數值，適合初次挑戰' },
-            { label: '困難', value: 1, icon: '💀', desc: '魔王強化，考驗操作與團隊配合' },
+            { label: '簡單', value: -0.3, icon: '🍃', desc: '輕鬆體驗冒險，適合新手或不擅長動作遊戲的玩家' },
+            { label: '普通', value: 0, icon: '⚖️', desc: '魔王傷害降低、血量減少、攻速變慢，適合初次挑戰' },
+            { label: '困難', value: 0.5, icon: '💀', desc: '魔王強化，考驗操作與團隊配合' },
           ].map((opt) => (
             <button
               key={opt.value}

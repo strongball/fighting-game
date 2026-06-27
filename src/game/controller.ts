@@ -95,7 +95,7 @@ function createController(): GameController {
   let selectedChar: string = CHARACTERS[0]?.id ?? 'warrior'; // 角色 slug（穩定唯一 id）
   let selectedControlScheme: ControlScheme = 'wasd-jkl';
   let selectedTeam = 0; // 0 = 單人；正數 = 組隊
-  let gameFlags: GameFlags = { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0.5 };
+  let gameFlags: GameFlags = { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0 };
   let lobby: LobbyEntry[] = [];
 
   let gameState: any = null;       // 房主權威狀態

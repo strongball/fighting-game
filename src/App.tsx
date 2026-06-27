@@ -13,7 +13,7 @@ import { AudioSettingsButton } from './components/AudioSettingsButton';
 import { TrainingOverlay } from './components/TrainingOverlay';
 import type { AppPhase, ControlScheme, GameFlags, GameOverView, LobbyView, TrainingStatsView } from './types';
 
-const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '', gameFlags: { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0.5 } };
+const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '', gameFlags: { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0 } };
 
 export function App() {
   const controller = getController();

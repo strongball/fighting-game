@@ -53,17 +53,13 @@ export function startBossRound(state, round) {
       if (p.itemMp == null) p.itemMp = 0;
 
       if (round === 1 && !isNewRound) {
-        // Initial game start: exactly 1 of each
-        p.itemHp = 1;
-        p.itemMp = 1;
-      } else if (isNewRound) {
-        // Advancing to next round: carry over and add 1
-        p.itemHp = Math.min(3, p.itemHp + 1);
-        p.itemMp = Math.min(3, p.itemMp + 1);
+        // Initial game start: 5 of each
+        p.itemHp = 5;
+        p.itemMp = 5;
       } else {
-        // Retry same round: make sure they have at least 1
-        p.itemHp = Math.max(1, p.itemHp);
-        p.itemMp = Math.max(1, p.itemMp);
+        // Retry or new round: ensure at least 5 of each, cap at 10
+        p.itemHp = Math.min(10, Math.max(5, p.itemHp));
+        p.itemMp = Math.min(10, Math.max(5, p.itemMp));
       }
     });
   }

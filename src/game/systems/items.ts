@@ -129,10 +129,10 @@ export function tickDropItems(state: GameState, dt: number) {
       if (d <= PLAYER_RADIUS + item.radius) {
         let pickedUp = false;
         
-        if (item.kind === 'heal' && p.itemHp < 3) {
+        if (item.kind === 'heal' && p.itemHp < 10) {
           p.itemHp++;
           pickedUp = true;
-        } else if (item.kind === 'mana' && p.itemMp < 3) {
+        } else if (item.kind === 'mana' && p.itemMp < 10) {
           p.itemMp++;
           pickedUp = true;
         }
