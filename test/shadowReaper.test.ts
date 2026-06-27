@@ -295,7 +295,9 @@ describe('Round 5 Shadow Reaper (Redesigned)', () => {
     // Execute slash on boss (which replicates to clone)
     executeAction(state, boss, blinkSlashAction);
 
-    // Both hit hero: 300 - (70 * 2 * 0.85) = 300 - 119 = 181
-    expect(hero.hp).toBe(181);
+    // Boss hit hero: 70 * 0.85 = 59.5
+    // Clone hit hero: 70 * 0.85 * 0.5 = 29.75
+    // Total damage: 59.5 + 29.75 = 89.25, remaining HP: 300 - 89.25 = 210.75
+    expect(hero.hp).toBe(210.75);
   });
 });

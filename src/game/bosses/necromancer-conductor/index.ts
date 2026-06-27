@@ -40,7 +40,7 @@ const data = {
     },
 
     phases: [
-      { hpPct: 0.5, name: '亡者大進行曲', sub: '亡魂奔流', color: '#7d5fff', dmgMult: 1.1, cdMult: 0.65,
+      { hpPct: 0.5, name: '亡者大進行曲', sub: '亡魂奔流', color: '#7d5fff', dmgMult: 1.1, cdMult: 0.8,
         tagsOverride: [
           { icon: '💀', text: '召喚速度加快' },
           { icon: '💥', text: '亡靈爆破更頻繁' },
@@ -49,8 +49,8 @@ const data = {
     ],
 
     basic: { name: '靈魂彈', type: 'projectile', dmg: 26, speed: 700, radius: 12, lifetime: 1.6, count: 3, spread: 0.25, knockback: 40, cd: 1.1, windup: 0.35, telegraph: 'line', color: '#39ff88', vfx: 'boss_necro_bolt' },
-    skill1: { name: '亡者召集', type: 'summon_minions', count: 4, minionHp: 240, minionCharId: -2, minionName: '亡者殘影', cap: 6, cd: 15, windup: 0.5, telegraph: 'self', color: '#7d5fff', vfx: 'boss_necro_summon' },
-    skill2: { name: '亡靈爆破', type: 'necro_burst', dmg: 55, radius: 240, knockback: 200, shield: 200, shieldPerMinion: 100, duration: 8, cd: 10, windup: 0.4, telegraph: 'self', color: '#39ff88', vfx: 'boss_necro_burst' },
+    skill1: { name: '亡者召集', type: 'summon_minions', count: 3, minionHp: 180, minionCharId: -2, minionName: '亡者殘影', cap: 5, cd: 15, windup: 0.5, telegraph: 'self', color: '#7d5fff', vfx: 'boss_necro_summon' },
+    skill2: { name: '亡靈爆破', type: 'necro_burst', dmg: 55, radius: 240, knockback: 200, shield: 150, shieldPerMinion: 60, duration: 4, cd: 10, windup: 0.4, telegraph: 'self', color: '#39ff88', vfx: 'boss_necro_burst' },
     ultimate: { name: '安魂彌撒', type: 'zone', range: 0, radius: 320, dmg: 30, lifetime: 4, tick: 0.5, follow: true, healPerMinion: 60, effect: { kind: 'slow', duration: 0.6, factor: 0.8 }, cd: 15.0, windup: 0.6, telegraph: 'circle', color: '#9d7dff', vfx: 'boss_necro_ult' },
   };
 

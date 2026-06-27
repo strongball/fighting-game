@@ -96,8 +96,8 @@ const data = {
     color: '#aa33ff',
     vfx: 'boss_shadow_shuriken',
     effect: { kind: 'blind', duration: 1.5 },
-    cd: 0.8,
-    windup: 0.3
+    cd: 0.4,
+    windup: 0.2
   },
   skill1: {
     name: '影步瞬斬',
@@ -271,8 +271,8 @@ const data = {
         currentClones.forEach((clone) => {
           clone.isUltDisappeared = false;
           const ang = Math.random() * Math.PI * 2;
-          clone.x = Math.max(80, Math.min(1600 - 80, boss.x + Math.cos(ang) * 100));
-          clone.y = Math.max(80, Math.min(1200 - 80, boss.y + Math.sin(ang) * 100));
+          clone.x = Math.max(80, Math.min(1600 - 80, boss.x + Math.cos(ang) * 280));
+          clone.y = Math.max(80, Math.min(1200 - 80, boss.y + Math.sin(ang) * 280));
         });
       }
     }

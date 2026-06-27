@@ -548,7 +548,13 @@ export function computeBossInput(state, ent, dt) {
   const s = ent.aiState || (ent.aiState = {});
 
   // 假身 (R4 分身)：隨機遊走、偶爾假揮 (不造成傷害，僅迷惑)；無真實技能
-  if (ent.isFake) return fakeInput(state, ent, dt, input);
+  if (ent.isFake) {
+    if (typeof ent.computeInput === 'function') {
+      const customInput = ent.computeInput(state, ent, dt, input);
+      if (customInput) return customInput;
+    }
+    return fakeInput(state, ent, dt, input);
+  }
 
   // 被暈：無法行動，取消起手
   if (ent.effects && ent.effects.stun) { s.mode = 'idle'; s.slot = null; s.idleDelayT = null; s.idleDelaySlot = null; return input; }

@@ -171,6 +171,9 @@ export function dealDamage(
     dmg *= mult;
   }
   if (hostile && attacker.effects && attacker.effects.dmg_reduce) dmg *= 1 - (attacker.effects.dmg_reduce.factor || 0);
+  if (hostile && attacker.damageDealtMult !== undefined) {
+    dmg *= attacker.damageDealtMult;
+  }
   if (target.isBoss) dmg = applyBossDamageModifiers(state, target, attacker, dmg);
   if (target.effects && target.effects.mark) dmg *= 1 + target.effects.mark.bonus;
   if (target.effects && target.effects.parasite) dmg *= 1 + (target.effects.parasite.vuln || 0);
