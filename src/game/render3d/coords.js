@@ -9,8 +9,8 @@
 
 import { ARENA, PLAYER_RADIUS } from '../constants.js';
 
-export const HALF_W = ARENA.width / 2;   // 600
-export const HALF_H = ARENA.height / 2;  // 400
+export const HALF_W = ARENA.width / 2;   // 1200
+export const HALF_H = ARENA.height / 2;  // 800
 export { PLAYER_RADIUS, ARENA };
 
 // 投射物/特效的飛行高度 (場景單位)

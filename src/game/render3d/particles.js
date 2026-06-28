@@ -4,6 +4,10 @@
 // 座標一律使用「場景座標」(已由 coords 轉換)。
 
 import * as THREE from 'three';
+import { HALF_W, HALF_H } from './coords.js';
+
+// 粒子允許溢出競技場邊界的視覺緩衝 (場景單位)
+const SPAWN_MARGIN = 4;
 
 const VERT = /* glsl */`
   attribute float aSize;
@@ -82,10 +86,12 @@ export function createParticleSystem(scene, opt = {}) {
   function spawn(p) {
     if (count >= CAP) return;
     const i = count++;
-    // 限制粒子在競技場邊界內 (HALF_W=600, HALF_H=400)，允許 +4 單位的視覺溢出緩衝
-    px[i] = Math.max(-604, Math.min(604, p.x));
+    // 限制粒子在競技場邊界內，允許 SPAWN_MARGIN 單位的視覺溢出緩衝
+    // (邊界由 coords 的 HALF_W/HALF_H 推導，避免競技場尺寸改變時殘留舊的硬編碼值)
+    const limX = HALF_W + SPAWN_MARGIN, limZ = HALF_H + SPAWN_MARGIN;
+    px[i] = Math.max(-limX, Math.min(limX, p.x));
     py[i] = p.y;
-    pz[i] = Math.max(-404, Math.min(404, p.z));
+    pz[i] = Math.max(-limZ, Math.min(limZ, p.z));
     vx[i] = p.vx || 0; vy[i] = p.vy || 0; vz[i] = p.vz || 0;
     life[i] = maxLife[i] = p.life || 0.5;
     baseSize[i] = p.size || 6;
