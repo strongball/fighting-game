@@ -28,14 +28,14 @@
 import { createRenderer } from './renderer.js';
 import { createNetwork, makeRoomCode } from './network.js';
 import { createInput, EMPTY_INPUT } from './input.js';
-import { createInitialState, makePlayer } from './entities.js';
+import { createInitialState, makePlayer, spawnPoints } from './entities.js';
 import { CHARACTERS } from './characters.js';
 import { getBossForRound } from './bosses.js';
 import { startBossRound, retryBossRound, quitBossRun } from './bossMode.js';
 import { step } from './simulation.ts';
 import { serializeNetworkSnapshot } from './network/snapshot';
 import { buildBossStats } from './controller/bossStats';
-import { setupStats, summarizeDps } from './entities/stats.ts';
+import { setupStats, ensureAllPlayerStats, summarizeDps } from './entities/stats.ts';
 import { createPrediction } from './controller/prediction';
 import { createCamera } from './controller/camera';
 import { ARENA, DT, SNAPSHOT_INTERVAL, INPUT_INTERVAL, MAX_PLAYERS } from './constants.js';
@@ -97,6 +97,7 @@ function createController(): GameController {
   let selectedTeam = 0; // 0 = 單人；正數 = 組隊
   let gameFlags: GameFlags = { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0 };
   let lobby: LobbyEntry[] = [];
+  let matchLive = false; // 是否已開打（中途加入：開打後加入者按「加入遊戲」即時生成進場）
 
   let gameState: any = null;       // 房主權威狀態
   const inputs: Record<string, any> = {}; // 房主：playerId -> input
@@ -126,12 +127,14 @@ function createController(): GameController {
     if (!lobby.find((p) => p.id === entry.id)) lobby.push(entry);
   }
   function removeFromLobby(id: string) { lobby = lobby.filter((p) => p.id !== id); }
+  // 房主/NPC 視為恆準備；其餘人需自行按下準備。全員準備房主才能開始。
+  function allReady() { return lobby.every((p) => p.isHost || p.isNpc || p.ready); }
   function renderLobby() {
-    const view: LobbyView = { players: lobby, selfId, isHost: role === 'host', roomCode, gameFlags };
+    const view: LobbyView = { players: lobby, selfId, isHost: role === 'host', roomCode, gameFlags, matchLive };
     emit('lobby', view);
   }
   function broadcastLobby() {
-    net.broadcast({ t: 'lobby', players: lobby, gameFlags });
+    net.broadcast({ t: 'lobby', players: lobby, gameFlags, matchLive });
     renderLobby();
   }
 
@@ -139,18 +142,23 @@ function createController(): GameController {
   function setupHost() {
     net.on('onOpen', (id: string) => {
       selfId = id;
-      addToLobby({ id, name: myName, charId: selectedChar, controlScheme: selectedControlScheme, isHost: true, team: selectedTeam });
+      addToLobby({ id, name: myName, charId: selectedChar, controlScheme: selectedControlScheme, isHost: true, team: selectedTeam, ready: true, inGame: false });
       emit('phase', 'lobby');
       renderLobby();
     });
     net.on('onData', (from: string, data: any) => {
       if (data.t === 'hello') {
         if (lobby.length >= MAX_PLAYERS) { net.sendTo(from, { t: 'full' }); return; }
-        addToLobby({ id: from, name: data.name, charId: data.charId ?? CHARACTERS[0]?.id, controlScheme: data.controlScheme || 'wasd-jkl', isHost: false, team: data.team | 0 });
+        addToLobby({ id: from, name: data.name, charId: data.charId ?? CHARACTERS[0]?.id, controlScheme: data.controlScheme || 'wasd-jkl', isHost: false, team: data.team | 0, ready: false, inGame: false });
         broadcastLobby();
       } else if (data.t === 'select') {
         const p = lobby.find((x) => x.id === from);
         if (p) { if (data.charId != null) p.charId = data.charId; if (data.controlScheme) p.controlScheme = data.controlScheme; if (data.team != null) p.team = data.team | 0; broadcastLobby(); }
+      } else if (data.t === 'ready') {
+        const p = lobby.find((x) => x.id === from);
+        if (p) { p.ready = !!data.ready; broadcastLobby(); }
+      } else if (data.t === 'joinGame') {
+        spawnJoinerIntoGame(from);
       } else if (data.t === 'input') {
         inputs[from] = data.input;
       }
@@ -158,7 +166,8 @@ function createController(): GameController {
     net.on('onLeave', (id: string) => {
       removeFromLobby(id);
       if (gameState && gameState.players[id]) { delete gameState.players[id]; delete inputs[id]; }
-      if (!running) broadcastLobby(); else renderLobby();
+      // 不論在大廳或遊戲中都廣播：讓所有人的玩家清單（含右上角）即時移除離開者。
+      broadcastLobby();
     });
     net.on('onError', (err: any) => {
       const taken = err && /unavailable|taken|ID/i.test(String(err.type || err.message || err));
@@ -174,11 +183,11 @@ function createController(): GameController {
       emit('lobbyStatus', '已連上房主，等待開始…');
     });
     net.on('onData', (_from: string, data: any) => {
-      if (data.t === 'lobby') { lobby = data.players; if (data.gameFlags) gameFlags = data.gameFlags; renderLobby(); }
-      else if (data.t === 'start') { lobby = data.lobby; startFromSnapshot(data.state); }
+      if (data.t === 'lobby') { lobby = data.players; if (data.gameFlags) gameFlags = data.gameFlags; matchLive = !!data.matchLive; renderLobby(); }
+      else if (data.t === 'start') { lobby = data.lobby; matchLive = true; startFromSnapshot(data.state); }
       else if (data.t === 'state') { prediction.receiveSnapshot(data.snapshot, data.seq); }
       else if (data.t === 'gameover') { joinerGameover(data); }
-      else if (data.t === 'tolobby') { lobby = data.players; stopLoop(); input.disable(); emit('phase', 'lobby'); renderLobby(); }
+      else if (data.t === 'tolobby') { lobby = data.players; matchLive = false; stopLoop(); input.disable(); emit('phase', 'lobby'); renderLobby(); }
       else if (data.t === 'full') { alert('房間已滿（上限 ' + MAX_PLAYERS + ' 人）'); window.location.reload(); }
     });
     net.on('onHostClose', () => { alert('與房主的連線已中斷，遊戲結束。'); window.location.reload(); });
@@ -189,21 +198,61 @@ function createController(): GameController {
   }
 
   // ---------- 開始遊戲 ----------
+  // 全員（非房主、非 NPC）需先按下準備，房主才能開始；未就緒則提示等待。
+  function ensureAllReady(): boolean {
+    if (allReady()) return true;
+    emit('lobbyStatus', '等待所有玩家準備…');
+    broadcastLobby();
+    return false;
+  }
   function hostStart() {
+    if (!ensureAllReady()) return;
     const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId, team: p.team || 0, isNpc: p.isNpc }));
     gameState = createInitialState(arr, gameFlags);
     for (const id of Object.keys(gameState.players)) inputs[id] = { ...EMPTY_INPUT };
+    for (const p of lobby) p.inGame = true;
+    matchLive = true;
     net.broadcast({ t: 'start', state: gameState, lobby });
     beginLoop();
+  }
+
+  // ---------- 中途加入：把一名已連線的加入者即時生成進現有戰場 ----------
+  function spawnJoinerIntoGame(id: string) {
+    if (role !== 'host' || !running || !gameState) return;
+    const entry = lobby.find((p) => p.id === id);
+    if (!entry) return;
+    if (!gameState.players[id]) {
+      const cx = ARENA.width / 2, cy = ARENA.height / 2;
+      const existing = Object.keys(gameState.players).length;
+      const pts = spawnPoints(existing + 1);
+      const pt = pts[existing % pts.length] || { x: cx, y: cy };
+      // boss 模式為協同：一律編入玩家隊（team 1）；其餘沿用其大廳選定隊伍。
+      const team = gameState.mode === 'boss' ? 1 : (entry.team || 0);
+      const pl = makePlayer(id, entry.name, entry.charId, pt.x, pt.y, team);
+      pl.facing = Math.atan2(cy - pt.y, cx - pt.x);
+      gameState.players[id] = pl;
+      inputs[id] = { ...EMPTY_INPUT };
+      gameState.playerCount = (gameState.playerCount || 0) + 1;
+      // FFA：補正 startCount 讓「場上剩一方就結算」生效（boss 模式不依此判定）。
+      if (gameState.mode !== 'boss') gameState.startCount = (gameState.startCount || 0) + 1;
+      ensureAllPlayerStats(gameState); // boss 模式統計：為新玩家建立累計欄位
+    }
+    entry.inGame = true;
+    // 只送這名加入者完整權威 state 供其初始化預測 / 進入遊戲；其餘人靠下一份 lobby 廣播更新清單。
+    net.sendTo(id, { t: 'start', state: gameState, lobby });
+    broadcastLobby();
   }
 
   // ---------- Boss 模式（闖關固定 R1；挑戰模式只打指定 Boss） ----------
   function startBossSession(round: number, bossMode: 'campaign' | 'challenge') {
     if (role !== 'host') return;
+    if (!ensureAllReady()) return;
     const arr = lobby.map((p) => ({ id: p.id, name: p.name, charId: p.charId, team: 1, isNpc: p.isNpc }));
     gameState = createInitialState(arr, gameFlags, { mode: 'boss' });
     gameState.bossMode = bossMode;
     for (const id of Object.keys(gameState.players)) inputs[id] = { ...EMPTY_INPUT };
+    for (const p of lobby) p.inGame = true;
+    matchLive = true;
     startBossRound(gameState, round);
     net.broadcast({ t: 'start', state: gameState, lobby });
     beginLoop();
@@ -252,6 +301,7 @@ function createController(): GameController {
   function stopLoop() {
     running = false;
     wantLoop = false;
+    matchLive = false; // 結束/離開戰鬥：關閉中途加入入口
     if (logicTimer) { clearInterval(logicTimer); logicTimer = null; }
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     camera.reset(); // 離開戰鬥時回到一般遠景視角
@@ -419,6 +469,19 @@ function createController(): GameController {
     setupJoiner();
     emit('menuStatus', '連線中…', false);
     net.join(code);
+  }
+
+  // 加入者：切換準備狀態（房主端彙整後廣播回大廳，自身按鈕狀態以廣播為準）。
+  function setReady(ready: boolean) {
+    if (role !== 'joiner') return;
+    net.sendToHost({ t: 'ready', ready: !!ready });
+  }
+
+  // 加入者：戰鬥進行中按「加入遊戲」→ 請房主把自己生成進場。
+  function joinGame() {
+    if (role !== 'joiner') return;
+    net.sendToHost({ t: 'joinGame' });
+    emit('lobbyStatus', '加入遊戲中…');
   }
 
   function selectChar(charId: string) {
@@ -628,6 +691,8 @@ function createController(): GameController {
     if (role !== 'host') return;
     stopLoop();
     gameState = null;
+    // 回大廳重置：清掉進場標記、要求非房主重新準備（下一場再次全員準備才能開始）。
+    for (const p of lobby) { p.inGame = false; if (!p.isHost) p.ready = false; }
     net.broadcast({ t: 'tolobby', players: lobby });
     emit('phase', 'lobby');
     renderLobby();
@@ -670,6 +735,8 @@ function createController(): GameController {
     on,
     createRoom,
     joinRoom,
+    setReady,
+    joinGame,
     selectChar,
     selectControlScheme,
     selectTeam,

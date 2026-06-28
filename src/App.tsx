@@ -116,6 +116,8 @@ export function App() {
             onSelectControlScheme={handleSelectControlScheme}
             onSelectTeam={handleSelectTeam}
             onSelectGameFlags={handleSelectGameFlags}
+            onSetReady={(ready) => controller.setReady(ready)}
+            onJoinGame={() => controller.joinGame()}
             onAddNpc={() => controller.addNpc()}
             onRemoveNpc={() => controller.removeNpc()}
             onStart={() => controller.startGame()}

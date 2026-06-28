@@ -21,6 +21,8 @@ export interface LobbyEntry {
   isHost: boolean;
   isNpc?: boolean;
   team?: number; // 0 = 單人 (與所有人為敵)；正數 = 同號為友方
+  ready?: boolean;  // 大廳準備狀態（房主/NPC 視為恆 true）
+  inGame?: boolean; // 是否已進入當前這場戰鬥（供右上角玩家清單 / 中途加入判定）
 }
 
 export interface LobbyView {
@@ -29,6 +31,7 @@ export interface LobbyView {
   isHost: boolean;
   roomCode: string;
   gameFlags: GameFlags;
+  matchLive?: boolean; // 房主是否已開打（此時加入者按鈕由「準備」改為「加入遊戲」）
 }
 
 export interface GameOverPlayer {
@@ -155,6 +158,8 @@ export interface GameController {
   on<K extends keyof ControllerEvents>(event: K, fn: ControllerEvents[K]): () => void;
   createRoom(name: string): void;
   joinRoom(name: string, code: string): void;
+  setReady(ready: boolean): void;
+  joinGame(): void;
   selectChar(charId: string): void;
   selectControlScheme(scheme: ControlScheme): void;
   selectTeam(team: number): void;

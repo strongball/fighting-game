@@ -85,6 +85,8 @@ interface LobbyScreenProps {
   onSelectControlScheme: (scheme: ControlScheme) => void;
   onSelectTeam: (team: number) => void;
   onSelectGameFlags: (flags: GameFlags) => void;
+  onSetReady: (ready: boolean) => void;
+  onJoinGame: () => void;
   onAddNpc: () => void;
   onRemoveNpc: () => void;
   onStart: () => void;
@@ -93,8 +95,13 @@ interface LobbyScreenProps {
   onLeave: () => void;
 }
 
-export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme, selectedTeam, onSelectChar, onSelectControlScheme, onSelectTeam, onSelectGameFlags, onAddNpc, onRemoveNpc, onStart, onStartBoss, onStartBossChallenge, onLeave }: LobbyScreenProps) {
-  const { players, selfId, isHost, roomCode, gameFlags } = lobby;
+export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme, selectedTeam, onSelectChar, onSelectControlScheme, onSelectTeam, onSelectGameFlags, onSetReady, onJoinGame, onAddNpc, onRemoveNpc, onStart, onStartBoss, onStartBossChallenge, onLeave }: LobbyScreenProps) {
+  const { players, selfId, isHost, roomCode, gameFlags, matchLive } = lobby;
+  // 準備狀態：房主/NPC 視為恆準備；全員準備房主才能開始。
+  const self = players.find((p) => p.id === selfId);
+  const humanJoiners = players.filter((p) => !p.isHost && !p.isNpc);
+  const readyCount = humanJoiners.filter((p) => p.ready).length;
+  const everyoneReady = humanJoiners.every((p) => p.ready);
   const [copied, setCopied] = useState(false);
   const [bossPickerOpen, setBossPickerOpen] = useState(false);
   const [selectedBossRound, setSelectedBossRound] = useState(BOSSES[0]?.round ?? 1);
@@ -279,6 +286,7 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
           <div className="players">
             <h3>
               {players.length} 人在房間
+              {humanJoiners.length > 0 && <span className="ready-progress"> · {readyCount}/{humanJoiners.length} 已準備</span>}
               {isHost && (
                 <span className="npc-controls">
                   <button className="btn tiny" onClick={onAddNpc} title="加入 NPC">+ NPC</button>
@@ -301,19 +309,41 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
                         : p.controlScheme === 'wasd-ijkl' ? '⌨️ WASD+I'
                         : '🎮 ↑↓←→'}
                     </span>
+                    {p.isHost || p.isNpc ? null : (
+                      <span className={'pready' + (p.ready ? ' is-ready' : '')}>
+                        {p.ready ? '✓ 已準備' : '⏳ 未準備'}
+                      </span>
+                    )}
+                    {p.inGame ? <span className="pingame">🎮 遊戲中</span> : null}
                   </div>
                 );
               })}
             </div>
           </div>
           <div className="start-box">
-            {isHost
-              ? <>
-                  <button className="btn primary big" onClick={onStart}>開始遊戲</button>
-                  <button className="btn big boss-start" onClick={onStartBoss}>⚔️ 闖關模式（全 Boss 協同）</button>
-                  <button className="btn big boss-challenge-start" onClick={() => setBossPickerOpen(true)}>🎯 Boss 挑戰模式</button>
-                </>
-              : <p className="dim">等待房主開始…</p>}
+            {isHost ? (
+              <>
+                <button className="btn primary big" onClick={onStart} disabled={!everyoneReady}>開始遊戲</button>
+                <button className="btn big boss-start" onClick={onStartBoss} disabled={!everyoneReady}>⚔️ 闖關模式（全 Boss 協同）</button>
+                <button className="btn big boss-challenge-start" onClick={() => setBossPickerOpen(true)} disabled={!everyoneReady}>🎯 Boss 挑戰模式</button>
+                {!everyoneReady && <p className="dim">等待所有玩家準備（{readyCount}/{humanJoiners.length}）…</p>}
+              </>
+            ) : matchLive ? (
+              <>
+                <button className="btn primary big" onClick={onJoinGame}>加入遊戲</button>
+                <p className="dim">這場已開打，選好角色後即可加入。</p>
+              </>
+            ) : (
+              <>
+                <button
+                  className={'btn big' + (self?.ready ? ' ghost' : ' primary')}
+                  onClick={() => onSetReady(!self?.ready)}
+                >
+                  {self?.ready ? '取消準備' : '我已準備'}
+                </button>
+                <p className="dim">{self?.ready ? '已準備，等待房主開始…' : '選好角色後按下準備。'}</p>
+              </>
+            )}
             <p className="status">{status}</p>
           </div>
         </div>
