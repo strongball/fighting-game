@@ -3,7 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import { getController } from './game/controller';
+import { CHARACTERS } from './game/characters/index.ts';
 import { getAudioManager } from './utils/audioManager';
+import { getSfxManager } from './utils/sfxManager';
 import { applyAudioSettings } from './utils/audioSettings';
 import { MenuScreen } from './components/MenuScreen';
 import { LobbyScreen } from './components/LobbyScreen';
@@ -14,6 +16,15 @@ import { TrainingOverlay } from './components/TrainingOverlay';
 import type { AppPhase, ControlScheme, GameFlags, GameOverView, LobbyView, TrainingStatsView } from './types';
 
 const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '', gameFlags: { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0 }, lobbyMode: 'expedition', bossRound: 1 };
+
+// 進大廳時一次預載「全角色每招」+ 泛型音效，避免戰鬥中首次出招才 fetch/decode 造成卡頓。
+// 命名需與 renderer.js 一致：每角色每招 = `${charId}_${slot}`（slot 見 CD_SLOTS）。
+const SFX_SLOTS = ['basic', 'skill1', 'skill2', 'ultimate'];
+const GENERIC_SFX = ['swing', 'cast', 'hit', 'hurt', 'death', 'ultimate', 'dash', 'blink', 'buff', 'evade_blink', 'evade_roll', 'footstep1', 'footstep2', 'footstep3'];
+const ALL_SFX_NAMES = [
+  ...CHARACTERS.flatMap((c: any) => SFX_SLOTS.map((slot) => `${c.id}_${slot}`)),
+  ...GENERIC_SFX,
+];
 
 export function App() {
   const controller = getController();
@@ -61,6 +72,12 @@ export function App() {
   useEffect(() => {
     applyAudioSettings();
   }, []);
+
+  // 首次進入大廳時預載全角色音效（fetch + decode 進快取），戰鬥中出招即取即播、不卡頓。
+  useEffect(() => {
+    if (phase !== 'lobby') return;
+    getSfxManager().preload(ALL_SFX_NAMES);
+  }, [phase]);
 
   // 重整／關閉分頁時跳出瀏覽器原生「確認離開」（避免誤觸丟失連線中的房間／戰局）。
   // 僅在非主選單階段啟用；主選單本就是最前面，不需要攔。

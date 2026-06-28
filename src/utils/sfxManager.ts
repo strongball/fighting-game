@@ -2,7 +2,7 @@
 //
 // 設計目標：
 // - 低延遲、可重疊、可空間化（依本地玩家位置做距離衰減 + 左右聲道定位）。
-// - 「丟檔即生效」慣例：play('<name>') 會載入 assets/sfx/<name>.mp3（正式，優先）或 .wav（佔位），缺檔則靜音不報錯。
+// - 「丟檔即生效」慣例：play('<name>') 會載入 assets/sfx/<name>.wav，缺檔則靜音不報錯。
 // - 純前端、全 renderer-side：不影響 simulation / network 的決定性。
 // - 無 AudioContext（headless / 不支援）時全部 no-op，不丟例外。
 //
@@ -11,7 +11,7 @@
 // - 出手 / 受傷：renderer.js syncPlayers 依 cd 上跳 / hp 下降呼叫 play('swing'|'cast'|'dash'|'blink'|'ultimate'|'hurt')。
 // - 命中 / 死亡：fxbus.js onSpawn 依 fx.type 'hit' / 'death' 呼叫 play。
 //
-// 命名慣例（public/assets/sfx/<name>.mp3 或 .wav）：
+// 命名慣例（public/assets/sfx/<name>.wav）：
 //   footstep1 / footstep2 / footstep3（腳步變體，隨機播）、swing / cast / hit / hurt / death / ultimate / dash / blink / buff
 //   外加每角色專屬：以該動作 vfx id 命名（如 warrior_grapple、fighter_ultimate），
 //   缺檔時自動回退泛型名（play 的 fallback 參數）。
@@ -55,9 +55,10 @@ export interface SfxManager {
 }
 
 // import.meta.env.BASE_URL 由 Vite 注入（對應 vite.config.ts 的 base '/fighting-game/'）。
-// 副檔名嘗試順序：.mp3（正式音效，優先）→ .wav（佔位音效）。每名取第一個「能成功解碼」的。
+// 目前所有音效資產皆為 .wav（程序化合成輸出）；故只嘗試 .wav，避免每名先打一發 .mp3 → 404 的浪費。
+// 若日後加入 .mp3 正式音效，於陣列前面加回 'mp3' 即可（取第一個「能成功解碼」的）。
 const BASE = import.meta.env.BASE_URL;
-const SFX_EXTS = ['mp3', 'wav'];
+const SFX_EXTS = ['wav'];
 const sfxUrl = (name: string, ext: string) => `${BASE}assets/sfx/${name}.${ext}`;
 
 // 空間化參數（世界單位；座標系見 render3d/coords.js，場地中心約 600,400）。
