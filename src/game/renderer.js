@@ -185,7 +185,7 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
 
       // 出手偵測：任一冷卻槽「上跳」= 剛開招；依動作類型分揮砍/施法 + 對應音效名
       let attackKind = null;
-      let sfxName = null, sfxVfx = null;
+      let sfxName = null, sfxSlot = null;
       if (p.cd) {
         const ch = getCharacter(p.charId);
         for (const slot of CD_SLOTS) {
@@ -194,12 +194,12 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
             const a = ch && ch[slot];
             const isSwing = a && SWING_TYPES.has(a.type);
             attackKind = isSwing ? 'swing' : 'cast';
-            // 音效名：大招槽→ultimate；位移技→dash/blink；近戰系→swing；其餘(投射/區域/增益)→cast
+            sfxSlot = slot; // 該技能槽 (basic/skill1/skill2/ultimate)，用於查每技能專屬音
+            // 泛型回退名：大招槽→ultimate；位移技→dash/blink；近戰系→swing；其餘(投射/區域/增益)→cast
             sfxName = slot === 'ultimate' ? 'ultimate'
               : (a && a.type === 'dash') ? 'dash'
               : (a && a.type === 'blink') ? 'blink'
               : isSwing ? 'swing' : 'cast';
-            sfxVfx = a && a.vfx; // 每角色專屬覆寫名 (缺檔回退泛型)
             break;
           }
         }
@@ -214,9 +214,10 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
       animateModel(e.group, dt, { speed, facing: p.facing, p, isSelf: p.id === selfId, attack: attackKind, hurt, downed, fake: !!p.isFake, ...bossVisual });
 
       // ---- 音效 (renderer-side 本地偵測；host+joiner 各自播放；缺檔靜音不報錯) ----
-      // 出手音：每角色 vfx id 優先，缺檔回退泛型 (swing/cast/dash/blink/ultimate)
+      // 每個技能各自的音色：以「<charId>_<技能槽>」(如 warrior_basic、healer_ultimate) 查找，
+      // 缺檔回退泛型 (swing/cast/dash/blink/ultimate)。魔王/召喚物為數字 id，自然回退泛型。
       if (sfxName) {
-        const primary = sfxVfx || sfxName;
+        const primary = `${p.charId}_${sfxSlot}`;
         sfx.play(primary, { x: e.rx, y: e.ry, fallback: primary !== sfxName ? sfxName : undefined });
       }
       // 受傷音

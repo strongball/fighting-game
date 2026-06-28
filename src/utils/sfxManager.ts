@@ -107,7 +107,7 @@ function createSfxManager(): SfxManager {
 
   const audioCtx = ctx;
   const masterGain = audioCtx.createGain();
-  masterGain.gain.value = 0.9;
+  masterGain.gain.value = 1.0;
   masterGain.connect(audioCtx.destination);
 
   let muted = false;
