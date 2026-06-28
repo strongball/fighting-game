@@ -13,7 +13,7 @@ import { AudioSettingsButton } from './components/AudioSettingsButton';
 import { TrainingOverlay } from './components/TrainingOverlay';
 import type { AppPhase, ControlScheme, GameFlags, GameOverView, LobbyView, TrainingStatsView } from './types';
 
-const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '', gameFlags: { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0 } };
+const EMPTY_LOBBY: LobbyView = { players: [], selfId: null, isHost: false, roomCode: '', gameFlags: { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0 }, lobbyMode: 'expedition', bossRound: 1 };
 
 export function App() {
   const controller = getController();
@@ -61,6 +61,19 @@ export function App() {
   useEffect(() => {
     applyAudioSettings();
   }, []);
+
+  // 重整／關閉分頁時跳出瀏覽器原生「確認離開」（避免誤觸丟失連線中的房間／戰局）。
+  // 僅在非主選單階段啟用；主選單本就是最前面，不需要攔。
+  useEffect(() => {
+    if (phase === 'menu') return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if ((window as any).__intentionalLeave) return; // 面板「離開遊戲」已確認過，不再彈
+      e.preventDefault();
+      e.returnValue = ''; // 觸發瀏覽器原生確認框（文字由瀏覽器決定，無法自訂）
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [phase]);
 
   // 根據遊戲階段切換背景音樂
   useEffect(() => {
@@ -116,6 +129,8 @@ export function App() {
             onSelectControlScheme={handleSelectControlScheme}
             onSelectTeam={handleSelectTeam}
             onSelectGameFlags={handleSelectGameFlags}
+            onSelectMode={(mode) => controller.selectLobbyMode(mode)}
+            onSelectBossRound={(round) => controller.selectBossRound(round)}
             onSetReady={(ready) => controller.setReady(ready)}
             onJoinGame={() => controller.joinGame()}
             onAddNpc={() => controller.addNpc()}
@@ -146,7 +161,7 @@ export function App() {
     <>
       {renderScreen()}
       {trainingStats && phase === 'game' && <TrainingOverlay stats={trainingStats} controller={controller} />}
-      <AudioSettingsButton />
+      <AudioSettingsButton canLeave={phase !== 'menu'} onLeave={() => controller.leave()} />
     </>
   );
 }

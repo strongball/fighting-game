@@ -1,11 +1,11 @@
-// 大廳：房號、角色選擇格、玩家列表、開始/等待。
+// 大廳：先選玩法模式，再依模式顯示對應設定；角色選擇、玩家列表、開始/等待。
 
-import { useState } from 'react';
 import { CHARACTERS as RAW_CHARACTERS, getCharacter as rawGetCharacter } from '../game/characters.js';
 import { BOSSES as RAW_BOSSES } from '../game/bosses.js';
 import { getCodexEntry } from '../utils/characterCodex';
 import { SkillCodexList } from './SkillCodexList';
-import type { CharacterMeta, ControlScheme, GameFlags, LobbyView } from '../types';
+import { useState } from 'react';
+import type { CharacterMeta, ControlScheme, GameFlags, LobbyMode, LobbyView } from '../types';
 
 const CHARACTERS = RAW_CHARACTERS as unknown as CharacterMeta[];
 const getCharacter = rawGetCharacter as (id: string) => CharacterMeta;
@@ -21,6 +21,13 @@ interface BossMeta {
 }
 
 const BOSSES = RAW_BOSSES as unknown as BossMeta[];
+
+// 三種玩法模式（與 controller / types 的 LobbyMode 對應）。
+const MODES: { id: LobbyMode; icon: string; name: string; desc: string }[] = [
+  { id: 'expedition', icon: '🐲', name: '征伐之路', desc: '組隊協同，連續討伐所有魔王，一路打到底' },
+  { id: 'challenge', icon: '🎯', name: '魔王試煉', desc: '指定一位魔王單獨挑戰，擊破即完成' },
+  { id: 'versus', icon: '⚔️', name: '群雄亂鬥', desc: '玩家互相對抗，最後存活者獲勝' },
+];
 
 function shapeIcon(shape: string) {
   if (shape === 'square') return '■';
@@ -85,6 +92,8 @@ interface LobbyScreenProps {
   onSelectControlScheme: (scheme: ControlScheme) => void;
   onSelectTeam: (team: number) => void;
   onSelectGameFlags: (flags: GameFlags) => void;
+  onSelectMode: (mode: LobbyMode) => void;
+  onSelectBossRound: (round: number) => void;
   onSetReady: (ready: boolean) => void;
   onJoinGame: () => void;
   onAddNpc: () => void;
@@ -95,7 +104,7 @@ interface LobbyScreenProps {
   onLeave: () => void;
 }
 
-export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme, selectedTeam, onSelectChar, onSelectControlScheme, onSelectTeam, onSelectGameFlags, onSetReady, onJoinGame, onAddNpc, onRemoveNpc, onStart, onStartBoss, onStartBossChallenge, onLeave }: LobbyScreenProps) {
+export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme, selectedTeam, onSelectChar, onSelectControlScheme, onSelectTeam, onSelectGameFlags, onSelectMode, onSelectBossRound, onSetReady, onJoinGame, onAddNpc, onRemoveNpc, onStart, onStartBoss, onStartBossChallenge, onLeave }: LobbyScreenProps) {
   const { players, selfId, isHost, roomCode, gameFlags, matchLive } = lobby;
   // 準備狀態：房主/NPC 視為恆準備；全員準備房主才能開始。
   const self = players.find((p) => p.id === selfId);
@@ -103,10 +112,18 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
   const readyCount = humanJoiners.filter((p) => p.ready).length;
   const everyoneReady = humanJoiners.every((p) => p.ready);
   const [copied, setCopied] = useState(false);
-  const [bossPickerOpen, setBossPickerOpen] = useState(false);
-  const [selectedBossRound, setSelectedBossRound] = useState(BOSSES[0]?.round ?? 1);
   const skillDisplay = getSkillDisplay(selectedControlScheme);
-  const selectedBoss = BOSSES.find((boss) => boss.round === selectedBossRound) ?? BOSSES[0];
+
+  // 模式 / 選定 Boss 皆由房主決定、同步給所有人。
+  const mode: LobbyMode = lobby.lobbyMode ?? 'expedition';
+  const bossRound = lobby.bossRound ?? BOSSES[0]?.round ?? 1;
+  const selectedBoss = BOSSES.find((b) => b.round === bossRound) ?? BOSSES[0];
+  const activeMode = MODES.find((m) => m.id === mode) ?? MODES[0];
+
+  // 依模式決定要顯示哪些設定區塊（精簡大廳）。
+  const showTeams = mode === 'versus';        // 隊伍分組只在 PvP 有意義
+  const showDifficulty = mode !== 'versus';   // 難度是調魔王強度，PvP 不需要
+  const showBossPicker = mode === 'challenge'; // 只有魔王試煉要挑單王
 
   function copyRoom() {
     if (!roomCode) return;
@@ -115,48 +132,14 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
     setTimeout(() => setCopied(false), 1200);
   }
 
-  if (bossPickerOpen) {
-    return (
-      <section id="screen-boss-select" className="screen active">
-        <div className="panel wide boss-picker-panel">
-          <div className="lobby-head">
-            <div>
-              <h2>Boss 挑戰模式</h2>
-              <p className="hint">選擇一位 Boss 單獨挑戰，擊破後立即完成。</p>
-            </div>
-            <button className="btn ghost" onClick={() => setBossPickerOpen(false)}>返回大廳</button>
-          </div>
-
-          <div className="boss-select-grid boss-picker-grid">
-            {BOSSES.map((boss) => (
-              <button
-                key={boss.id}
-                type="button"
-                className={'boss-select-card' + (boss.round === selectedBossRound ? ' selected' : '')}
-                onClick={() => setSelectedBossRound(boss.round)}
-                aria-pressed={boss.round === selectedBossRound}
-              >
-                <span className="boss-select-round">ROUND {boss.round}</span>
-                <span className="boss-select-icon" style={{ color: boss.color }}>{shapeIcon(boss.shape)}</span>
-                <span className="boss-select-name">{boss.name}</span>
-                <span className="boss-select-sub">{boss.subtitle || '未知威脅'} · HP {boss.maxHp}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="boss-picker-actions">
-            <div>
-              <span className="boss-picker-label">目前選擇</span>
-              <strong>{selectedBoss?.name || `ROUND ${selectedBossRound}`}</strong>
-            </div>
-            <button className="btn big boss-challenge-start" onClick={() => onStartBossChallenge(selectedBossRound)}>
-              🎯 開始挑戰
-            </button>
-          </div>
-        </div>
-      </section>
-    );
+  function handleStart() {
+    if (mode === 'versus') onStart();
+    else if (mode === 'challenge') onStartBossChallenge(bossRound);
+    else onStartBoss();
   }
+  const startLabel = mode === 'versus' ? '⚔️ 開始群雄亂鬥'
+    : mode === 'challenge' ? '🎯 開始魔王試煉'
+    : '🐲 開始征伐之路';
 
   return (
     <section id="screen-lobby" className="screen active">
@@ -171,7 +154,25 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
           <button className="btn ghost" onClick={onLeave}>離開</button>
         </div>
 
-        <p className="hint">把房號分享給朋友，請他們在主選單輸入房號加入。選好角色後由房主開始。</p>
+        <p className="hint">把房號分享給朋友，請他們在主選單輸入房號加入。選好玩法與角色後由房主開始。</p>
+
+        <h3>選擇玩法{!isHost && <span className="dim">（由房主設定）</span>}</h3>
+        <div className="mode-picker">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className={'mode-pick-card' + (m.id === mode ? ' selected' : '')}
+              onClick={() => isHost && onSelectMode(m.id)}
+              disabled={!isHost && m.id !== mode}
+              aria-pressed={m.id === mode}
+            >
+              <span className="mode-pick-icon">{m.icon}</span>
+              <span className="mode-pick-name">{m.name}</span>
+              <span className="mode-pick-desc">{m.desc}</span>
+            </button>
+          ))}
+        </div>
 
         <h3>選擇操作方式</h3>
         <div className="control-scheme-selector">
@@ -195,21 +196,48 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
           </button>
         </div>
 
-        <h3>隊伍</h3>
-        <div className="control-scheme-selector team-selector">
-          {[0, 1, 2, 3, 4].map((t) => (
-            <button
-              key={t}
-              className={'btn' + (selectedTeam === t ? ' primary' : '')}
-              onClick={() => onSelectTeam(t)}
-            >
-              {t === 0 ? '單人混戰' : `隊伍 ${t}`}
-            </button>
-          ))}
-        </div>
-        <p className="hint">同隊玩家為友軍：不會互相傷害，治療／護盾／增益可作用於隊友。單人＝全場混戰、最後一人獲勝。</p>
+        {showTeams && (
+          <>
+            <h3>隊伍</h3>
+            <div className="control-scheme-selector team-selector">
+              {[0, 1, 2, 3, 4].map((t) => (
+                <button
+                  key={t}
+                  className={'btn' + (selectedTeam === t ? ' primary' : '')}
+                  onClick={() => onSelectTeam(t)}
+                >
+                  {t === 0 ? '單人混戰' : `隊伍 ${t}`}
+                </button>
+              ))}
+            </div>
+            <p className="hint">同隊玩家為友軍：不會互相傷害，治療／護盾／增益可作用於隊友。單人＝全場混戰、最後一人獲勝。</p>
+          </>
+        )}
 
-        <h3>遊戲模式{!isHost && <span className="dim">（由房主設定）</span>}</h3>
+        {showBossPicker && (
+          <>
+            <h3>選擇魔王{!isHost && <span className="dim">（由房主設定）</span>}</h3>
+            <div className="boss-select-grid">
+              {BOSSES.map((boss) => (
+                <button
+                  key={boss.id}
+                  type="button"
+                  className={'boss-select-card' + (boss.round === bossRound ? ' selected' : '')}
+                  onClick={() => isHost && onSelectBossRound(boss.round)}
+                  disabled={!isHost && boss.round !== bossRound}
+                  aria-pressed={boss.round === bossRound}
+                >
+                  <span className="boss-select-round">ROUND {boss.round}</span>
+                  <span className="boss-select-icon" style={{ color: boss.color }}>{shapeIcon(boss.shape)}</span>
+                  <span className="boss-select-name">{boss.name}</span>
+                  <span className="boss-select-sub">{boss.subtitle || '未知威脅'} · HP {boss.maxHp}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <h3>進階開關{!isHost && <span className="dim">（由房主設定）</span>}</h3>
         <div className="game-modes-grid">
           <button
             className={'btn mode-btn' + (gameFlags.freeMana ? ' active' : '')}
@@ -240,25 +268,28 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
           </button>
         </div>
 
-        <h3>難度{!isHost && <span className="dim">（由房主設定）</span>}</h3>
-        <div className="difficulty-selector">
-          {[
-            { label: '簡單', value: -0.3, icon: '🍃', desc: '輕鬆體驗冒險，適合新手或不擅長動作遊戲的玩家' },
-            { label: '普通', value: 0, icon: '⚖️', desc: '魔王傷害降低、血量減少、攻速變慢，適合初次挑戰' },
-            { label: '困難', value: 0.5, icon: '💀', desc: '魔王強化，考驗操作與團隊配合' },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              className={'btn diff-btn' + (gameFlags.difficulty === opt.value ? ' active' : '')}
-              onClick={() => isHost && onSelectGameFlags({ ...gameFlags, difficulty: opt.value })}
-              disabled={!isHost}
-            >
-              <span className="diff-icon">{opt.icon}</span>
-              <span className="diff-label">{opt.label}</span>
-            </button>
-          ))}
-        </div>
-
+        {showDifficulty && (
+          <>
+            <h3>難度{!isHost && <span className="dim">（由房主設定）</span>}</h3>
+            <div className="difficulty-selector">
+              {[
+                { label: '簡單', value: -0.3, icon: '🍃', desc: '輕鬆體驗冒險，適合新手或不擅長動作遊戲的玩家' },
+                { label: '普通', value: 0, icon: '⚖️', desc: '魔王傷害降低、血量減少、攻速變慢，適合初次挑戰' },
+                { label: '困難', value: 0.5, icon: '💀', desc: '魔王強化，考驗操作與團隊配合' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  className={'btn diff-btn' + (gameFlags.difficulty === opt.value ? ' active' : '')}
+                  onClick={() => isHost && onSelectGameFlags({ ...gameFlags, difficulty: opt.value })}
+                  disabled={!isHost}
+                >
+                  <span className="diff-icon">{opt.icon}</span>
+                  <span className="diff-label">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         <h3>選擇角色</h3>
         <div className="char-select">
@@ -302,7 +333,7 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
                     <span className="dot" style={{ background: c.color }}></span>
                     <span className="pname">{p.name}{p.id === selfId ? '（你）' : ''}{p.isHost ? ' 👑' : ''}</span>
                     <span className="pchar">{c.name}</span>
-                    {p.team ? <span className="pteam">隊 {p.team}</span> : null}
+                    {showTeams && p.team ? <span className="pteam">隊 {p.team}</span> : null}
                     <span className="pcontrol">
                       {p.isNpc ? '🤖 NPC'
                         : p.controlScheme === 'wasd-jkl' ? '⌨️ WASD+;'
@@ -323,15 +354,17 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
           <div className="start-box">
             {isHost ? (
               <>
-                <button className="btn primary big" onClick={onStart} disabled={!everyoneReady}>開始遊戲</button>
-                <button className="btn big boss-start" onClick={onStartBoss} disabled={!everyoneReady}>⚔️ 闖關模式（全 Boss 協同）</button>
-                <button className="btn big boss-challenge-start" onClick={() => setBossPickerOpen(true)} disabled={!everyoneReady}>🎯 Boss 挑戰模式</button>
+                <div className="start-mode-line">
+                  目前玩法：<strong>{activeMode.name}</strong>
+                  {showBossPicker && selectedBoss && <span className="dim"> · {selectedBoss.name}</span>}
+                </div>
+                <button className="btn primary big start-main" onClick={handleStart} disabled={!everyoneReady}>{startLabel}</button>
                 {!everyoneReady && <p className="dim">等待所有玩家準備（{readyCount}/{humanJoiners.length}）…</p>}
               </>
             ) : matchLive ? (
               <>
                 <button className="btn primary big" onClick={onJoinGame}>加入遊戲</button>
-                <p className="dim">這場已開打，選好角色後即可加入。</p>
+                <p className="dim">這場已開打（{activeMode.name}），選好角色後即可加入。</p>
               </>
             ) : (
               <>
@@ -341,7 +374,7 @@ export function LobbyScreen({ lobby, status, selectedChar, selectedControlScheme
                 >
                   {self?.ready ? '取消準備' : '我已準備'}
                 </button>
-                <p className="dim">{self?.ready ? '已準備，等待房主開始…' : '選好角色後按下準備。'}</p>
+                <p className="dim">{self?.ready ? `已準備（${activeMode.name}），等待房主開始…` : '選好角色後按下準備。'}</p>
               </>
             )}
             <p className="status">{status}</p>

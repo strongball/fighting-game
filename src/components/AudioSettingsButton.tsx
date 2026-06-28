@@ -28,7 +28,17 @@ import {
   type JoystickSettings,
 } from '../utils/joystickSettings';
 
-export function AudioSettingsButton() {
+// 是否為觸控裝置（＝遊戲內會畫出虛擬搖桿的條件，與 render3d/hud.js、controller/camera.ts 一致）。
+// 觸控能力在執行期不會改變，模組載入時判定一次即可。
+const IS_TOUCH = typeof window !== 'undefined'
+  && (('ontouchstart' in window) || ((navigator.maxTouchPoints || 0) > 0));
+
+interface AudioSettingsButtonProps {
+  canLeave?: boolean;       // 是否顯示「離開遊戲」（在選單頁已是最前面，不顯示）
+  onLeave?: () => void;     // 離開：斷線並重新載入回到主選單（建房／加房）
+}
+
+export function AudioSettingsButton({ canLeave, onLeave }: AudioSettingsButtonProps = {}) {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<AudioSettings>(getAudioSettings());
   const [viewCfg, setViewCfg] = useState<ViewSettings>(getViewSettings());
@@ -100,15 +110,33 @@ export function AudioSettingsButton() {
               enabled={viewCfg.autoAim}
               onToggle={(v) => updateViewSettings({ autoAim: v })}
             />
-            <JoystickModeRow
-              mode={joystickCfg.mode}
-              onMode={(m) => updateJoystickSettings({ mode: m })}
-            />
-            <JoystickScaleRow
-              scale={joystickCfg.scale}
-              onScale={(v) => updateJoystickSettings({ scale: v })}
-            />
-            <FullscreenRow />
+            {/* 搖桿模式／大小／全螢幕：僅觸控裝置顯示（桌機無虛擬搖桿、全螢幕含鎖橫向僅手機需要） */}
+            {IS_TOUCH && (
+              <>
+                <JoystickModeRow
+                  mode={joystickCfg.mode}
+                  onMode={(m) => updateJoystickSettings({ mode: m })}
+                />
+                <JoystickScaleRow
+                  scale={joystickCfg.scale}
+                  onScale={(v) => updateJoystickSettings({ scale: v })}
+                />
+                <FullscreenRow />
+              </>
+            )}
+
+            {canLeave && onLeave && (
+              <div className="settings-leave">
+                <button
+                  className="btn danger"
+                  onClick={() => {
+                    if (window.confirm('確定要離開遊戲並回到主選單嗎？')) onLeave();
+                  }}
+                >
+                  🚪 離開遊戲
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

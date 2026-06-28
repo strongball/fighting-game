@@ -6,6 +6,10 @@ import type { ActionDef, ActionType } from './game/types/actions';
 export type AppPhase = 'menu' | 'lobby' | 'game' | 'gameover';
 export type ControlScheme = 'wasd-jkl' | 'arrows-asdf' | 'wasd-ijkl';
 
+// 大廳玩法模式（由房主選定、同步給所有人，決定大廳要顯示哪些設定）：
+// versus=群雄亂鬥(PvP) / expedition=征伐之路(全 Boss 連戰) / challenge=魔王試煉(指定單王)
+export type LobbyMode = 'versus' | 'expedition' | 'challenge';
+
 export interface GameFlags {
   freeMana: boolean;
   noCooldown: boolean;
@@ -31,6 +35,8 @@ export interface LobbyView {
   isHost: boolean;
   roomCode: string;
   gameFlags: GameFlags;
+  lobbyMode: LobbyMode; // 房主選定的玩法模式（同步給加入者，決定大廳顯示哪些設定）
+  bossRound?: number;   // 魔王試煉(challenge)：房主選定的單王回合（同步顯示）
   matchLive?: boolean; // 房主是否已開打（此時加入者按鈕由「準備」改為「加入遊戲」）
 }
 
@@ -164,6 +170,8 @@ export interface GameController {
   selectControlScheme(scheme: ControlScheme): void;
   selectTeam(team: number): void;
   selectGameFlags(flags: GameFlags): void;
+  selectLobbyMode(mode: LobbyMode): void;
+  selectBossRound(round: number): void;
   addNpc(): void;
   removeNpc(): void;
   startGame(): void;

@@ -47,6 +47,7 @@ import type {
   GameOverView,
   LobbyEntry,
   LobbyView,
+  LobbyMode,
 } from '../types';
 
 // 網路快照序列化已抽到 ./network/snapshot.ts（宣告式欄位 manifest）。
@@ -96,6 +97,8 @@ function createController(): GameController {
   let selectedControlScheme: ControlScheme = 'wasd-jkl';
   let selectedTeam = 0; // 0 = 單人；正數 = 組隊
   let gameFlags: GameFlags = { freeMana: false, noCooldown: false, noDamage: false, difficulty: 0 };
+  let lobbyMode: LobbyMode = 'expedition'; // 預設「征伐之路」（本作以打王為主）；房主可改
+  let bossRound = 1;                        // 魔王試煉所選回合（房主選定、同步給加入者）
   let lobby: LobbyEntry[] = [];
   let matchLive = false; // 是否已開打（中途加入：開打後加入者按「加入遊戲」即時生成進場）
 
@@ -130,11 +133,11 @@ function createController(): GameController {
   // 房主/NPC 視為恆準備；其餘人需自行按下準備。全員準備房主才能開始。
   function allReady() { return lobby.every((p) => p.isHost || p.isNpc || p.ready); }
   function renderLobby() {
-    const view: LobbyView = { players: lobby, selfId, isHost: role === 'host', roomCode, gameFlags, matchLive };
+    const view: LobbyView = { players: lobby, selfId, isHost: role === 'host', roomCode, gameFlags, lobbyMode, bossRound, matchLive };
     emit('lobby', view);
   }
   function broadcastLobby() {
-    net.broadcast({ t: 'lobby', players: lobby, gameFlags, matchLive });
+    net.broadcast({ t: 'lobby', players: lobby, gameFlags, lobbyMode, bossRound, matchLive });
     renderLobby();
   }
 
@@ -183,7 +186,7 @@ function createController(): GameController {
       emit('lobbyStatus', '已連上房主，等待開始…');
     });
     net.on('onData', (_from: string, data: any) => {
-      if (data.t === 'lobby') { lobby = data.players; if (data.gameFlags) gameFlags = data.gameFlags; matchLive = !!data.matchLive; renderLobby(); }
+      if (data.t === 'lobby') { lobby = data.players; if (data.gameFlags) gameFlags = data.gameFlags; if (data.lobbyMode) lobbyMode = data.lobbyMode; if (data.bossRound != null) bossRound = data.bossRound; matchLive = !!data.matchLive; renderLobby(); }
       else if (data.t === 'start') { lobby = data.lobby; matchLive = true; startFromSnapshot(data.state); }
       else if (data.t === 'state') { prediction.receiveSnapshot(data.snapshot, data.seq); }
       else if (data.t === 'gameover') { joinerGameover(data); }
@@ -519,6 +522,18 @@ function createController(): GameController {
     if (role === 'host') broadcastLobby();
   }
 
+  // 房主選定玩法模式 / 魔王試煉回合，同步給所有人（決定大廳顯示哪些設定）。
+  function selectLobbyMode(mode: LobbyMode) {
+    if (role !== 'host') return;
+    lobbyMode = mode;
+    broadcastLobby();
+  }
+  function selectBossRound(round: number) {
+    if (role !== 'host') return;
+    bossRound = round | 0;
+    broadcastLobby();
+  }
+
   function addNpc() {
     if (role !== 'host') return;
     if (lobby.length >= MAX_PLAYERS) return;
@@ -699,6 +714,8 @@ function createController(): GameController {
   }
 
   function leave() {
+    // 主動離開（已在面板確認過）：標記以略過 App 的 beforeunload 原生確認，避免二次彈窗。
+    (window as any).__intentionalLeave = true;
     net.destroy();
     window.location.reload();
   }
@@ -741,6 +758,8 @@ function createController(): GameController {
     selectControlScheme,
     selectTeam,
     selectGameFlags,
+    selectLobbyMode,
+    selectBossRound,
     addNpc,
     removeNpc,
     startGame,
