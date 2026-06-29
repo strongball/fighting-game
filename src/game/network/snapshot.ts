@@ -22,6 +22,7 @@ export const NET_PLAYER_FIELDS = [
   // 生命 / 資源 / 狀態
   'hp', 'maxHp', 'mana', 'maxMana', 'alive', 'shield', 'shieldTime', 'kills',
   'ult', 'fury', 'chi', 'magicSwordsman', 'effects', 'cd', 'chargeState',
+  'itemHp', 'itemMp',
   // 魔王 / 召喚物 / 部位 / 鏡像 渲染旗標
   'isBoss', 'isPart', 'isMinion', 'isFake', 'isMirror',
   'ownerId', 'partId', 'partColor', 'scale', 'reviveProg',

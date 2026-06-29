@@ -45,6 +45,10 @@ function lowestHp(list) {
   return best;
 }
 
+function projectileLike(action) {
+  return action && (action.type === 'projectile' || action.type === 'magnetic_needles');
+}
+
 // ---- 移動輔助：把朝向 (tx,ty) 的位移轉成 8 方向 input 布林 ----
 function moveToward(input, ent, tx, ty, stopDist = 0) {
   const dx = tx - ent.x, dy = ty - ent.y, d = Math.hypot(dx, dy);
@@ -334,7 +338,7 @@ function telegraph(state, ent, action, dt) {
   // 決定預警形狀
   let shape = action.telegraph || 'circle';
   if (action.type === 'melee' && !action.telegraph) shape = 'arc';
-  if (action.type === 'projectile' && !action.telegraph) shape = 'line';
+  if (projectileLike(action) && !action.telegraph) shape = 'line';
   if (action.type === 'charge' && !action.telegraph) shape = 'line';
 
   // 實時計算預警中心點、半徑與長度 (加上 PLAYER_RADIUS 以完美匹配實際碰撞判定)
@@ -348,7 +352,7 @@ function telegraph(state, ent, action, dt) {
     ty = ent.y;
     tr = (action.range || 80) + PLAYER_RADIUS;
     trange = (action.range || 80) + PLAYER_RADIUS;
-  } else if (action.type === 'projectile') {
+  } else if (projectileLike(action)) {
     tx = ent.x;
     ty = ent.y;
     tr = (action.radius || 40) + PLAYER_RADIUS;
@@ -485,6 +489,7 @@ function usable(a, d) {
     case 'charge': return d >= 90 && d <= (a.range || 320) + 40;
     case 'leap': return d >= 60 && d <= (a.range || 280) + 40;
     case 'blink': return d <= (a.range || 280) + 80;
+    case 'magnetic_needles':
     case 'projectile': {
       const projRange = a.range || (a.speed && a.lifetime ? a.speed * a.lifetime : 760);
       return d <= projRange;

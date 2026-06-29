@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { BaseBoss } from '../BaseBoss.ts';
 import { SLOW } from '../effects.js';
-import { clamp } from '../../entities/math.ts';
 import { addFx } from '../../entities/fx.ts';
+import { dealDamage } from '../../entities/damage.ts';
 import { aiProfile } from './ai.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { loadVfx } from './vfx.ts';
@@ -11,10 +11,141 @@ import './action.ts';
 const POLARITY_VFX = 'boss_magnet_polarity';
 const ANCHOR_VFX = 'boss_magnet_anchor';
 const COLLAPSE_VFX = 'boss_magnet_collapse';
+const TEAR_VFX = 'boss_magnet_tear';
+const BLAST_VFX = 'boss_magnet_polarity_blast';
+const BLAST_IMPACT_VFX = 'boss_magnet_blast_impact';
+
+function isSoloMagnetFight(state: any, boss: any) {
+  const humans = Object.values(state.players || {}).filter((p: any) => p.alive && p.team !== boss.team && !p.isNpc);
+  return humans.length <= 1;
+}
 
 function clearMagnetFields(state: any) {
   for (const p of Object.values(state.players || {}) as any[]) {
     if (p.magneticPolarity) delete p.magneticPolarity;
+  }
+}
+
+function triggerPolarityBlast(state: any, boss: any, a: any, b: any) {
+  const overload = !!boss.magnetOverload;
+  const x = (a.x + b.x) / 2;
+  const y = (a.y + b.y) / 2;
+  const radius = overload ? 190 : 170;
+  const dmg = overload ? 105 : 82;
+  a.magneticPolarity.blastCd = overload ? 1.05 : 1.35;
+  b.magneticPolarity.blastCd = overload ? 1.05 : 1.35;
+  addFx(state, {
+    type: 'ultimate',
+    x,
+    y,
+    color: '#ffffff',
+    life: 0.72,
+    radius,
+    polarityA: a.magneticPolarity.polarity,
+    polarityB: b.magneticPolarity.polarity,
+    vfx: BLAST_VFX,
+  });
+  for (const p of Object.values(state.players || {}) as any[]) {
+    if (!p.alive || p.team === boss.team) continue;
+    let dx = p.x - x;
+    let dy = p.y - y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d > radius + (p.hitR || 18)) continue;
+    if (d <= 1) {
+      const fallback = p.id === a.id ? -1 : 1;
+      dx = fallback;
+      dy = 0;
+    }
+    const falloff = 1 - Math.min(0.45, d / Math.max(1, radius) * 0.45);
+    dealDamage(state, p, Math.round(dmg * falloff), boss.id, { source: 'ultimate' });
+    const isTriggerPair = p.id === a.id || p.id === b.id;
+    const knock = (overload ? 620 : 520) * falloff + (isTriggerPair ? (overload ? 160 : 120) : 0);
+    p.kvx += dx / d * knock;
+    p.kvy += dy / d * knock;
+    addFx(state, {
+      type: 'hit',
+      x: p.x,
+      y: p.y,
+      color: p.magneticPolarity?.color || '#ffffff',
+      life: 0.34,
+      radius: isTriggerPair ? 72 : 54,
+      targetId: p.id,
+      polarity: p.magneticPolarity?.polarity,
+      vfx: BLAST_IMPACT_VFX,
+    });
+  }
+}
+
+function triggerAnchorPolarityBlast(state: any, boss: any, anchor: any, target: any) {
+  const overload = !!boss.magnetOverload;
+  const x = anchor.x;
+  const y = anchor.y;
+  const radius = overload ? 205 : 180;
+  const dmg = overload ? 118 : 92;
+  anchor.exploded = true;
+  anchor.magneticAnchor = false;
+  anchor.magneticDanger = false;
+  anchor.lifetime = 0;
+  anchor.delay = 0;
+  target.magneticPolarity.blastCd = overload ? 0.95 : 1.15;
+  target.magneticPolarity.anchorBlastCd = overload ? 0.95 : 1.15;
+  addFx(state, {
+    type: 'ultimate',
+    x,
+    y,
+    color: '#ffffff',
+    life: 0.78,
+    radius,
+    polarityA: target.magneticPolarity.polarity,
+    polarityB: anchor.polarity,
+    vfx: BLAST_VFX,
+  });
+  for (const p of Object.values(state.players || {}) as any[]) {
+    if (!p.alive || p.team === boss.team) continue;
+    let dx = p.x - x;
+    let dy = p.y - y;
+    let d = Math.hypot(dx, dy) || 1;
+    if (d > radius + (p.hitR || 18)) continue;
+    if (d <= 1) {
+      dx = p.id === target.id ? (target.x >= x ? 1 : -1) : 1;
+      dy = 0;
+      d = 1;
+    }
+    const falloff = 1 - Math.min(0.5, d / Math.max(1, radius) * 0.5);
+    dealDamage(state, p, Math.round(dmg * falloff), boss.id, { source: 'ultimate' });
+    const isTrigger = p.id === target.id;
+    const knock = (overload ? 720 : 610) * falloff + (isTrigger ? (overload ? 220 : 170) : 0);
+    p.kvx += dx / d * knock;
+    p.kvy += dy / d * knock;
+    addFx(state, {
+      type: 'hit',
+      x: p.x,
+      y: p.y,
+      color: p.magneticPolarity?.color || anchor.color || '#ffffff',
+      life: 0.38,
+      radius: isTrigger ? 82 : 60,
+      targetId: p.id,
+      polarity: p.magneticPolarity?.polarity,
+      vfx: BLAST_IMPACT_VFX,
+    });
+  }
+}
+
+function tickPolarityCollisions(state: any, boss: any) {
+  const marked = (Object.values(state.players || {}) as any[])
+    .filter((p: any) => p.alive && p.team !== boss.team && p.magneticPolarity?.sourceBossId === boss.id);
+  const triggerDist = boss.magnetOverload ? 105 : 92;
+  for (let i = 0; i < marked.length; i++) {
+    const a = marked[i];
+    if ((a.magneticPolarity.blastCd || 0) > 0) continue;
+    for (let j = i + 1; j < marked.length; j++) {
+      const b = marked[j];
+      if ((b.magneticPolarity.blastCd || 0) > 0) continue;
+      if (a.magneticPolarity.polarity === b.magneticPolarity.polarity) continue;
+      if (Math.hypot(a.x - b.x, a.y - b.y) > triggerDist) continue;
+      triggerPolarityBlast(state, boss, a, b);
+      break;
+    }
   }
 }
 
@@ -31,23 +162,31 @@ function tickMagnetism(state: any, boss: any, dt: number) {
     if (p.magneticPolarity.remaining <= 0) {
       delete polarities[p.id];
       delete p.magneticPolarity;
-    } else if (bc.fxTimer <= 0) {
-      addFx(state, {
-        type: 'buff',
-        x: p.x,
-        y: p.y,
-        color: p.magneticPolarity.color,
-        life: 0.32,
-        radius: 54,
-        polarity: p.magneticPolarity.polarity,
-        targetId: p.id,
-        vfx: POLARITY_VFX,
-      });
+    } else {
+      p.magneticPolarity.resonanceCd = Math.max(0, (p.magneticPolarity.resonanceCd || 0) - dt);
+      p.magneticPolarity.tearCd = Math.max(0, (p.magneticPolarity.tearCd || 0) - dt);
+      p.magneticPolarity.blastCd = Math.max(0, (p.magneticPolarity.blastCd || 0) - dt);
+      p.magneticPolarity.anchorBlastCd = Math.max(0, (p.magneticPolarity.anchorBlastCd || 0) - dt);
+      if (bc.fxTimer <= 0) {
+        addFx(state, {
+          type: 'buff',
+          x: p.x,
+          y: p.y,
+          color: p.magneticPolarity.color,
+          life: boss.magnetOverload ? 0.42 : 0.36,
+          radius: boss.magnetOverload ? 68 : 58,
+          polarity: p.magneticPolarity.polarity,
+          targetId: p.id,
+          vfx: POLARITY_VFX,
+        });
+      }
     }
   }
-  if (bc.fxTimer <= 0) bc.fxTimer = 0.34;
+  if (bc.fxTimer <= 0) bc.fxTimer = boss.magnetOverload ? 0.25 : 0.32;
 
-  const anchors = (state.zones || []).filter((z: any) => z.magneticAnchor && z.owner === boss.id);
+  tickPolarityCollisions(state, boss);
+
+  const anchors = (state.zones || []).filter((z: any) => z.magneticAnchor && !z.exploded && z.owner === boss.id);
   bc.anchors = anchors.map((z: any) => ({
     id: z.id,
     x: z.x,
@@ -60,6 +199,7 @@ function tickMagnetism(state: any, boss: any, dt: number) {
   }));
 
   for (const z of anchors) {
+    if (z.exploded || z.lifetime <= 0) continue;
     const activeRatio = z.delay > 0 ? (z.warningForceRatio || 0.45) : 1;
     for (const p of Object.values(state.players || {}) as any[]) {
       if (!p.alive || p.team === boss.team || !p.magneticPolarity) continue;
@@ -75,6 +215,32 @@ function tickMagnetism(state: any, boss: any, dt: number) {
       const force = (z.force || 180) * Math.min(0.75, falloff) * activeRatio * polarityMult * dt;
       p.kvx += (dx / d) * force * dir;
       p.kvy += (dy / d) * force * dir;
+      if (z.delay <= 0 && !same && d <= (z.blastRadius || Math.max(82, (z.radius || 130) * 0.68)) && (p.magneticPolarity.anchorBlastCd || 0) <= 0) {
+        triggerAnchorPolarityBlast(state, boss, z, p);
+        break;
+      }
+      if (z.delay <= 0 && !z._tearDisabled) {
+        const speed = Math.hypot(p.kvx || 0, p.kvy || 0);
+        const tearThreshold = z.soloMagnet ? 90 : (boss.magnetOverload ? 105 : 120);
+        const tearRange = z.tearRange || (z.fieldScale || 300) + (z.radius || 130) * 0.85;
+        if ((d <= tearRange || speed >= tearThreshold) && (p.magneticPolarity.tearCd || 0) <= 0) {
+          const solo = z.soloMagnet || isSoloMagnetFight(state, boss);
+          const dmg = z.tearDmg || (solo ? 16 : (boss.magnetOverload ? 38 : 30));
+          p.magneticPolarity.tearCd = solo ? 0.95 : (boss.magnetOverload ? 0.48 : 0.62);
+          addFx(state, {
+            type: 'hit',
+            x: p.x,
+            y: p.y,
+            color: '#a855ff',
+            life: 0.42,
+            radius: solo ? 68 : 92,
+            polarity: p.magneticPolarity.polarity,
+            targetId: p.id,
+            vfx: TEAR_VFX,
+          });
+          dealDamage(state, p, dmg, boss.id, { source: 'ultimate' });
+        }
+      }
     }
   }
 }
@@ -171,8 +337,8 @@ const data = {
   },
   skill1: {
     name: '磁針連射',
-    type: 'projectile',
-    dmg: 22,
+    type: 'magnetic_needles',
+    dmg: 28,
     range: 500,
     speed: 700,
     radius: 10,
@@ -180,17 +346,24 @@ const data = {
     spread: 0.22,
     knockback: 45,
     effect: SLOW(1.2, 0.72),
-    cd: 6.2,
+    cd: 5.8,
     windup: 0.52,
     telegraph: 'line',
     color: '#58d7ff',
     vfx: 'boss_magnet_needle',
+    resonanceDmg: 34,
+    overloadResonanceDmg: 44,
+    soloResonanceDmg: 14,
+    resonanceRadius: 430,
+    resonanceCd: 0.75,
   },
   skill2: {
     name: '極性烙印',
     type: 'magnetic_polarity',
     duration: 8.0,
-    cd: 10.8,
+    crackDmg: 16,
+    overloadCrackDmg: 22,
+    cd: 7.8,
     windup: 0.65,
     telegraph: 'self',
     color: '#58d7ff',

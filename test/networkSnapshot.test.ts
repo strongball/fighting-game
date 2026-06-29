@@ -49,6 +49,24 @@ describe('network snapshot serialization', () => {
     expect(snapshot.destructibles).toEqual(state.destructibles);
   });
 
+  it('syncs player potion inventory counts for joiner HUDs', () => {
+    const state: any = createInitialState([
+      { id: 'p0', name: 'Host Player', charId: 'warrior', team: 1 },
+      { id: 'p1', name: 'Joiner Player', charId: 'mage', team: 1 },
+    ], {}, { mode: 'boss' });
+    state.players.p0.itemHp = 4;
+    state.players.p0.itemMp = 2;
+    state.players.p1.itemHp = 1;
+    state.players.p1.itemMp = 0;
+
+    const snapshot = serializeNetworkSnapshot(state);
+
+    expect(snapshot.players.p0.itemHp).toBe(4);
+    expect(snapshot.players.p0.itemMp).toBe(2);
+    expect(snapshot.players.p1.itemHp).toBe(1);
+    expect(snapshot.players.p1.itemMp).toBe(0);
+  });
+
   it('syncs magnet artificer multiplayer display objects', () => {
     const state: any = createInitialState([
       { id: 'p0', name: 'Host Player', charId: 'warrior', team: 1 },
