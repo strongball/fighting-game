@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { buildBerserkerWeapon } from './weapon.ts';
 
-export const modelConfig = { bulk: 2.6, weapon: 'axes', skinKind: 'metal', headgear: 'horns', pauldron: true };
+export const modelConfig = { bulk: 2.6, weapon: 'axes', skinKind: 'metal', headgear: 'horns', pauldron: true, swingStyle: 'horizontal', stretchBlade: true };
 
 export function buildModel(ctx) {
   const {

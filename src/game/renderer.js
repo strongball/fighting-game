@@ -500,102 +500,129 @@ export function createRenderer(canvas, controlScheme = 'wasd-jkl', hooks = {}) {
   }
 
   function render(state, selfId, view) {
-    const now = performance.now();
-    let dt = lastT ? (now - lastT) / 1000 : 0;
-    lastT = now;
-    if (dt > 0.05) dt = 0.05;
-    perfHud?.markStart(); // 效能浮層：標記本幀 render 的 CPU 計時起點
-    hideSelf = !!(view && view.mode === 2); // 第一人稱藏自身模型
+    try {
+      const now = performance.now();
+      let dt = lastT ? (now - lastT) / 1000 : 0;
+      lastT = now;
+      if (dt > 0.05) dt = 0.05;
+      perfHud?.markStart(); // 效能浮層：標記本幀 render 的 CPU 計時起點
+      hideSelf = !!(view && view.mode === 2); // 第一人稱藏自身模型
 
-    if (sceneMgr.resize()) hud.resize();
+      if (sceneMgr.resize()) hud.resize();
 
-    // 場景主題：偵測 (mode/round) 變化，套用 Boss 主題色 + 裝飾 + 大氣粒子
-    if (state.mode === 'boss') {
-      const data = getBossForRound(state.round);
-      const theme = (data && data.theme) || null;
-      if (state.round !== appliedThemeRound || appliedThemeMode !== 'boss') {
-        sceneMgr.applyTheme(theme);
-        applyDecorations(sceneMgr.themeGroup, theme || {});
-        atmosphere.setTheme(theme || {});
-        appliedThemeRound = state.round;
-        appliedThemeMode = 'boss';
-        sceneMgr._inSandstormVfx = false;
-      }
-
-      const bossEnt = Object.values(state.players).find((o) => o.isBoss && o.alive);
-      if (bossEnt) {
-        const bossData = getBoss(bossEnt.charId);
-        if (bossData && typeof bossData.renderTick === 'function') {
-          bossData.renderTick(state, bossEnt, dt, { sceneMgr, scene, atmosphere });
+      // 場景主題：偵測 (mode/round) 變化，套用 Boss 主題色 + 裝飾 + 大氣粒子
+      if (state.mode === 'boss') {
+        const data = getBossForRound(state.round);
+        const theme = (data && data.theme) || null;
+        if (state.round !== appliedThemeRound || appliedThemeMode !== 'boss') {
+          sceneMgr.applyTheme(theme);
+          applyDecorations(sceneMgr.themeGroup, theme || {});
+          atmosphere.setTheme(theme || {});
+          appliedThemeRound = state.round;
+          appliedThemeMode = 'boss';
+          sceneMgr._inSandstormVfx = false;
         }
-      } else if (sceneMgr._customOverrideActive) {
-        sceneMgr._customOverrideActive = false;
-        if (theme) {
-          scene.background = new THREE.Color(theme.sky);
-          scene.fog = new THREE.Fog(theme.fog, theme.fogNear, theme.fogFar);
-          atmosphere.setTheme(theme);
-        } else {
-          sceneMgr.applyTheme(null);
-          atmosphere.setTheme({});
+
+        const bossEnt = Object.values(state.players).find((o) => o.isBoss && o.alive);
+        if (bossEnt) {
+          const bossData = getBoss(bossEnt.charId);
+          if (bossData && typeof bossData.renderTick === 'function') {
+            bossData.renderTick(state, bossEnt, dt, { sceneMgr, scene, atmosphere });
+          }
+        } else if (sceneMgr._customOverrideActive) {
+          sceneMgr._customOverrideActive = false;
+          if (theme) {
+            scene.background = new THREE.Color(theme.sky);
+            scene.fog = new THREE.Fog(theme.fog, theme.fogNear, theme.fogFar);
+            atmosphere.setTheme(theme);
+          } else {
+            sceneMgr.applyTheme(null);
+            atmosphere.setTheme({});
+          }
+        }
+      } else if (appliedThemeMode !== 'ffa') {
+        sceneMgr.applyTheme(null);
+        applyDecorations(sceneMgr.themeGroup, {});
+        atmosphere.setTheme({});
+        appliedThemeMode = 'ffa';
+        appliedThemeRound = -1;
+      }
+
+      // 相機跟隨焦點 (給 destructibles 視線判斷與 setCameraFocus 用)
+      const meP = state.players[selfId];
+      let fx = 0, fz = 0;
+      if (meP && meP.alive) { fx = sceneX(meP.x); fz = sceneZ(meP.y); }
+      else {
+        for (const pp of Object.values(state.players)) {
+          if (pp.alive && !pp.ownerId && !pp.isBoss) { fx = sceneX(pp.x); fz = sceneZ(pp.y); break; }
         }
       }
-    } else if (appliedThemeMode !== 'ffa') {
-      sceneMgr.applyTheme(null);
-      applyDecorations(sceneMgr.themeGroup, {});
-      atmosphere.setTheme({});
-      appliedThemeMode = 'ffa';
-      appliedThemeRound = -1;
-    }
 
-    // 相機跟隨焦點 (給 destructibles 視線判斷與 setCameraFocus 用)
-    const meP = state.players[selfId];
-    let fx = 0, fz = 0;
-    if (meP && meP.alive) { fx = sceneX(meP.x); fz = sceneZ(meP.y); }
-    else {
-      for (const pp of Object.values(state.players)) {
-        if (pp.alive && !pp.ownerId && !pp.isBoss) { fx = sceneX(pp.x); fz = sceneZ(pp.y); break; }
+      fxbus.process(state);
+      syncPlayers(state, selfId, dt);
+      syncTethers(state, dt);
+      bossUltimateAura.sync(state.players, dt);
+      fighterChi.sync(state.players, dt, getEntityScenePos);
+      timeAnchorLayer.sync(state.timeAnchors || [], state.timeAnchorRitual, dt);
+
+      updateHuntMarker(state, dt);
+      entities.syncProjectiles(state.projectiles, dt);
+      entities.syncZones(state.zones, dt);
+      entities.syncDestructibles(state.destructibles || [], dt, { x: fx, z: fz });
+      entities.syncItems(state.items || [], dt);
+      updateDecorationFade(sceneMgr.themeGroup, { x: fx, z: fz }, dt);
+      atmosphere.update(dt);
+      particles.update(dt);
+      fxbus.update(dt);
+      // 登場動畫：把鏡頭朝 Boss 推近。intro 期間 strength 隨 t 由 0→1→0 (ease in/out)。
+      let introStr = 0, bossSx = 0, bossSz = 0;
+      if (state.mode === 'boss' && state.roundPhase === 'intro') {
+        const dur = state.introDur || 3.2;
+        const elapsed = Math.max(0, dur - (state.roundTimer || 0));
+        const t = Math.min(1, elapsed / dur);
+        // 0-0.18 推近、0.18-0.78 維持、0.78-1.0 退回
+        if (t < 0.18) introStr = t / 0.18;
+        else if (t < 0.78) introStr = 1;
+        else introStr = Math.max(0, 1 - (t - 0.78) / 0.22);
+        for (const pp of Object.values(state.players)) {
+          if (pp.isBoss) { bossSx = sceneX(pp.x); bossSz = sceneZ(pp.y); break; }
+        }
       }
-    }
+      sceneMgr.setIntroFocus(introStr, bossSx, bossSz);
+      sceneMgr.setCameraFocus(fx, fz);
+      sceneMgr.setCameraMode(view ? (view.mode | 0) : 0, view ? view.yaw : 0, view ? view.pitch : 0);
+      sceneMgr.update(dt);
+      hud.update(state, selfId);
 
-    fxbus.process(state);
-    syncPlayers(state, selfId, dt);
-    syncTethers(state, dt);
-    bossUltimateAura.sync(state.players, dt);
-    fighterChi.sync(state.players, dt, getEntityScenePos);
-    timeAnchorLayer.sync(state.timeAnchors || [], state.timeAnchorRitual, dt);
-
-    updateHuntMarker(state, dt);
-    entities.syncProjectiles(state.projectiles, dt);
-    entities.syncZones(state.zones, dt);
-    entities.syncDestructibles(state.destructibles || [], dt, { x: fx, z: fz });
-    entities.syncItems(state.items || [], dt);
-    updateDecorationFade(sceneMgr.themeGroup, { x: fx, z: fz }, dt);
-    atmosphere.update(dt);
-    particles.update(dt);
-    fxbus.update(dt);
-    // 登場動畫：把鏡頭朝 Boss 推近。intro 期間 strength 隨 t 由 0→1→0 (ease in/out)。
-    let introStr = 0, bossSx = 0, bossSz = 0;
-    if (state.mode === 'boss' && state.roundPhase === 'intro') {
-      const dur = state.introDur || 3.2;
-      const elapsed = Math.max(0, dur - (state.roundTimer || 0));
-      const t = Math.min(1, elapsed / dur);
-      // 0-0.18 推近、0.18-0.78 維持、0.78-1.0 退回
-      if (t < 0.18) introStr = t / 0.18;
-      else if (t < 0.78) introStr = 1;
-      else introStr = Math.max(0, 1 - (t - 0.78) / 0.22);
-      for (const pp of Object.values(state.players)) {
-        if (pp.isBoss) { bossSx = sceneX(pp.x); bossSz = sceneZ(pp.y); break; }
+      sceneMgr.render();
+      hud.render();
+      perfHud?.tick(dt, state);
+    } catch (err) {
+      console.error("render ERROR:", err);
+      if (typeof document !== 'undefined') {
+        let div = document.getElementById('debug-error-overlay');
+        if (!div) {
+          div = document.createElement('div');
+          div.id = 'debug-error-overlay';
+          div.style.position = 'fixed';
+          div.style.top = '10px';
+          div.style.left = '10px';
+          div.style.right = '10px';
+          div.style.padding = '20px';
+          div.style.background = 'rgba(255, 0, 0, 0.9)';
+          div.style.color = 'white';
+          div.style.fontFamily = 'monospace';
+          div.style.fontSize = '14px';
+          div.style.zIndex = '99999';
+          div.style.whiteSpace = 'pre-wrap';
+          div.style.borderRadius = '8px';
+          div.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+          document.body.appendChild(div);
+        }
+        div.textContent = `render Error:\n${err.message}\n\nStack:\n${err.stack}`;
       }
+      throw err;
     }
-    sceneMgr.setIntroFocus(introStr, bossSx, bossSz);
-    sceneMgr.setCameraFocus(fx, fz);
-    sceneMgr.setCameraMode(view ? (view.mode | 0) : 0, view ? view.yaw : 0, view ? view.pitch : 0);
-    sceneMgr.update(dt);
-    hud.update(state, selfId);
-
-    sceneMgr.render();
-    hud.render();
-    perfHud?.tick(dt, state);
   }
 
   return { render, dispose: () => { bossUltimateAura.dispose(); timeAnchorLayer.dispose(); for (const line of tetherLines.values()) { scene.remove(line.group); line.geo.dispose(); line.coreMat.dispose(); line.glowMat.dispose(); } } };

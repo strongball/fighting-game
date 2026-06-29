@@ -60,7 +60,7 @@ registerTalent('arcane_contract', {
       s.swordEnergy -= 1;
       s.regenTimer = 0;
       p._waveEnhancedTimer = 0.5;
-      addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#fd79a8', life: 0.3, radius: 60, vfx: 'magic_swordsman_decay' });
+      addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#00d2ff', life: 0.3, radius: 60, vfx: 'magic_swordsman_decay' });
       return;
     }
     if (slot === 'skill2' && s.swordEnergy >= 2) {
@@ -68,7 +68,7 @@ registerTalent('arcane_contract', {
       s.regenTimer = 0;
       s.enhanced = true;
       s.enhancedTimer = 5.0;
-      addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#fd79a8', life: 0.6, radius: 120, vfx: 'magic_swordsman_enhance' });
+      addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#ffd700', life: 0.6, radius: 120, vfx: 'magic_swordsman_enhance' });
       return;
     }
     if (slot === 'ultimate') {
@@ -93,7 +93,7 @@ export function tickMagicSwordsman(state: any, p: Player, dt: number) {
     while (s.regenTimer >= REGEN_TIME && s.swordEnergy < MAX_SE) {
       s.regenTimer -= REGEN_TIME;
       s.swordEnergy += 1;
-      addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#a29bfe', life: 0.2, radius: 36, vfx: 'magic_swordsman_decay' });
+      addFx(state, { type: 'buff', x: p.x, y: p.y, color: '#00d2ff', life: 0.2, radius: 36, vfx: 'magic_swordsman_decay' });
     }
   } else {
     s.regenTimer = 0;
