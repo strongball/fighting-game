@@ -98,8 +98,10 @@ export function createParticleSystem(scene, opt = {}) {
     grav[i] = p.gravity || 0;
     drag[i] = p.drag || 0;
     fade[i] = p.fade ? 1 : 0;
-    if (p.color instanceof THREE.Color) _col.copy(p.color);
-    else _col.set(p.color || '#ffffff');
+    let col = p.color;
+    if (Array.isArray(col)) col = col[(Math.random() * col.length) | 0];
+    if (col instanceof THREE.Color) _col.copy(col);
+    else _col.set(col || '#ffffff');
     cr[i] = _col.r; cg[i] = _col.g; cb[i] = _col.b;
   }
 

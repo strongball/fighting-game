@@ -372,6 +372,7 @@ export function createCharacterModel(charId) {
   group.userData = {
     parts: { torso, head, armL, armR, legL, legR, emblem, shieldRing, shieldShell, rageRing, burnRing, frozenRingLow, frozenRingHigh, stunRing, stunHalo, rootRing, handR, face, accents, starOrbitShards: parts.starOrbitShards, swordEnergyOrbs: parts.swordEnergyOrbs, extraOrbs: parts.extraOrbs, barrageWings: parts.barrageWings, falcon: parts.falcon, customUpdate: parts.customUpdate, cape: parts.cape, capeTrim: parts.capeTrim },
     skinMats,
+    cfg,
     phase: Math.random() * Math.PI * 2,
     breathe: Math.random() * Math.PI * 2,
     move: 0,
@@ -401,6 +402,68 @@ function castArmZ(p) {
   const u = smoothstep(Math.min(1, p / 0.35));
   const dn = p > 0.6 ? smoothstep((p - 0.6) / 0.4) : 0;
   return 1.6 * u * (1 - dn);
+}
+
+// 橫砍/橫揮：windup(後拉蓄力) → strike(橫掃) → recover(收招)；回傳 { armZ, armY, armX, torsoY }
+function swingArmHorizontal(p) {
+  const windup = 0.22;
+  const strike = 0.28;
+  const recover = 0.5;
+
+  let armZ = 0, armY = 0, armX = 0, torsoY = 0;
+
+  if (p < windup) {
+    const t = smoothstep(p / windup);
+    armZ = -0.2 - 1.0 * t; // 舉高右手臂
+    armY = -1.2 * t;        // 往後拉蓄力
+    armX = -0.4 * t;
+    torsoY = 0.25 * t;      // 身體反向旋轉
+  } else if (p < windup + strike) {
+    const t = smoothstep((p - windup) / strike);
+    armZ = -1.2 + 0.3 * t; 
+    armY = -1.2 + 2.8 * t;  // 橫掃動作：-1.2 -> +1.6
+    armX = -0.4 + 1.0 * t;  // 向前擺
+    torsoY = 0.25 - 0.65 * t; // 身體隨之橫旋轉
+  } else {
+    const t = smoothstep((p - windup - strike) / recover);
+    armZ = -0.9 * (1 - t);
+    armY = 1.6 * (1 - t);
+    armX = 0.6 * (1 - t);
+    torsoY = -0.4 * (1 - t);
+  }
+
+  return { armZ, armY, armX, torsoY };
+}
+
+// 反手橫砍 (左到右)：windup(左側後拉蓄力) → strike(反手橫掃) → recover(收招)；回傳 { armZ, armY, armX, torsoY }
+function swingArmHorizontalBackhand(p) {
+  const windup = 0.22;
+  const strike = 0.28;
+  const recover = 0.5;
+
+  let armZ = 0, armY = 0, armX = 0, torsoY = 0;
+
+  if (p < windup) {
+    const t = smoothstep(p / windup);
+    armZ = -0.2 - 0.8 * t; // 舉起手臂並往左拉
+    armY = 1.5 * t;        // 往左後拉蓄力
+    armX = 0.6 * t;
+    torsoY = -0.3 * t;     // 身體反向偏左
+  } else if (p < windup + strike) {
+    const t = smoothstep((p - windup) / strike);
+    armZ = -1.0 - 0.3 * t; 
+    armY = 1.5 - 2.7 * t;  // 反手揮掃動作：+1.5 -> -1.2 (左到右)
+    armX = 0.6 - 1.0 * t;
+    torsoY = -0.3 + 0.55 * t; // 身體隨之向右偏
+  } else {
+    const t = smoothstep((p - windup - strike) / recover);
+    armZ = -1.3 * (1 - t);
+    armY = -1.2 * (1 - t);
+    armX = -0.4 * (1 - t);
+    torsoY = 0.25 * (1 - t);
+  }
+
+  return { armZ, armY, armX, torsoY };
 }
 
 // ---- GLB 皮膚動畫驅動 (idle/walk 交叉淡入 + attack/hit 一次性) ----
@@ -631,407 +694,516 @@ export function attachSkin(group, skin, charId = 0) {
 }
 
 export function animateModel(group, dt, info) {
-  const ud = group.userData;
-  if (!ud) return;
-  if (ud.simple) { // 簡易模型 (魔王部位/水晶)：僅自轉漂浮
-    ud.breathe = (ud.breathe || 0) + dt * 1.6;
-    if (ud.core) { ud.core.rotation.y += dt * 1.2; ud.core.rotation.x += dt * 0.7; }
-    group.position.y = (ud.baseY || 0) + Math.sin(ud.breathe) * 1.5;
-    return;
-  }
-  const { parts } = ud;
-
-  // ---- 出手 / 受擊 觸發 (由 renderer 依 cd 上跳 / hp 下降 偵測) ----
-  if (info.attack) {
-    ud.atkKind = info.attack;
-    ud.atkDur = info.attack === 'cast' ? 0.55 : 0.42;
-    ud.atkT = ud.atkDur;
-    ud.focusT = Math.max(ud.focusT, ud.atkDur + 0.25);
-  }
-  if (info.hurt) ud.hurtT = 0.42;
-  if (ud.atkT > 0) ud.atkT = Math.max(0, ud.atkT - dt);
-  if (ud.focusT > 0) ud.focusT = Math.max(0, ud.focusT - dt);
-  if (ud.hurtT > 0) ud.hurtT = Math.max(0, ud.hurtT - dt);
-
-  const moving = info.speed > WALK_THRESHOLD;
-  // move 平滑
-  ud.move += ((moving ? 1 : 0) - ud.move) * Math.min(1, dt * 12);
-  const stride = Math.min(1.7, 0.6 + info.speed / 220);
-  if (ud.move > 0.02) ud.phase += dt * 9 * stride;
-  ud.breathe += dt * 1.6;
-
-  // 朝向平滑 (group.rotation.y = -facing)
-  const target = -info.facing;
-  let d = target - ud.curFacing;
-  while (d > Math.PI) d -= Math.PI * 2;
-  while (d < -Math.PI) d += Math.PI * 2;
-  ud.curFacing += d * Math.min(1, dt * 14);
-  group.rotation.y = ud.curFacing;
-
-  const sw = Math.sin(ud.phase);
-  const amp = 0.7 * ud.move;
-
-  if (ud.skin) {
-    // ---- GLB 皮膚：驅動骨架動畫，身體交由 mixer；身體踩地 ----
-    driveSkin(ud, dt, info);
-    
-    // 手動重寫攻擊姿勢的骨骼旋轉，使動作更自然
-    if (ud.atkT > 0 && ud.atkDur > 0) {
-      const ap = 1 - ud.atkT / ud.atkDur;
-      const s = ud.skin;
-      if (ud.atkKind === 'cast') {
-        const z = castArmZ(ap);
-        if (s.rightArmBone) {
-          s.rightArmBone.rotation.z = -Math.PI / 3 - z * 0.4;
-          s.rightArmBone.rotation.y = -z * 0.5;
-        }
-        if (s.leftArmBone) {
-          s.leftArmBone.rotation.z = Math.PI / 3 + z * 0.4;
-          s.leftArmBone.rotation.y = z * 0.5;
-        }
-      } else {
-        const swing = swingArmZ(ap);
-        if (s.rightArmBone) {
-          s.rightArmBone.rotation.z = -Math.PI / 3;
-          s.rightArmBone.rotation.y = swing * 1.2;
-        }
-        if (s.rightForeArmBone) {
-          s.rightForeArmBone.rotation.y = Math.sin(ap * Math.PI) * 0.6;
-        }
-      }
+  try {
+    const ud = group.userData;
+    if (!ud) return;
+    const p = info.p;
+    const cfg = ud.cfg || { bulk: 1, weapon: 'sword' };
+    if (ud.simple) { // 簡易模型 (魔王部位/水晶)：僅自轉漂浮
+      ud.breathe = (ud.breathe || 0) + dt * 1.6;
+      if (ud.core) { ud.core.rotation.y += dt * 1.2; ud.core.rotation.x += dt * 0.7; }
+      group.position.y = (ud.baseY || 0) + Math.sin(ud.breathe) * 1.5;
+      return;
     }
-    
-    group.position.y = ud.baseY;
-  } else {
-    // ---- 程序化肢體 + 出手姿勢 ----
-    // 腿擺動 (rotation.z 沿 +X 前後)
-    parts.legL.rotation.z = sw * amp;
-    parts.legR.rotation.z = -sw * amp;
-    // 手臂反向擺 + 微張
-    parts.armL.rotation.z = -sw * amp * 0.8;
-    parts.armR.rotation.z = sw * amp * 0.8;
-    parts.armL.rotation.x = -0.12;
-    parts.armR.rotation.x = 0.12;
+    const { parts } = ud;
 
-    // 出手姿勢 (疊加在走路擺動上)；武器掛右手→主要動右臂
-    if (ud.atkT > 0 && ud.atkDur > 0) {
-      const ap = 1 - ud.atkT / ud.atkDur; // 0→1 進度
-      if (ud.atkKind === 'cast') {
-        const z = castArmZ(ap);
-        parts.armR.rotation.z = sw * amp * 0.3 + z;
-        parts.armR.rotation.x = 0.12 - z * 0.18;
-        parts.armL.rotation.z = -sw * amp * 0.3 + z * 0.55;
-        parts.torso.rotation.x = -0.12 * Math.sin(ap * Math.PI);
-      } else {
-        const z = swingArmZ(ap);
-        parts.armR.rotation.z = z;
-        parts.armR.rotation.x = 0.12 + Math.sin(ap * Math.PI) * 0.25;
-        parts.armL.rotation.z = -sw * amp * 0.4 - z * 0.25;
-        parts.torso.rotation.y = -Math.sin(ap * Math.PI) * 0.22;
+    // ---- 出手 / 受擊 觸發 (由 renderer 依 cd 上跳 / hp 下降 偵測) ----
+    if (info.attack) {
+      ud.atkKind = info.attack;
+      ud.atkDur = info.attack === 'cast' ? 0.55 : 0.42;
+      ud.atkT = ud.atkDur;
+      ud.focusT = Math.max(ud.focusT, ud.atkDur + 0.25);
+      
+      if (info.attack === 'swing') {
+        // 若閒置超過 1.2 秒則重設連招，從第一刀開始
+        if ((ud.idleAttackT || 0) > 1.2) {
+          ud.swingCount = 0;
+        }
+        ud.swingCount = (ud.swingCount || 0) + 1;
+        ud.idleAttackT = 0;
       }
     } else {
-      parts.torso.rotation.x = 0;
-      parts.torso.rotation.y = 0;
-    }
-
-    // 軀幹上下彈跳 + 呼吸
-    const bob = ud.move > 0.02 ? Math.abs(Math.sin(ud.phase)) * 3.2 * ud.move : Math.sin(ud.breathe) * 0.8;
-    group.position.y = ud.baseY + bob;
-    parts.torso.rotation.z = sw * 0.05 * ud.move;
-  }
-
-  // 徽記旋轉 + 漂浮
-  parts.emblem.rotation.y += dt * 1.5;
-  parts.emblem.rotation.x += dt * 0.8;
-  parts.emblem.position.y = (parts.head.position.y + 16) + Math.sin(ud.breathe * 1.3) * 1.6;
-
-  // 元素使浮球公轉 (適用程序化模型與 GLB 皮膚模型)
-  if (parts.handR) {
-    for (const o of parts.handR.children) {
-      if (o.userData && o.userData.orbit !== undefined) {
-        const a = ud.breathe * 2 + o.userData.orbit * (Math.PI * 2 / 3);
-        o.position.set(4 + Math.cos(a) * 5, 2, Math.sin(a) * 5);
+      if (ud.atkT <= 0) {
+        ud.idleAttackT = (ud.idleAttackT || 0) + dt;
       }
     }
-  }
+    if (info.hurt) ud.hurtT = 0.42;
+    if (ud.atkT > 0) ud.atkT = Math.max(0, ud.atkT - dt);
+    if (ud.focusT > 0) ud.focusT = Math.max(0, ud.focusT - dt);
+    if (ud.hurtT > 0) ud.hurtT = Math.max(0, ud.hurtT - dt);
 
-  const p = info.p;
-  if (parts.starOrbitShards) {
-    const orbit = p && p.starOrbit;
-    const count = Math.max(0, Math.min(3, orbit?.shards ?? 0));
-    const baseAngle = orbit?.angle ?? ud.breathe * 1.9;
-    for (let i = 0; i < parts.starOrbitShards.length; i++) {
-      const shard = parts.starOrbitShards[i];
-      shard.visible = i < count;
-      if (!shard.visible) continue;
-      const a = baseAngle + i * (Math.PI * 2 / Math.max(1, count));
-      const r = 56 + count * 10;
-      shard.position.set(Math.cos(a) * r, 31 + Math.sin(a * 2) * 4, Math.sin(a) * r);
-      shard.rotation.x += dt * 1.2;
-      shard.rotation.y += dt * 2.8;
-      shard.rotation.z += dt * 0.8;
-      shard.scale.setScalar(1 + Math.sin(ud.breathe * 2 + i) * 0.035);
-    }
-  }
+    const moving = info.speed > WALK_THRESHOLD;
+    // move 平滑
+    ud.move += ((moving ? 1 : 0) - ud.move) * Math.min(1, dt * 12);
+    const stride = Math.min(1.7, 0.6 + info.speed / 220);
+    if (ud.move > 0.02) ud.phase += dt * 9 * stride;
+    ud.breathe += dt * 1.6;
 
-  // 魔劍士劍氣球體：依 swordEnergy 數量顯示
-  if (parts.swordEnergyOrbs) {
-    const se = p && p.magicSwordsman;
-    const count = se ? Math.max(0, Math.min(5, se.swordEnergy || 0)) : 0;
-    const baseY = 18;
-    for (let i = 0; i < parts.swordEnergyOrbs.length; i++) {
-      const orb = parts.swordEnergyOrbs[i];
-      orb.visible = i < count;
-      if (!orb.visible) continue;
-      const a = ud.breathe * 1.4 + i * (Math.PI * 2 / Math.max(1, count));
-      const r = 48 + count * 3;
-      orb.position.set(Math.cos(a) * r, baseY + Math.sin(a * 1.5 + i * 1.2) * 8, Math.sin(a) * r);
-      orb.rotation.x += dt * 1.6;
-      orb.rotation.y += dt * 2.5;
-      orb.rotation.z += dt * 1.0;
-      const pulse = 1 + Math.sin(ud.breathe * 3 + i * 1.5) * 0.08;
-      orb.scale.setScalar(pulse);
-    }
-  }
+    // 朝向平滑 (group.rotation.y = -facing)
+    const target = -info.facing;
+    let d = target - ud.curFacing;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    ud.curFacing += d * Math.min(1, dt * 14);
+    group.rotation.y = ud.curFacing;
 
-  // 魔劍士額外浮游小劍氣（3 顆，始終可見，低速公轉）
-  if (parts.extraOrbs) {
-    for (let i = 0; i < parts.extraOrbs.length; i++) {
-      const extra = parts.extraOrbs[i];
-      const a = ud.breathe * 0.6 + i * (Math.PI * 2 / 3);
-      const r = 62;
-      extra.position.set(Math.cos(a) * r, 22 + Math.sin(a * 2 + i) * 5, Math.sin(a) * r);
-      extra.rotation.x += dt * 0.8;
-      extra.rotation.y += dt * 1.2;
-      extra.rotation.z += dt * 0.4;
-      extra.scale.setScalar(1 + Math.sin(ud.breathe * 1.5 + i) * 0.05);
-    }
-  }
+    const sw = Math.sin(ud.phase);
+    const amp = 0.7 * ud.move;
 
-  // 魔劍士披風飄動
-  if (parts.cape) {
-    const sway = Math.sin(ud.breathe * 0.8) * 0.06;
-    parts.cape.rotation.z = sway;
-  }
-  if (parts.capeTrim) {
-    const sway = Math.sin(ud.breathe * 0.8 + 0.3) * 0.08;
-    parts.capeTrim.rotation.z = sway;
-  }
-
-  // 天羽箭暴 — 磅礴雙翼：依 p.barrage 展開/收合，作為 player group 子物件自動跟隨移動。
-  if (parts.barrageWings) {
-    const on = p && p.barrage;
-    ud.wingT = on ? Math.min(1, (ud.wingT || 0) + dt * 3.0)   // 展開 ~0.33s
-                  : Math.max(0, (ud.wingT || 0) - dt * 4.5);  // 收合更快
-    const wings = parts.barrageWings;
-    wings.visible = ud.wingT > 0.001;
-    if (wings.visible) {
-      const e = ud.wingT * ud.wingT * (3 - 2 * ud.wingT);     // smoothstep 展開緩動
-      const flap = Math.sin(ud.breathe * 5) * 0.14;           // 拍動
-      for (const side of wings.children) {
-        const sz = side.userData.side;
-        const feathers = side.userData.feathers;
-        for (let i = 0; i < feathers.length; i++) {
-          const fan = feathers[i].userData.fan;
-          // 收合(e=0)時幾近直立貼背；展開時外擺成扇 + 拍動
-          feathers[i].rotation.x = sz * (0.05 + fan * 1.05 * e + flap * (0.4 + i * 0.12) * e);
+    if (ud.skin) {
+      // ---- GLB 皮膚：驅動骨架動畫，身體交由 mixer；身體踩地 ----
+      driveSkin(ud, dt, info);
+      
+      // 手動重寫攻擊姿勢的骨骼旋轉，使動作更自然
+      if (ud.atkT > 0 && ud.atkDur > 0) {
+        const ap = 1 - ud.atkT / ud.atkDur;
+        const s = ud.skin;
+        if (ud.atkKind === 'cast') {
+          const z = castArmZ(ap);
+          if (s.rightArmBone) {
+            s.rightArmBone.rotation.z = -Math.PI / 3 - z * 0.4;
+            s.rightArmBone.rotation.y = -z * 0.5;
+          }
+          if (s.leftArmBone) {
+            s.leftArmBone.rotation.z = Math.PI / 3 + z * 0.4;
+            s.leftArmBone.rotation.y = z * 0.5;
+          }
+        } else {
+          if (cfg.swingStyle === 'horizontal') {
+            const isBackhand = (ud.swingCount % 2 === 0);
+            const { armZ, armY, armX } = isBackhand ? swingArmHorizontalBackhand(ap) : swingArmHorizontal(ap);
+            if (s.rightArmBone) {
+              s.rightArmBone.rotation.z = -Math.PI / 3.2 + armZ * 0.15;
+              s.rightArmBone.rotation.y = armY * 1.15;
+              s.rightArmBone.rotation.x = armX * 0.5;
+            }
+            if (s.rightForeArmBone) {
+              s.rightForeArmBone.rotation.y = Math.sin(ap * Math.PI) * 0.4;
+            }
+          } else {
+            const swing = swingArmZ(ap);
+            if (s.rightArmBone) {
+              s.rightArmBone.rotation.z = -Math.PI / 3;
+              s.rightArmBone.rotation.y = swing * 1.2;
+            }
+            if (s.rightForeArmBone) {
+              s.rightForeArmBone.rotation.y = Math.sin(ap * Math.PI) * 0.6;
+            }
+          }
         }
       }
-      wings.scale.setScalar(0.7 + 0.6 * e);                   // 展開後放大到 1.3×
-      if (wings.userData.mat) wings.userData.mat.opacity = 0.25 + 0.72 * e;
-    }
-  }
-
-  // 鳥獵鷹隼：平時棲於肩、攻擊時「飛出俯衝」再返回。
-  // 由 sim 的 p._falcon.flight = { t, dur } 驅動（falcon.ts）；模型恆面向 +X → 往 +X 飛即朝敵。
-  if (parts.falcon) {
-    const fal = parts.falcon;
-    const rest = fal.userData.rest;
-    const wings = fal.userData.wings || [];
-    const fl = p && p._falcon && p._falcon.flight;
-    ud.falconFlap = (ud.falconFlap || 0) + dt * (fl ? 26 : 6);
-    if (fl) {
-      const u = Math.min(1, fl.t / (fl.dur || 0.62));
-      const arc = Math.sin(u * Math.PI);          // 0→1→0：去程＋回程
-      // 把「世界位移(tdx,tdy)」轉成模型本地座標（group 已繞 Y 轉 ud.curFacing）→ 飛到敵人實際位置。
-      const th = ud.curFacing || 0, c2 = Math.cos(th), s2 = Math.sin(th);
-      const wx = fl.tdx || 0, wz = fl.tdy || 0;
-      const lx = wx * c2 - wz * s2;
-      const lz = wx * s2 + wz * c2;
-      // 弧線飛行：沿「棲位→敵人」推進(arc)，外加垂直方向的側擺 → 去程/回程走不同側形成弧/環，不是直線來回。
-      const dirx = lx - rest.x, dirz = lz - rest.z;
-      const dl = Math.hypot(dirx, dirz) || 1;
-      const perpx = -dirz / dl, perpz = dirx / dl;
-      const lateral = Math.sin(u * Math.PI * 2) * Math.min(70, dl * 0.22); // 來回不同側的弧度（隨距離、上限 70）
-      fal.position.x = rest.x + dirx * arc + perpx * lateral;
-      fal.position.z = rest.z + dirz * arc + perpz * lateral;
-      fal.position.y = rest.y + (24 - rest.y) * arc + Math.sin(u * Math.PI) * 8; // 拋物高度：先升後俯衝下探
-      // 鷹頭朝「實際飛行方向」：用上一幀位移求向量（含弧線側擺）→ 去程朝敵、回程朝你都自然。
-      const hx = fal.position.x - (ud.falPrevX != null ? ud.falPrevX : fal.position.x);
-      const hz = fal.position.z - (ud.falPrevZ != null ? ud.falPrevZ : fal.position.z);
-      if (Math.hypot(hx, hz) > 0.05) fal.rotation.y = Math.atan2(-hz, hx);
-      ud.falPrevX = fal.position.x; ud.falPrevZ = fal.position.z;
-      fal.rotation.z = -arc * 0.4 + lateral * 0.01;    // 俯衝前傾 + 轉彎側傾
-      const flap = Math.sin(ud.falconFlap) * 0.6;      // 急速拍翼
-      for (const w of wings) w.rotation.x = w.userData.side * (0.2 + flap);
-      const storm = p && p._falcon && p._falcon.frenzy ? 1.3 : 1; // 大絕風暴：鷹更巨大有壓迫感
-      fal.scale.setScalar((fal.userData.baseScale || 1) * (1.5 + arc * 0.5) * storm);
+      
+      group.position.y = ud.baseY;
     } else {
-      // 棲息：輕微上下浮動 + 緩慢拍翼，平滑回到棲位。
-      fal.position.x += (rest.x - fal.position.x) * Math.min(1, dt * 10);
-      fal.position.z += (rest.z - fal.position.z) * Math.min(1, dt * 10);
-      fal.position.y = rest.y + Math.sin(ud.breathe * 2) * 0.6;
-      fal.rotation.z += (0 - fal.rotation.z) * Math.min(1, dt * 10);
-      fal.rotation.y += (0 - fal.rotation.y) * Math.min(1, dt * 10);
-      fal.scale.setScalar(fal.userData.baseScale || 1);
-      ud.falPrevX = null; ud.falPrevZ = null;
-      const flap = Math.sin(ud.falconFlap) * 0.12;
-      for (const w of wings) w.rotation.x = w.userData.side * (0.1 + flap);
+      // ---- 程序化肢體 + 出手姿勢 ----
+      // 腿擺動 (rotation.z 沿 +X 前後)
+      parts.legL.rotation.z = sw * amp;
+      parts.legR.rotation.z = -sw * amp;
+      // 手臂反向擺 + 微張
+      parts.armL.rotation.z = -sw * amp * 0.8;
+      parts.armR.rotation.z = sw * amp * 0.8;
+      parts.armL.rotation.x = -0.12;
+      parts.armR.rotation.x = 0.12;
+
+      // 出手姿勢 (疊加在走路擺動上)；武器掛右手→主要動右臂
+      if (ud.atkT > 0 && ud.atkDur > 0) {
+        const ap = 1 - ud.atkT / ud.atkDur; // 0→1 進度
+        if (ud.atkKind === 'cast') {
+          const z = castArmZ(ap);
+          parts.armR.rotation.z = sw * amp * 0.3 + z;
+          parts.armR.rotation.x = 0.12 - z * 0.18;
+          parts.armL.rotation.z = -sw * amp * 0.3 + z * 0.55;
+          parts.torso.rotation.x = -0.12 * Math.sin(ap * Math.PI);
+        } else {
+          const isSlasher = cfg.swingStyle === 'horizontal';
+          if (isSlasher) {
+            const isBackhand = (ud.swingCount % 2 === 0);
+            const { armZ, armY, armX, torsoY } = isBackhand ? swingArmHorizontalBackhand(ap) : swingArmHorizontal(ap);
+            parts.armR.rotation.z = armZ;
+            parts.armR.rotation.y = armY;
+            parts.armR.rotation.x = armX;
+            parts.armL.rotation.z = -sw * amp * 0.4 - armZ * 0.25;
+            parts.torso.rotation.y = torsoY;
+          } else {
+            // Default vertical overhead swing
+            const z = swingArmZ(ap);
+            parts.armR.rotation.z = z;
+            parts.armR.rotation.x = 0.12 + Math.sin(ap * Math.PI) * 0.25;
+            parts.armL.rotation.z = -sw * amp * 0.4 - z * 0.25;
+            parts.torso.rotation.y = -Math.sin(ap * Math.PI) * 0.22;
+          }
+        }
+      } else {
+        parts.torso.rotation.x = 0;
+        parts.torso.rotation.y = 0;
+        parts.armR.rotation.y = 0;
+      }
+
+      // 軀幹上下彈跳 + 呼吸
+      const bob = ud.move > 0.02 ? Math.abs(Math.sin(ud.phase)) * 3.2 * ud.move : Math.sin(ud.breathe) * 0.8;
+      group.position.y = ud.baseY + bob;
+      parts.torso.rotation.z = sw * 0.05 * ud.move;
     }
-  }
 
-  // 法師浮空法術書懸浮與旋轉動畫
-  if (ud.skin && ud.skin.floatingItem) {
-    const book = ud.skin.floatingItem;
-    book.position.y = 2.5 + Math.sin(ud.breathe * 2) * 0.4;
-    book.rotation.y = Math.sin(ud.breathe * 0.5) * 0.25;
-    if (book.children[2]) {
-      book.children[2].rotation.x += dt * 1.5;
-      book.children[2].rotation.y += dt * 0.8;
-      book.children[2].position.y = 1.2 + Math.sin(ud.breathe * 4) * 0.15;
+    // 徽記旋轉 + 漂浮
+    parts.emblem.rotation.y += dt * 1.5;
+    parts.emblem.rotation.x += dt * 0.8;
+    parts.emblem.position.y = (parts.head.position.y + 16) + Math.sin(ud.breathe * 1.3) * 1.6;
+
+    // 元素使浮球公轉 (適用程序化模型與 GLB 皮膚模型)
+    if (parts.handR) {
+      for (const o of parts.handR.children) {
+        if (o.userData && o.userData.orbit !== undefined) {
+          const a = ud.breathe * 2 + o.userData.orbit * (Math.PI * 2 / 3);
+          o.position.set(4 + Math.cos(a) * 5, 2, Math.sin(a) * 5);
+        }
+      }
     }
-  }
 
-  // ---- 狀態環 / 隱身淡出 ----
-  const shieldOn = p && p.shield > 0;
-  parts.shieldRing.visible = shieldOn;
-  parts.shieldShell.visible = shieldOn;
-  if (shieldOn) {
-    const pulse = 0.8 + 0.2 * Math.sin(ud.breathe * 4);
-    const strength = Math.min(1, (p.shield || 0) / Math.max(1, p.maxHp || 1));
-    parts.shieldRing.scale.setScalar(0.96 + 0.1 * pulse);
-    parts.shieldRing.material.emissiveIntensity = 1.9 + 1.0 * pulse;
-    parts.shieldRing.material.opacity = 0.72 + 0.2 * pulse;
-    parts.shieldShell.scale.set(1 + 0.04 * pulse, 1.42 + 0.05 * pulse, 1 + 0.04 * pulse);
-    parts.shieldShell.material.opacity = 0.12 + 0.12 * pulse + 0.08 * strength;
-  }
-  const rageOn = p && p.effects && (p.effects.rage || p.effects.overdrive);
-  parts.rageRing.visible = !!rageOn;
-  if (rageOn) {
-    const pulse = 0.85 + 0.15 * Math.sin(ud.breathe * 6);
-    parts.rageRing.scale.setScalar(pulse);
-  }
-
-  const burnOn = p && p.effects && p.effects.burn;
-  parts.burnRing.visible = !!burnOn;
-  if (burnOn) {
-    const pulse = 0.8 + 0.2 * Math.sin(ud.breathe * 9);
-    parts.burnRing.scale.setScalar(pulse);
-    parts.burnRing.material.emissiveIntensity = 1.8 + 1.0 * pulse;
-  }
-
-  // 凍結外殼：快速閃燈 + 旋轉
-  const frozenOn = p && p.effects && p.effects.frozen;
-  parts.frozenRingLow.visible = !!frozenOn;
-  parts.frozenRingHigh.visible = !!frozenOn;
-  if (frozenOn) {
-    const pulse = 0.88 + 0.12 * Math.sin(ud.breathe * 12);
-    const spin = ud.breathe * 0.8; // 慢速旋轉
-    parts.frozenRingLow.scale.setScalar(pulse);
-    parts.frozenRingHigh.scale.setScalar(pulse);
-    parts.frozenRingLow.rotation.z = spin;
-    parts.frozenRingHigh.rotation.z = -spin * 1.4;
-    const glow = 2.6 + 1.4 * Math.sin(ud.breathe * 14);
-    parts.frozenRingLow.material.emissiveIntensity = glow;
-    parts.frozenRingHigh.material.emissiveIntensity = glow * 0.85;
-  }
-
-  // 暈眩光環：地面金圈 + 頭頂星星環旋轉
-  const stunOn = p && p.effects && p.effects.stun && p.effects.stun.remaining > 0;
-  if (parts.stunRing) {
-    parts.stunRing.visible = !!stunOn;
-    parts.stunHalo.visible = !!stunOn;
-    if (stunOn) {
-      const pulse = 0.85 + 0.15 * Math.sin(ud.breathe * 10);
-      parts.stunRing.scale.setScalar(pulse);
-      parts.stunRing.rotation.z = ud.breathe * 1.5;
-      parts.stunHalo.rotation.x = ud.breathe * 6;
-      parts.stunHalo.rotation.y = ud.breathe * 4;
-      parts.stunRing.material.emissiveIntensity = 2.6 + 1.2 * Math.sin(ud.breathe * 12);
+    if (parts.starOrbitShards) {
+      const orbit = p && p.starOrbit;
+      const count = Math.max(0, Math.min(3, orbit?.shards ?? 0));
+      const baseAngle = orbit?.angle ?? ud.breathe * 1.9;
+      for (let i = 0; i < parts.starOrbitShards.length; i++) {
+        const shard = parts.starOrbitShards[i];
+        shard.visible = i < count;
+        if (!shard.visible) continue;
+        const a = baseAngle + i * (Math.PI * 2 / Math.max(1, count));
+        const r = 56 + count * 10;
+        shard.position.set(Math.cos(a) * r, 31 + Math.sin(a * 2) * 4, Math.sin(a) * r);
+        shard.rotation.x += dt * 1.2;
+        shard.rotation.y += dt * 2.8;
+        shard.rotation.z += dt * 0.8;
+        shard.scale.setScalar(1 + Math.sin(ud.breathe * 2 + i) * 0.035);
+      }
     }
-  }
 
-  // 定身根系：地面綠圈脈動
-  const rootOn = p && p.effects && p.effects.root && p.effects.root.remaining > 0;
-  if (parts.rootRing) {
-    parts.rootRing.visible = !!rootOn;
-    if (rootOn) {
-      const pulse = 0.9 + 0.1 * Math.sin(ud.breathe * 8);
-      parts.rootRing.scale.setScalar(pulse);
-      parts.rootRing.material.emissiveIntensity = 2.0 + 0.8 * Math.sin(ud.breathe * 10);
+    // 魔劍士劍氣球體：依 swordEnergy 數量顯示
+    if (parts.swordEnergyOrbs) {
+      const se = p && p.magicSwordsman;
+      const count = se ? Math.max(0, Math.min(5, se.swordEnergy || 0)) : 0;
+      const baseY = 18;
+      for (let i = 0; i < parts.swordEnergyOrbs.length; i++) {
+        const orb = parts.swordEnergyOrbs[i];
+        orb.visible = i < count;
+        if (!orb.visible) continue;
+        const a = ud.breathe * 1.4 + i * (Math.PI * 2 / Math.max(1, count));
+        const r = 48 + count * 3;
+        orb.position.set(Math.cos(a) * r, baseY + Math.sin(a * 1.5 + i * 1.2) * 8, Math.sin(a) * r);
+        orb.rotation.x += dt * 1.6;
+        orb.rotation.y += dt * 2.5;
+        orb.rotation.z += dt * 1.0;
+        const pulse = 1 + Math.sin(ud.breathe * 3 + i * 1.5) * 0.08;
+        orb.scale.setScalar(pulse);
+      }
     }
-  }
 
-  // ---- 臉部表情：中性 / 專注(出手) / 痛苦(受擊)；hurt 優先 ----
-  if (parts.face && !ud.skin) {
-    const f = parts.face;
-    let tEye = 1, tBrowTilt = 0, tBrowY = 0, tMouth = 1, tFlinch = 0;
-    if (ud.hurtT > 0) {
-      const k = ud.hurtT / 0.42;
-      tEye = 0.25; tBrowTilt = -0.5; tBrowY = 0.9; tMouth = 2.4; tFlinch = 0.6 * k;
-    } else if (ud.focusT > 0) {
-      tEye = 0.6; tBrowTilt = 0.5; tBrowY = -0.6; tMouth = 0.55;
+    // 魔劍士額外浮游小劍氣（3 顆，始終可見，低速公轉）
+    if (parts.extraOrbs) {
+      for (let i = 0; i < parts.extraOrbs.length; i++) {
+        const extra = parts.extraOrbs[i];
+        const a = ud.breathe * 0.6 + i * (Math.PI * 2 / 3);
+        const r = 62;
+        extra.position.set(Math.cos(a) * r, 22 + Math.sin(a * 2 + i) * 5, Math.sin(a) * r);
+        extra.rotation.x += dt * 0.8;
+        extra.rotation.y += dt * 1.2;
+        extra.rotation.z += dt * 0.4;
+        extra.scale.setScalar(1 + Math.sin(ud.breathe * 1.5 + i) * 0.05);
+      }
     }
-    const ease = Math.min(1, dt * 16);
-    ud.eEye += (tEye - ud.eEye) * ease;
-    ud.eBrowTilt += (tBrowTilt - ud.eBrowTilt) * ease;
-    ud.eBrowY += (tBrowY - ud.eBrowY) * ease;
-    ud.eMouth += (tMouth - ud.eMouth) * ease;
-    ud.eFlinch += (tFlinch - ud.eFlinch) * ease;
-    f.eyeL.scale.y = f.eyeR.scale.y = ud.eEye;
-    f.browL.rotation.x = ud.eBrowTilt;
-    f.browR.rotation.x = -ud.eBrowTilt;
-    f.browL.position.y = f.browR.position.y = f.browY + ud.eBrowY;
-    f.mouth.scale.y = ud.eMouth;
-    f.group.position.x = -ud.eFlinch * 1.6;
-    f.group.rotation.z = ud.eFlinch * 0.18;
-  }
 
-  // 隱身：淡化所有皮膚材質 (敵人更透明、自己半透明)
-  // 倒地 (闖關復活機制)：灰化半透明 + 前傾倒地姿態，讓隊友看得到、找得到去復活。
-  if (info.downed) {
-    group.position.y = (ud.baseY || 0) + 2;
-    group.rotation.x = Math.PI * 0.42;
-  } else if (group.rotation.x) {
-    group.rotation.x += (0 - group.rotation.x) * Math.min(1, dt * 12); // 復活後回正
-    if (Math.abs(group.rotation.x) < 0.01) group.rotation.x = 0;
-  }
-  const invis = p && p.effects && p.effects.invis;
-  const evading = p && p.effects && p.effects.evading;
-  let targetOp = info.downed ? 0.5 : 1;
-  if (invis) targetOp = info.isSelf ? 0.42 : 0.12;
-  else if (evading) targetOp = 0.55;
-  // 假分身 (R4 霜雪刺客)：半透明 + 閃爍，與「實心」真身做對比，教玩家認真身
-  if (info.fake) {
-    const flick = 0.5 + 0.5 * Math.sin(ud.breathe * 5 + ud.phase);
-    targetOp = Math.min(targetOp, 0.32 + 0.22 * flick);
-  }
-  for (const m of ud.skinMats) {
-    m.opacity += (targetOp - m.opacity) * Math.min(1, dt * 10);
-  }
-  if (ud.skin) {
-    for (const m of ud.skin.glbMats) {
+    // 魔劍士披風飄動
+    if (parts.cape) {
+      const sway = Math.sin(ud.breathe * 0.8) * 0.06;
+      parts.cape.rotation.z = sway;
+    }
+    if (parts.capeTrim) {
+      const sway = Math.sin(ud.breathe * 0.8 + 0.3) * 0.08;
+      parts.capeTrim.rotation.z = sway;
+    }
+
+    // 天羽箭暴 — 磅礴雙翼：依 p.barrage 展開/收合，作為 player group 子物件自動跟隨移動。
+    if (parts.barrageWings) {
+      const on = p && p.barrage;
+      ud.wingT = on ? Math.min(1, (ud.wingT || 0) + dt * 3.0)   // 展開 ~0.33s
+                    : Math.max(0, (ud.wingT || 0) - dt * 4.5);  // 收合更快
+      const wings = parts.barrageWings;
+      wings.visible = ud.wingT > 0.001;
+      if (wings.visible) {
+        const e = ud.wingT * ud.wingT * (3 - 2 * ud.wingT);     // smoothstep 展開緩動
+        const flap = Math.sin(ud.breathe * 5) * 0.14;           // 拍動
+        for (const side of wings.children) {
+          const sz = side.userData.side;
+          const feathers = side.userData.feathers;
+          for (let i = 0; i < feathers.length; i++) {
+            const fan = feathers[i].userData.fan;
+            // 收合(e=0)時幾近直立貼背；展開時外擺成扇 + 拍動
+            feathers[i].rotation.x = sz * (0.05 + fan * 1.05 * e + flap * (0.4 + i * 0.12) * e);
+          }
+        }
+        wings.scale.setScalar(0.7 + 0.6 * e);                   // 展開後放大到 1.3×
+        if (wings.userData.mat) wings.userData.mat.opacity = 0.25 + 0.72 * e;
+      }
+    }
+
+    // 鳥獵鷹隼：平時棲於肩、攻擊時「飛出俯衝」再返回。
+    // 由 sim 的 p._falcon.flight = { t, dur } 驅動（falcon.ts）；模型恆面向 +X → 往 +X 飛即朝敵。
+    if (parts.falcon) {
+      const fal = parts.falcon;
+      const rest = fal.userData.rest;
+      const wings = fal.userData.wings || [];
+      const fl = p && p._falcon && p._falcon.flight;
+      ud.falconFlap = (ud.falconFlap || 0) + dt * (fl ? 26 : 6);
+      if (fl) {
+        const u = Math.min(1, fl.t / (fl.dur || 0.62));
+        const arc = Math.sin(u * Math.PI);          // 0→1→0：去程＋回程
+        // 把「世界位移(tdx,tdy)」轉成模型本地座標（group 已繞 Y 轉 ud.curFacing）→ 飛到敵人實際位置。
+        const th = ud.curFacing || 0, c2 = Math.cos(th), s2 = Math.sin(th);
+        const wx = fl.tdx || 0, wz = fl.tdy || 0;
+        const lx = wx * c2 - wz * s2;
+        const lz = wx * s2 + wz * c2;
+        // 弧線飛行：沿「棲位→敵人」推進(arc)，外加垂直方向的側擺 → 去程/回程走不同側形成弧/環，不是直線來回。
+        const dirx = lx - rest.x, dirz = lz - rest.z;
+        const dl = Math.hypot(dirx, dirz) || 1;
+        const perpx = -dirz / dl, perpz = dirx / dl;
+        const lateral = Math.sin(u * Math.PI * 2) * Math.min(70, dl * 0.22); // 來回不同側的弧度（隨距離、上限 70）
+        fal.position.x = rest.x + dirx * arc + perpx * lateral;
+        fal.position.z = rest.z + dirz * arc + perpz * lateral;
+        fal.position.y = rest.y + (24 - rest.y) * arc + Math.sin(u * Math.PI) * 8; // 拋物高度：先升後俯衝下探
+        // 鷹頭朝「實際飛行方向」：用上一幀位移求向量（含弧線側擺）→ 去程朝敵、回程朝你都自然。
+        const hx = fal.position.x - (ud.falPrevX != null ? ud.falPrevX : fal.position.x);
+        const hz = fal.position.z - (ud.falPrevZ != null ? ud.falPrevZ : fal.position.z);
+        if (Math.hypot(hx, hz) > 0.05) fal.rotation.y = Math.atan2(-hz, hx);
+        ud.falPrevX = fal.position.x; ud.falPrevZ = fal.position.z;
+        fal.rotation.z = -arc * 0.4 + lateral * 0.01;    // 俯衝前傾 + 轉彎側傾
+        const flap = Math.sin(ud.falconFlap) * 0.6;      // 急速拍翼
+        for (const w of wings) w.rotation.x = w.userData.side * (0.2 + flap);
+        const storm = p && p._falcon && p._falcon.frenzy ? 1.3 : 1; // 大絕風暴：鷹更巨大有壓迫感
+        fal.scale.setScalar((fal.userData.baseScale || 1) * (1.5 + arc * 0.5) * storm);
+      } else {
+        // 棲息：輕微上下浮動 + 緩慢拍翼，平滑回到棲位。
+        fal.position.x += (rest.x - fal.position.x) * Math.min(1, dt * 10);
+        fal.position.z += (rest.z - fal.position.z) * Math.min(1, dt * 10);
+        fal.position.y = rest.y + Math.sin(ud.breathe * 2) * 0.6;
+        fal.rotation.z += (0 - fal.rotation.z) * Math.min(1, dt * 10);
+        fal.rotation.y += (0 - fal.rotation.y) * Math.min(1, dt * 10);
+        fal.scale.setScalar(fal.userData.baseScale || 1);
+        ud.falPrevX = null; ud.falPrevZ = null;
+        const flap = Math.sin(ud.falconFlap) * 0.12;
+        for (const w of wings) w.rotation.x = w.userData.side * (0.1 + flap);
+      }
+    }
+
+    // 法師浮空法術書懸浮與旋轉動畫
+    if (ud.skin && ud.skin.floatingItem) {
+      const book = ud.skin.floatingItem;
+      book.position.y = 2.5 + Math.sin(ud.breathe * 2) * 0.4;
+      book.rotation.y = Math.sin(ud.breathe * 0.5) * 0.25;
+      if (book.children[2]) {
+        book.children[2].rotation.x += dt * 1.5;
+        book.children[2].rotation.y += dt * 0.8;
+        book.children[2].position.y = 1.2 + Math.sin(ud.breathe * 4) * 0.15;
+      }
+    }
+
+    // ---- 狀態環 / 隱身淡出 ----
+    const shieldOn = p && p.shield > 0;
+    parts.shieldRing.visible = shieldOn;
+    parts.shieldShell.visible = shieldOn;
+    if (shieldOn) {
+      const pulse = 0.8 + 0.2 * Math.sin(ud.breathe * 4);
+      const strength = Math.min(1, (p.shield || 0) / Math.max(1, p.maxHp || 1));
+      parts.shieldRing.scale.setScalar(0.96 + 0.1 * pulse);
+      parts.shieldRing.material.emissiveIntensity = 1.9 + 1.0 * pulse;
+      parts.shieldRing.material.opacity = 0.72 + 0.2 * pulse;
+      parts.shieldShell.scale.set(1 + 0.04 * pulse, 1.42 + 0.05 * pulse, 1 + 0.04 * pulse);
+      parts.shieldShell.material.opacity = 0.12 + 0.12 * pulse + 0.08 * strength;
+    }
+    const rageOn = p && p.effects && (p.effects.rage || p.effects.overdrive);
+    parts.rageRing.visible = !!rageOn;
+    if (rageOn) {
+      const pulse = 0.85 + 0.15 * Math.sin(ud.breathe * 6);
+      parts.rageRing.scale.setScalar(pulse);
+    }
+
+    const burnOn = p && p.effects && p.effects.burn;
+    parts.burnRing.visible = !!burnOn;
+    if (burnOn) {
+      const pulse = 0.8 + 0.2 * Math.sin(ud.breathe * 9);
+      parts.burnRing.scale.setScalar(pulse);
+      parts.burnRing.material.emissiveIntensity = 1.8 + 1.0 * pulse;
+    }
+
+    // 凍結外殼：快速閃燈 + 旋轉
+    const frozenOn = p && p.effects && p.effects.frozen;
+    parts.frozenRingLow.visible = !!frozenOn;
+    parts.frozenRingHigh.visible = !!frozenOn;
+    if (frozenOn) {
+      const pulse = 0.88 + 0.12 * Math.sin(ud.breathe * 12);
+      const spin = ud.breathe * 0.8; // 慢速旋轉
+      parts.frozenRingLow.scale.setScalar(pulse);
+      parts.frozenRingHigh.scale.setScalar(pulse);
+      parts.frozenRingLow.rotation.z = spin;
+      parts.frozenRingHigh.rotation.z = -spin * 1.4;
+      const glow = 2.6 + 1.4 * Math.sin(ud.breathe * 14);
+      parts.frozenRingLow.material.emissiveIntensity = glow;
+      parts.frozenRingHigh.material.emissiveIntensity = glow * 0.85;
+    }
+
+    // 暈眩光環：地面金圈 + 頭頂星星環旋轉
+    const stunOn = p && p.effects && p.effects.stun && p.effects.stun.remaining > 0;
+    if (parts.stunRing) {
+      parts.stunRing.visible = !!stunOn;
+      parts.stunHalo.visible = !!stunOn;
+      if (stunOn) {
+        const pulse = 0.85 + 0.15 * Math.sin(ud.breathe * 10);
+        parts.stunRing.scale.setScalar(pulse);
+        parts.stunRing.rotation.z = ud.breathe * 1.5;
+        parts.stunHalo.rotation.x = ud.breathe * 6;
+        parts.stunHalo.rotation.y = ud.breathe * 4;
+        parts.stunRing.material.emissiveIntensity = 2.6 + 1.2 * Math.sin(ud.breathe * 12);
+      }
+    }
+
+    // 定身根系：地面綠圈脈動
+    const rootOn = p && p.effects && p.effects.root && p.effects.root.remaining > 0;
+    if (parts.rootRing) {
+      parts.rootRing.visible = !!rootOn;
+      if (rootOn) {
+        const pulse = 0.9 + 0.1 * Math.sin(ud.breathe * 8);
+        parts.rootRing.scale.setScalar(pulse);
+        parts.rootRing.material.emissiveIntensity = 2.0 + 0.8 * Math.sin(ud.breathe * 10);
+      }
+    }
+
+    // ---- 臉部表情：中性 / 專注(出手) / 痛苦(受擊)；hurt 優先 ----
+    if (parts.face && !ud.skin) {
+      const f = parts.face;
+      let tEye = 1, tBrowTilt = 0, tBrowY = 0, tMouth = 1, tFlinch = 0;
+      if (ud.hurtT > 0) {
+        const k = ud.hurtT / 0.42;
+        tEye = 0.25; tBrowTilt = -0.5; tBrowY = 0.9; tMouth = 2.4; tFlinch = 0.6 * k;
+      } else if (ud.focusT > 0) {
+        tEye = 0.6; tBrowTilt = 0.5; tBrowY = -0.6; tMouth = 0.55;
+      }
+      const ease = Math.min(1, dt * 16);
+      ud.eEye += (tEye - ud.eEye) * ease;
+      ud.eBrowTilt += (tBrowTilt - ud.eBrowTilt) * ease;
+      ud.eBrowY += (tBrowY - ud.eBrowY) * ease;
+      ud.eMouth += (tMouth - ud.eMouth) * ease;
+      ud.eFlinch += (tFlinch - ud.eFlinch) * ease;
+      f.eyeL.scale.y = f.eyeR.scale.y = ud.eEye;
+      f.browL.rotation.x = ud.eBrowTilt;
+      f.browR.rotation.x = -ud.eBrowTilt;
+      f.browL.position.y = f.browR.position.y = f.browY + ud.eBrowY;
+      f.mouth.scale.y = ud.eMouth;
+      f.group.position.x = -ud.eFlinch * 1.6;
+      f.group.rotation.z = ud.eFlinch * 0.18;
+    }
+
+    // 隱身：淡化所有皮膚材質 (敵人更透明、自己半透明)
+    // 倒地 (闖關復活機制)：灰化半透明 + 前傾倒地姿態，讓隊友看得到、找得到去復活。
+    if (info.downed) {
+      group.position.y = (ud.baseY || 0) + 2;
+      group.rotation.x = Math.PI * 0.42;
+    } else if (group.rotation.x) {
+      group.rotation.x += (0 - group.rotation.x) * Math.min(1, dt * 12); // 復活後回正
+      if (Math.abs(group.rotation.x) < 0.01) group.rotation.x = 0;
+    }
+    const invis = p && p.effects && p.effects.invis;
+    const evading = p && p.effects && p.effects.evading;
+    let targetOp = info.downed ? 0.5 : 1;
+    if (invis) targetOp = info.isSelf ? 0.42 : 0.12;
+    else if (evading) targetOp = 0.55;
+    // 假分身 (R4 霜雪刺客)：半透明 + 閃爍，與「實心」真身做對比，教玩家認真身
+    if (info.fake) {
+      const flick = 0.5 + 0.5 * Math.sin(ud.breathe * 5 + ud.phase);
+      targetOp = Math.min(targetOp, 0.32 + 0.22 * flick);
+    }
+    for (const m of ud.skinMats) {
       m.opacity += (targetOp - m.opacity) * Math.min(1, dt * 10);
     }
+    if (ud.skin) {
+      for (const m of ud.skin.glbMats) {
+        m.opacity += (targetOp - m.opacity) * Math.min(1, dt * 10);
+      }
+    }
+
+    // 懸浮效果：若實體具有 floatHeight 屬性，使其在 3D 空間中懸浮並微幅上下漂浮
+    const floatHeight = (p && p.floatHeight) || 0;
+    if (floatHeight > 0) {
+      const t = performance.now() * 0.0035;
+      group.position.y = floatHeight + Math.sin(t * 3.0) * 1.5;
+    }
+
+    // 揮砍職業武器巨型化 (在出手/普通攻擊期間把刀劍/雙斧模組做到與扇形區域一樣大)
+    if (parts.handR) {
+      const bladeGroup = parts.handR.getObjectByName('magic-sword-blade') || 
+                         parts.handR.getObjectByName('blade-group') || 
+                         parts.handR.getObjectByName('weapon-blade') || 
+                         parts.handR;
+      if (bladeGroup) {
+        if (ud.atkT > 0 && ud.atkDur > 0 && ud.atkKind === 'swing' && cfg.stretchBlade) {
+          const ap = 1 - ud.atkT / ud.atkDur;
+          let scaleY = 1.0;
+          let scaleXZ = 1.0;
+          if (ap < 0.25) {
+            const t = smoothstep(ap / 0.25);
+            scaleY = 1.0 + 2.2 * t;      // 逐漸拉長到 3.2 倍
+            scaleXZ = 1.0 + 0.25 * t;    // 寬度與厚度微幅拓寬到 1.25 倍
+          } else if (ap < 0.55) {
+            const t = smoothstep((ap - 0.25) / 0.3);
+            scaleY = 3.2 - 0.8 * t;      // 揮砍瞬間稍微收縮到 2.4 倍
+            scaleXZ = 1.25 - 0.1 * t;    // 寬度與厚度收縮到 1.15 倍
+          } else {
+            const t = smoothstep((ap - 0.55) / 0.45);
+            scaleY = 2.4 - 1.4 * t;      // 揮完縮回 1.0 倍
+            scaleXZ = 1.15 - 0.15 * t;   // 寬度厚度縮回 1.0 倍
+          }
+          
+          if (bladeGroup === parts.handR) {
+            // 若為整把武器縮放，採用等比縮放以防手把拉長變形
+            const baseScale = ud.skin ? 0.7 : 1.0;
+            bladeGroup.scale.setScalar(baseScale * scaleY);
+          } else {
+            bladeGroup.scale.set(scaleXZ, scaleY, scaleXZ);
+          }
+        } else {
+          if (bladeGroup === parts.handR) {
+            const defaultScale = ud.skin ? 0.7 : 1.0;
+            bladeGroup.scale.setScalar(defaultScale);
+          } else {
+            bladeGroup.scale.set(1.0, 1.0, 1.0);
+          }
+        }
+      }
+    }
+
+    updateBossModelVisuals(group, ud, dt, { ...info, targetOpacity: targetOp });
+  } catch (err) {
+    console.error("animateModel ERROR:", err);
+    if (typeof document !== 'undefined') {
+      let div = document.getElementById('debug-error-overlay');
+      if (!div) {
+        div = document.createElement('div');
+        div.id = 'debug-error-overlay';
+        div.style.position = 'fixed';
+        div.style.top = '10px';
+        div.style.left = '10px';
+        div.style.right = '10px';
+        div.style.padding = '20px';
+        div.style.background = 'rgba(255, 0, 0, 0.9)';
+        div.style.color = 'white';
+        div.style.fontFamily = 'monospace';
+        div.style.fontSize = '14px';
+        div.style.zIndex = '99999';
+        div.style.whiteSpace = 'pre-wrap';
+        div.style.borderRadius = '8px';
+        div.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+        document.body.appendChild(div);
+      }
+      div.textContent = `animateModel Error:\n${err.message}\n\nStack:\n${err.stack}`;
+    }
+    throw err;
   }
-
-  // 懸浮效果：若實體具有 floatHeight 屬性，使其在 3D 空間中懸浮並微幅上下漂浮
-  const floatHeight = (p && p.floatHeight) || 0;
-  if (floatHeight > 0) {
-    const t = performance.now() * 0.0035;
-    group.position.y = floatHeight + Math.sin(t * 3.0) * 1.5;
-  }
-
-  updateBossModelVisuals(group, ud, dt, { ...info, targetOpacity: targetOp });
-
 }

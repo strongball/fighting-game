@@ -209,6 +209,19 @@ export function ultimateBurst(ctx, c, opt = {}) {
   ctx.sceneMgr.addFlash(opt.flash ?? 0.38, color);
 }
 
+// 根據發招點 c，搜尋場景中距離小於 15 的玩家模型，取得正/反手揮砍方向 (正手=1.0, 反手=-1.0)
+export function getSwingDir(ctx, c) {
+  let isBackhand = false;
+  ctx.scene.traverse((obj) => {
+    if (obj.userData && obj.userData.parts && Math.hypot(obj.position.x - c.x, obj.position.z - c.z) < 15) {
+      if (obj.userData.swingCount && obj.userData.swingCount % 2 === 0) {
+        isBackhand = true;
+      }
+    }
+  });
+  return isBackhand ? -1.0 : 1.0;
+}
+
 function pick(c) {
   if (Array.isArray(c)) return c[(Math.random() * c.length) | 0];
   return c || '#ffffff';

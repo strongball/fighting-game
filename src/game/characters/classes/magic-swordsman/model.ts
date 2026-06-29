@@ -2,7 +2,8 @@
 import * as THREE from 'three';
 import { buildMagicSwordsmanWeapon } from './weapon.ts';
 
-export const modelConfig = { bulk: 1.9, weapon: 'magic-sword', skinKind: 'metal', headgear: '', pauldron: true };
+// pauldron set to false so we can craft highly-detailed pauldrons manually inside buildModel
+export const modelConfig = { bulk: 1.9, weapon: 'magic-sword', skinKind: 'metal', headgear: '', pauldron: false, swingStyle: 'horizontal', stretchBlade: true };
 
 export function buildModel(ctx) {
   const {
@@ -13,23 +14,24 @@ export function buildModel(ctx) {
     faceGroup, helmAddons, mkLimb, addAccent,
   } = ctx;
 
-  // ── 軀幹：簡潔六角裝甲 ──
-  const armorMat = reg(mat(shade(base, 0.06), { rough: 0.3, metal: 0.75 }));
+  // ── 軀幹：金屬暗藍六角裝甲 ──
+  const armorBaseColor = '#13143c'; // Dark metallic indigo-blue
+  const armorMat = reg(mat(armorBaseColor, { rough: 0.25, metal: 0.85 }));
   const torso = new THREE.Mesh(new THREE.CylinderGeometry(torsoW * 0.48, torsoW * 0.56, torsoH + 1, 6), armorMat);
 
-  // 胸口魔能核心
-  const coreMat = reg(mat('#6c5ce7', { emissive: new THREE.Color('#6c5ce7'), ei: 3.0, rough: 0.1, metal: 0.6 }));
+  // 胸口魔能核心 (發光青藍色)
+  const coreMat = reg(mat('#00f0ff', { emissive: new THREE.Color('#00d2ff'), ei: 3.5, rough: 0.1, metal: 0.5 }));
   const core = new THREE.Mesh(new THREE.OctahedronGeometry(torsoW * 0.2, 0), coreMat);
   core.position.set(frontX * 0.55, torsoH * 0.08, 0);
   torso.add(core);
 
-  const innerCoreMat = reg(mat('#f0f0ff', { emissive: new THREE.Color('#a29bfe'), ei: 3.5, rough: 0.1, metal: 0.3 }));
+  const innerCoreMat = reg(mat('#ffffff', { emissive: new THREE.Color('#e0ffff'), ei: 4.5, rough: 0.05, metal: 0.2 }));
   const innerCore = new THREE.Mesh(new THREE.OctahedronGeometry(torsoW * 0.09, 0), innerCoreMat);
   innerCore.position.copy(core.position);
   torso.add(innerCore);
 
   // 胸口環
-  const ringMat = reg(mat('#a29bfe', { emissive: new THREE.Color('#a29bfe'), ei: 2.2, rough: 0.2, metal: 0.4 }));
+  const ringMat = reg(mat('#00f3ff', { emissive: new THREE.Color('#00f3ff'), ei: 2.5, rough: 0.2, metal: 0.4 }));
   const chestRing = new THREE.Mesh(new THREE.TorusGeometry(torsoW * 0.36, 1.0, 8, 24), ringMat);
   chestRing.position.copy(core.position);
   chestRing.rotation.x = Math.PI / 3;
@@ -48,7 +50,7 @@ export function buildModel(ctx) {
   torso.add(trimBot);
 
   // 腰帶（暗色 + 金色扣環）
-  const beltMat = reg(mat(shade(base, -0.35), { rough: 0.7, metal: 0.1 }));
+  const beltMat = reg(mat('#0a0b1c', { rough: 0.7, metal: 0.1 }));
   const belt = new THREE.Mesh(new THREE.TorusGeometry(torsoW * 0.54, 1.6, 6, 6), beltMat);
   belt.position.set(0, -torsoH * 0.28, 0);
   belt.rotation.x = Math.PI / 2;
@@ -57,9 +59,9 @@ export function buildModel(ctx) {
   buckle.position.set(frontX * 0.35, -torsoH * 0.28, 0);
   torso.add(buckle);
 
-  // 戰裙（三片裝甲板）
-  const skirtMat = reg(mat(shade(base, -0.08), { rough: 0.4, metal: 0.7 }));
-  const skirtTrim = reg(mat('#ffd700', { emissive: '#ffd700', ei: 0.5, rough: 0.3, metal: 0.8 }));
+  // 戰裙（三片裝甲板，暗藍色 + 金黃邊）
+  const skirtMat = reg(mat('#0f102b', { rough: 0.35, metal: 0.8 }));
+  const skirtTrim = reg(mat('#ffd700', { emissive: '#ffd700', ei: 0.3, rough: 0.3, metal: 0.8 }));
   for (let i = -1; i <= 1; i++) {
     const plate = new THREE.Mesh(new THREE.BoxGeometry(2.5, 5.0, 4.0), skirtMat);
     plate.position.set(0, -torsoH * 0.5 - 2.5, i * 5.5);
@@ -70,29 +72,29 @@ export function buildModel(ctx) {
     plate.add(plateEdge);
   }
 
-  // ── 披風（背後飄逸布幔）──
-  const capeMat = reg(mat(shade(base, -0.15), { rough: 0.85, metal: 0.05 }));
+  // ── 披風（深靛藍背後披風，青藍流光內襯）──
+  const capeMat = reg(mat('#0a0b22', { rough: 0.8, metal: 0.15 }));
   const cape = new THREE.Mesh(new THREE.BoxGeometry(2.0, torsoH * 1.4, torsoW * 0.75), capeMat);
   cape.castShadow = true;
   cape.position.set(-torsoD * 0.55, shoulderY - torsoH * 0.55, 0);
   cape.rotation.x = 0.15;
 
-  const capeInnerMat = reg(mat('#6c5ce7', { transparent: true, opacity: 0.3, emissive: '#6c5ce7', ei: 1.2, side: THREE.DoubleSide }));
+  const capeInnerMat = reg(mat('#00d2ff', { transparent: true, opacity: 0.35, emissive: '#00d2ff', ei: 1.5, side: THREE.DoubleSide }));
   const capeTrim = new THREE.Mesh(new THREE.BoxGeometry(0.8, torsoH * 1.2, torsoW * 0.7), capeInnerMat);
   capeTrim.castShadow = true;
   capeTrim.position.set(-torsoD * 0.45, shoulderY - torsoH * 0.52, 0);
   capeTrim.rotation.x = 0.12;
 
-  // ── 浮游劍氣球體（類似星環使的 shard 風格，5 顆沿環軌道排列）──
-  const floatOrbMat = reg(new THREE.MeshBasicMaterial({ color: new THREE.Color('#a29bfe'), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
-  const floatCoreMat = reg(new THREE.MeshBasicMaterial({ color: new THREE.Color('#f0f0ff'), transparent: true, opacity: 0.9 }));
-  const floatRingMat = reg(new THREE.MeshBasicMaterial({ color: new THREE.Color('#6c5ce7'), transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+  // ── 浮游劍氣球體（5 顆沿軌道排列，青藍發光，滿層變金黃）──
+  const floatOrbMat = reg(new THREE.MeshBasicMaterial({ color: new THREE.Color('#00f0ff'), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+  const floatCoreMat = reg(new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffffff'), transparent: true, opacity: 0.9 }));
+  const floatRingMat = reg(new THREE.MeshBasicMaterial({ color: new THREE.Color('#00d2ff'), transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
   const swordEnergyOrbs = [];
   for (let i = 0; i < 5; i++) {
     const orb = new THREE.Group();
     const isLast = i === 4;
     const size = isLast ? 1.3 : 1.0;
-    const col = isLast ? '#fd79a8' : '#a29bfe';
+    const col = isLast ? '#ffd700' : '#00f3ff';
     const colMat = reg(new THREE.MeshBasicMaterial({ color: new THREE.Color(col), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
     const orbCore = new THREE.Mesh(new THREE.SphereGeometry(4.2 * size, 10, 8), floatCoreMat);
     const orbGlow = new THREE.Mesh(new THREE.IcosahedronGeometry(7.5 * size, 1), colMat);
@@ -105,8 +107,8 @@ export function buildModel(ctx) {
     swordEnergyOrbs.push(orb);
   }
 
-  // ── 額外浮游小劍氣（參考星環使的飄浮 shard）──
-  const extraMat = reg(mat('#fd79a8', { transparent: true, opacity: 0.4, emissive: '#fd79a8', ei: 1.5, side: THREE.DoubleSide }));
+  // ── 額外浮游小劍氣（青藍）──
+  const extraMat = reg(mat('#00f3ff', { transparent: true, opacity: 0.4, emissive: '#00f3ff', ei: 1.5, side: THREE.DoubleSide }));
   const extraOrbs = [];
   for (let i = 0; i < 3; i++) {
     const extra = new THREE.Mesh(new THREE.OctahedronGeometry(3.5, 0), extraMat);
@@ -116,19 +118,19 @@ export function buildModel(ctx) {
     extraOrbs.push(extra);
   }
 
-  // ── 頭部：簡潔鑽石頭盔 ──
-  const helmMat = reg(mat(shade(base, 0.1), { rough: 0.3, metal: 0.8 }));
+  // ── 頭部：簡潔鑽石頭盔 (深靛藍面盔 + T形發光青藍眼縫 + 金冠 + 紅羽冠) ──
+  const helmMat = reg(mat('#15163b', { rough: 0.28, metal: 0.85 }));
   const head = new THREE.Group();
   const helmMain = new THREE.Mesh(new THREE.OctahedronGeometry(6.8 * bulk, 0), helmMat);
   head.add(helmMain);
 
   // 前方護面甲 + T 形眼縫
-  const visorMat = reg(mat(shade(base, 0.18), { rough: 0.2, metal: 0.9 }));
+  const visorMat = reg(mat('#0c0d24', { rough: 0.2, metal: 0.9 }));
   const visor = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.8, 7.2), visorMat);
   visor.position.set(frontX * 0.5, 0.2, 0);
   head.add(visor);
 
-  const eyeSlitMat = reg(mat('#f0f0ff', { emissive: new THREE.Color('#a29bfe'), ei: 4.0 }));
+  const eyeSlitMat = reg(mat('#ffffff', { emissive: new THREE.Color('#00f0ff'), ei: 4.5 }));
   const eyeH = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 5.5), eyeSlitMat);
   eyeH.position.set(frontX * 1.1, 0.2, 0);
   head.add(eyeH);
@@ -137,21 +139,34 @@ export function buildModel(ctx) {
   head.add(eyeV);
 
   // 金色頭冠
-  const crestMat = reg(mat('#ffd700', { emissive: '#ffd700', ei: 0.6, rough: 0.2, metal: 0.9 }));
-  const crest = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.5, 6.0), crestMat);
+  const crest = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.5, 6.0), trimMat);
   crest.position.set(frontX * 0.3, 6.0, 0);
   head.add(crest);
-  const crestGem = new THREE.Mesh(new THREE.OctahedronGeometry(1.5, 0), reg(mat('#fd79a8', { emissive: '#fd79a8', ei: 2.5, rough: 0.1, metal: 0.3 })));
+  const crestGem = new THREE.Mesh(new THREE.OctahedronGeometry(1.5, 0), reg(mat('#00ff88', { emissive: '#00ff88', ei: 2.5, rough: 0.1, metal: 0.3 })));
   crestGem.position.set(frontX * 0.3, 5.5, 0);
   head.add(crestGem);
 
-  // ── 四肢：金屬裝甲 ──
-  const limbMat = reg(mat(shade(base, 0.04), { rough: 0.4, metal: 0.7 }));
-  const limbBootMat = reg(mat(shade(base, -0.22), { rough: 0.5, metal: 0.55 }));
-  const armL = mkLimb(0, -shoulderX, true, limbMat, limbBootMat, base);
-  const armR = mkLimb(0, shoulderX, true, limbMat, limbBootMat, base);
-  const legL = mkLimb(0, -hipX, false, limbMat, limbBootMat, base);
-  const legR = mkLimb(0, hipX, false, limbMat, limbBootMat, base);
+  // 紅色流線型長羽飾 (Plume) - 展現精緻的羽冠造型
+  const plumeMat = reg(mat('#d63031', { rough: 0.5, metal: 0.15 }));
+  const plumeG = new THREE.Group();
+  plumeG.position.set(-3.5, 6.5, 0);
+  plumeG.rotation.z = -0.4;
+  for (let i = 0; i < 4; i++) {
+    const segment = new THREE.Mesh(new THREE.BoxGeometry(4.0 - i * 0.8, 2.5, 3.5 - i * 0.6), plumeMat);
+    segment.position.set(-i * 2.8, -i * 1.2, 0);
+    segment.rotation.z = -0.15;
+    segment.castShadow = true;
+    plumeG.add(segment);
+  }
+  head.add(plumeG);
+
+  // ── 四肢：金屬裝甲 (手腳使用與軀幹相同的暗藍金屬與發光環) ──
+  const limbMat = reg(mat(armorBaseColor, { rough: 0.3, metal: 0.8 }));
+  const limbBootMat = reg(mat('#0a0b1f', { rough: 0.4, metal: 0.7 }));
+  const armL = mkLimb(0, -shoulderX, true, limbMat, limbBootMat, '#00d2ff');
+  const armR = mkLimb(0, shoulderX, true, limbMat, limbBootMat, '#00d2ff');
+  const legL = mkLimb(0, -hipX, false, limbMat, limbBootMat, '#00d2ff');
+  const legR = mkLimb(0, hipX, false, limbMat, limbBootMat, '#00d2ff');
 
   // 金色護膝
   const kneeMat = reg(mat('#ffd700', { emissive: '#ffd700', ei: 0.4, rough: 0.3, metal: 0.8 }));
@@ -163,6 +178,32 @@ export function buildModel(ctx) {
   kneeR.scale.set(1.3, 0.6, 1.0);
   kneeR.position.set(1.8, -10, 0);
   legR.add(kneeR);
+
+  // ── 自訂肩甲 (Pauldrons) ──
+  // 建立左右手對稱的肩甲板，隨手臂旋轉與移動
+  for (const [arm, side] of [[armL, -1], [armR, 1]]) {
+    const pGroup = new THREE.Group();
+    // 肩甲主裝甲板
+    const mainPlate = new THREE.Mesh(new THREE.BoxGeometry(5.8, 6.0, 7.5), limbMat);
+    mainPlate.castShadow = true;
+    mainPlate.position.set(0, 1.0, side * 0.5);
+    mainPlate.rotation.z = -side * 0.15;
+    pGroup.add(mainPlate);
+    
+    // 金色頂邊飾條
+    const edgeTrim = new THREE.Mesh(new THREE.BoxGeometry(6.2, 1.2, 8.0), trimMat);
+    edgeTrim.castShadow = true;
+    edgeTrim.position.set(0, 3.2, 0);
+    mainPlate.add(edgeTrim);
+    
+    // 側邊青藍色魔能水晶核心
+    const pCore = new THREE.Mesh(new THREE.OctahedronGeometry(1.6, 0), coreMat);
+    pCore.position.set(2.6 * side, 0, 0);
+    pCore.rotation.y = Math.PI / 2;
+    mainPlate.add(pCore);
+
+    arm.add(pGroup);
+  }
 
   return { torso, head, armL, armR, legL, legR, swordEnergyOrbs, extraOrbs, cape, capeTrim };
 }

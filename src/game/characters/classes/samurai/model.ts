@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { buildSamuraiWeapon } from './weapon.ts';
 
-export const modelConfig = { bulk: 2.04, weapon: 'katana', skinKind: 'metal', headgear: 'none', pauldron: false };
+export const modelConfig = { bulk: 2.04, weapon: 'katana', skinKind: 'metal', headgear: 'none', pauldron: false, swingStyle: 'horizontal', stretchBlade: true };
 
 // 武士：可玩版無明劍聖，複製自斬業 Boss 的黑袍、蒙眼、白髮與斷裂劍輪語彙。
 export function buildModel(ctx) {

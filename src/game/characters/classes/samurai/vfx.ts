@@ -2,7 +2,7 @@
 // 武士：可玩版斬業。白色死線、紅色命中斬痕、納刀光圈。
 import * as THREE from 'three';
 import { registerVfx } from '../../../render3d/vfx/registry.js';
-import { ring, cone, burst, sphereFlash, slashBlade } from '../../../render3d/vfx/lib.js';
+import { ring, cone, burst, sphereFlash, slashBlade, getSwingDir } from '../../../render3d/vfx/lib.js';
 
 const WHITE = '#f2f0dc';
 const RED = '#d94343';
@@ -23,7 +23,8 @@ function lineFlash(ctx, c, facing, color, len = 240, width = 7) {
 
 registerVfx('samurai_draw', {
   onCast(ctx, f, c) {
-    slashBlade(ctx, c, f.facing, { color: [WHITE, RED], len: f.range * 1.16, w: 10, swing: (f.arc || 0.9), life: 0.2 });
+    const swingDir = getSwingDir(ctx, c);
+    slashBlade(ctx, c, f.facing, { color: [WHITE, RED], len: f.range * 1.16, w: 10, swing: (f.arc || 0.9) * swingDir, life: 0.2 });
     lineFlash(ctx, c, f.facing, WHITE, f.range * 1.15, 5);
     cone(ctx, c, f.facing, { color: [WHITE, RED], count: 10, speed: 280, spread: (f.arc || 0.9) / 2.5, offset: f.range * 0.5, life: 0.28, size: 3.2 });
   },

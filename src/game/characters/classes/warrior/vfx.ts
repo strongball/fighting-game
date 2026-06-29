@@ -2,7 +2,7 @@
 // 戰士：厚重、物理、地面感。鋼鐵月牙斬 / 衝鋒塵爆 / 金色戰吼。
 import * as THREE from 'three';
 import { registerVfx } from '../../../render3d/vfx/registry.js';
-import { slashBlade, cone, ring, column, burst, addShake, addFlash, ultimateBurst } from '../../../render3d/vfx/lib.js';
+import { slashBlade, cone, ring, column, burst, addShake, addFlash, ultimateBurst, getSwingDir } from '../../../render3d/vfx/lib.js';
 
 // 大絕招 — 不動如山：黃金聖域與盾牌防禦
 registerVfx('warrior_ultimate', {
@@ -125,8 +125,10 @@ registerVfx('warrior_ultimate', {
 registerVfx('warrior_slash', {
   onCast(ctx, f, c) {
     const THREE = ctx.THREE;
-    slashBlade(ctx, c, f.facing, { color: '#ffffff', len: f.range * 1.15, w: 18, swing: (f.arc || 1.3), life: 0.22 });
-    slashBlade(ctx, c, f.facing, { color: '#ffd700', len: f.range, w: 28, swing: (f.arc || 1.3), life: 0.26 });
+    const swingDir = getSwingDir(ctx, c);
+    const sw = (f.arc || 1.3) * swingDir;
+    slashBlade(ctx, c, f.facing, { color: '#ffffff', len: f.range * 1.15, w: 18, swing: sw, life: 0.22 });
+    slashBlade(ctx, c, f.facing, { color: '#ffd700', len: f.range, w: 28, swing: sw, life: 0.26 });
     cone(ctx, c, f.facing, { color: ['#ffd166', '#ff8a5b', '#caa472'], count: 15, speed: 240, spread: (f.arc || 1.3) / 2, offset: f.range * 0.4, up: 40, life: 0.35, size: 4.5 });
     
     const rockGeo = new THREE.DodecahedronGeometry(3.5);
