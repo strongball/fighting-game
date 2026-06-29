@@ -41,14 +41,20 @@ export function processScripted(state: GameState, p: Player, dt: number): boolea
     }
     p.vx = 0;
     p.vy = 0;
+    let ended = false;
     if (hitSomeone && c.stopOnHit) {
       addFx(state, { type: 'hit', x: p.x, y: p.y, color: c.color, life: 0.26, radius: c.hitRadius * 1.4, vfx: c.vfx });
-      p.charge = null;
+      ended = true;
     } else if (hitWall && c.wallStun) {
       applyEffect(p, 'stun', { duration: c.wallStun });
       addFx(state, { type: 'hit', x: p.x, y: p.y, color: c.color, life: 0.5, radius: c.hitRadius * 1.8, vfx: c.vfx });
-      p.charge = null;
+      ended = true;
     } else if (c.dist <= 0) {
+      ended = true;
+    }
+    if (ended) {
+      // 衝鋒結束在落點留下持續傷害區（聖騎士神聖衝鋒的「奉獻聖土」）。
+      if (c.leaveZone) state.zones.push(Object.assign(makeZone(p.id, p.x, p.y, c.leaveZone), { srcSlot: c.srcSlot }));
       p.charge = null;
     }
     return true;

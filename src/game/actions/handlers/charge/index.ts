@@ -17,6 +17,7 @@ export function charge(ctx: ActionContext) {
     wallStun: action.wallStun || 0,
     color: action.color,
     vfx: action.vfx,
+    leaveZone: action.leaveZone || null,
     srcSlot: ctx.source,
     hit: {},
   };
