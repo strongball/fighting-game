@@ -855,7 +855,14 @@ export function animateModel(group, dt, info) {
       for (const o of parts.handR.children) {
         if (o.userData && o.userData.orbit !== undefined) {
           const a = ud.breathe * 2 + o.userData.orbit * (Math.PI * 2 / 3);
-          o.position.set(4 + Math.cos(a) * 5, 2, Math.sin(a) * 5);
+          if (cfg.weapon === 'elements') {
+            const outerLift = Math.max(0, Math.sin(a)) * 8;
+            o.position.set(12 + Math.cos(a) * 5, 22 + outerLift + Math.sin(a * 1.1) * 4, 16 + Math.sin(a) * 10);
+            o.rotation.x += dt * 0.45;
+            o.rotation.y += dt * 1.1;
+          } else {
+            o.position.set(4 + Math.cos(a) * 5, 2, Math.sin(a) * 5);
+          }
         }
       }
     }

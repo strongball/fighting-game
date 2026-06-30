@@ -1,33 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Elementalist">
   <defs>
-    <radialGradient id="aura" cx="50%" cy="43%" r="67%">
-      <stop offset="0" stop-color="#ffe7b0" stop-opacity=".7"/>
-      <stop offset=".48" stop-color="#e67e22" stop-opacity=".34"/>
-      <stop offset="1" stop-color="#0b1118" stop-opacity="0"/>
+    <radialGradient id="aura" cx="50%" cy="42%" r="64%">
+      <stop offset="0" stop-color="#fff7d1" stop-opacity=".92"/>
+      <stop offset=".42" stop-color="#ffc56f" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#10161a" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="robe" x1="31" x2="98" y1="16" y2="113">
-      <stop stop-color="#ffcf78"/>
-      <stop offset=".43" stop-color="#e46d1e"/>
-      <stop offset="1" stop-color="#5c2018"/>
+    <linearGradient id="robe" x1="43" x2="83" y1="37" y2="112">
+      <stop stop-color="#fff9e7"/>
+      <stop offset=".42" stop-color="#ffe39d"/>
+      <stop offset=".68" stop-color="#ff9638"/>
+      <stop offset="1" stop-color="#f8efc7"/>
     </linearGradient>
-    <radialGradient id="core" cx="42%" cy="30%" r="65%">
-      <stop stop-color="#fff7a6"/>
-      <stop offset=".48" stop-color="#ff8c2e"/>
-      <stop offset="1" stop-color="#b62020"/>
+    <linearGradient id="sash" x1="18" x2="103" y1="56" y2="116">
+      <stop stop-color="#e6f6cb" stop-opacity=".92"/>
+      <stop offset=".55" stop-color="#bfe9d2" stop-opacity=".76"/>
+      <stop offset="1" stop-color="#8edac4" stop-opacity=".42"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="38%" cy="30%" r="64%">
+      <stop stop-color="#fff5b8"/>
+      <stop offset=".52" stop-color="#74e6c9"/>
+      <stop offset="1" stop-color="#f0a33a"/>
     </radialGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
-      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000" flood-opacity=".42"/>
+    <filter id="shadow" x="-20%" y="-18%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000" flood-opacity=".34"/>
     </filter>
   </defs>
-  <ellipse cx="64" cy="72" rx="50" ry="45" fill="url(#aura)"/>
+  <ellipse cx="64" cy="66" rx="52" ry="49" fill="url(#aura)"/>
+  <g fill="none" stroke="#f0a33a" stroke-linecap="round" stroke-linejoin="round" opacity=".88">
+    <path d="M31 58c2-19 15-34 33-34s31 15 33 34" stroke-width="3"/>
+    <path d="M27 63c9 7 9 16 0 23M101 63c-9 7-9 16 0 23" stroke="#ffb35b" stroke-width="5"/>
+    <path d="M36 56c5 3 5 8 0 13M92 56c-5 3-5 8 0 13" stroke="#fff0b8" stroke-width="4"/>
+    <circle cx="64" cy="46" r="24" stroke-width="2.5" stroke-dasharray="22 8 6 8"/>
+  </g>
   <g filter="url(#shadow)" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M64 12l31 29-11 75-20-12-20 12-11-75z" fill="url(#robe)" stroke="#34100d" stroke-width="4"/>
-    <path d="M46 43l18-20 18 20-8 15H54z" fill="#5e2014" stroke="#ffc36d" stroke-width="3"/>
-    <circle cx="64" cy="70" r="14" fill="url(#core)" stroke="#fff0a8" stroke-width="4"/>
-    <path d="M64 36c17 20 17 48 0 70M41 77c14 10 32 10 46 0" fill="none" stroke="#ffe29a" stroke-opacity=".65" stroke-width="4"/>
-    <circle cx="29" cy="58" r="8" fill="#74e0ff" stroke="#e6fbff" stroke-width="3"/>
-    <circle cx="99" cy="56" r="9" fill="#ff5e4f" stroke="#ffd2a8" stroke-width="3"/>
-    <circle cx="88" cy="95" r="7" fill="#ffd166" stroke="#fff0a8" stroke-width="3"/>
-    <path d="M30 86l34 19 34-19" fill="none" stroke="#6ee7b7" stroke-opacity=".75" stroke-width="5"/>
+    <path d="M51 75c-12 7-25 17-32 37 17-3 29-10 39-23zM77 75c12 7 25 17 32 37-17-3-29-10-39-23z" fill="url(#sash)" stroke="#edf7db" stroke-width="2.5"/>
+    <path d="M46 50c-4 17-8 44-2 68l20-11 20 11c6-24 2-51-2-68z" fill="url(#robe)" stroke="#b57524" stroke-width="3"/>
+    <path d="M64 50l13 17-6 33-7 7-7-7-6-33z" fill="#fff6dd" stroke="#f0b45d" stroke-width="2.4"/>
+    <path d="M51 61c4 8 8 16 13 25 5-9 9-17 13-25" fill="#ff9638" stroke="#fff0b4" stroke-width="2.2"/>
+    <circle cx="64" cy="60" r="5.6" fill="url(#orb)" stroke="#fff5be" stroke-width="2"/>
+    <path d="M47 42c5-14 29-14 34 0-3 15-31 15-34 0z" fill="#fff8ec" stroke="#d8b574" stroke-width="2.5"/>
+    <path d="M43 43c4-15 17-22 21-22s17 7 21 22c-12-5-30-5-42 0z" fill="#fffdf4" stroke="#d2bd8a" stroke-width="2.2"/>
+    <circle cx="64" cy="48" r="14" fill="#f9dcc8" stroke="#efe0cf" stroke-width="2"/>
+    <path d="M49 49c5 3 9 2 15-2 6 4 10 5 15 2" fill="#fffaf0" stroke="#fffaf0" stroke-width="7"/>
+    <path d="M57 51h.1M71 51h.1" stroke="#57cfc2" stroke-width="3.4"/>
+    <path d="M58 58c4 3 8 3 12 0" stroke="#d98975" stroke-width="1.8"/>
+    <path d="M50 36c5-8 23-8 28 0" fill="#fff8e8" stroke="#c49a54" stroke-width="2"/>
+    <path d="M45 31c7-15 31-15 38 0" fill="none" stroke="#fff0af" stroke-width="3"/>
+    <path d="M64 11v13M51 16l5 11M77 16l-5 11M41 24l10 7M87 24l-10 7" stroke="#fff0af" stroke-width="3"/>
+    <path d="M55 29l9-8 9 8-5 6h-8z" fill="#fff7de" stroke="#b47a28" stroke-width="2"/>
+    <circle cx="27" cy="80" r="8" fill="url(#orb)" stroke="#fff0a7" stroke-width="2.5"/>
+    <path d="M87 86c8 3 14 9 18 18" fill="none" stroke="#fff7dc" stroke-width="2" opacity=".72"/>
+    <path d="M23 103h6M31 99h3M96 103h6M91 98h3" stroke="#fff7dc" stroke-width="2" opacity=".7"/>
   </g>
 </svg>

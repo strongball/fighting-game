@@ -6,7 +6,7 @@ import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 
 const data = {
-    id: 'elementalist', order: 8, evadeType: 'blink', name: '元素使', color: '#e67e22', shape: 'circle', sprite: characterSprite('elementalist', '#e67e22', true, drawElementalistTexture),
+    id: 'elementalist', order: 8, evadeType: 'blink', name: '元素使', color: '#f0a33a', shape: 'circle', sprite: characterSprite('elementalist', '#f0a33a', true, drawElementalistTexture),
     maxHp: 220, maxMana: 150, speed: 160,
     desc: '三元素區域封鎖法師。火焰扇近身灼燒、雷霆風暴推進壓制、寒霜足跡留下凍徑封路，大招隕石風暴覆蓋大片區域持續灼燒。靠三系區域技能把戰場化為禁區。',
     role: '控制 · 區域封鎖',
