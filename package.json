@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "dps": "RUN_DPS=1 vitest run test/dps.test.ts --reporter=basic"
+    "dps": "vite-node scripts/dps-report.ts"
   },
   "dependencies": {
     "peerjs": "1.5.4",
@@ -18,9 +18,11 @@
     "three": "0.180.0"
   },
   "devDependencies": {
+    "@types/node": "^26.0.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "tsx": "^4.22.4",
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
     "vitest": "^2.1.8"

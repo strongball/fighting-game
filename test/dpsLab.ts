@@ -94,7 +94,11 @@ export function measureCharacter(charId: string, opts: DpsOptions = {}) {
     // 木人：巨血不死。boss 型木人額外掛 isBoss（繞過近戰 ×0.85、走 boss 傷害修正路徑），
     // 並關閉 20% 鎖血奧義（ultLockTriggered=true）避免污染量測。
     dum.maxHp = 1e9; dum.hp = 1e9;
-    if (dummy === 'boss') { dum.isBoss = true; dum.ultLockTriggered = true; }
+    if (dummy === 'boss') {
+      dum.isBoss = true;
+      dum.ultLockTriggered = true;
+      dum.hitR = 90; // 代表中型 Boss 碰撞半徑（實際分布在 37~215，中位數~87）
+    }
 
     setupStats(state);
 

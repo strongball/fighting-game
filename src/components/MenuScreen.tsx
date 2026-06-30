@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { CHARACTERS } from '../game/characters.js';
 
+
 interface MenuScreenProps {
   status: { msg: string; isError: boolean };
   onCreate: (name: string) => void;
   onJoin: (name: string, code: string) => void;
-  onTraining: (charId: string) => void;
+  onTraining: (charId: string, hitR?: number) => void;
 }
 
 const ROSTER = (CHARACTERS as any[]).map((c) => ({ id: c.id, name: c.name }));
@@ -16,6 +17,7 @@ export function MenuScreen({ status, onCreate, onJoin, onTraining }: MenuScreenP
   const [name, setName] = useState('');
   const [room, setRoom] = useState('');
   const [trainChar, setTrainChar] = useState<string>(ROSTER[0]?.id ?? 'warrior');
+  const [trainHitR, setTrainHitR] = useState<number>(50);
 
   // 名稱留空時自動產生隨機名（沿用舊版行為）。
   function resolveName() {
@@ -61,9 +63,22 @@ export function MenuScreen({ status, onCreate, onJoin, onTraining }: MenuScreenP
           >
             {ROSTER.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <button className="btn" onClick={() => onTraining(trainChar)}>🎯 練功房（傷害測試）</button>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <span>hitR</span>
+            <input
+              type="range"
+              min={10}
+              max={200}
+              step={5}
+              value={trainHitR}
+              onChange={(e) => setTrainHitR(Number(e.target.value))}
+              style={{ width: 100 }}
+            />
+            <span style={{ minWidth: 32 }}>{trainHitR}</span>
+          </label>
+          <button className="btn" onClick={() => onTraining(trainChar, trainHitR)}>🎯 練功房（傷害測試）</button>
         </div>
-        <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>單機練功房：對不死木人測試 DPS 與各技能輸出佔比，可即時換角、重置。</p>
+        <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>單機練功房：對不死目標測試 DPS 與各技能輸出佔比，可即時換角、切換目標、重置。</p>
 
         <p className={'status' + (status.isError ? ' error' : '')}>{status.msg}</p>
       </div>

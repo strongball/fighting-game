@@ -101,6 +101,8 @@ export interface TrainingSkillRow {
 export interface TrainingStatsView {
   charId: string;
   charName: string;
+  targetName: string;  // 目標名稱（固定「木人樁」）
+  hitR: number;        // 木人碰撞半徑
   elapsed: number;     // 秒（自上次重置起算）
   total: number;       // 累計輸出傷害
   dps: number;
@@ -179,7 +181,7 @@ export interface GameController {
   startBossChallenge(round: number): void;
   devStartGame(charId?: string): void;
   devStartBoss(charId?: string, round?: number): void;
-  startTraining(charId?: string, opts?: { retaliate?: boolean }): void;
+  startTraining(charId?: string, opts?: { retaliate?: boolean; hitR?: number }): void;
   resetTrainingStats(): void;
   setTrainingRetaliate(on: boolean): void;
   quitTraining(): void;

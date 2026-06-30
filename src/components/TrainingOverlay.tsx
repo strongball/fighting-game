@@ -4,6 +4,7 @@
 
 import { useMemo, useState } from 'react';
 import { CHARACTERS } from '../game/characters.js';
+
 import { SkillCodexList, type SkillKeyDisplay } from './SkillCodexList';
 import { getCodexEntry } from '../utils/characterCodex';
 import type { CharacterMeta, GameController, TrainingStatsView, TrainingSkillRow } from '../types';
@@ -46,7 +47,7 @@ export function TrainingOverlay({ stats, controller }: Props) {
   return (
     <div style={panel}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <strong style={{ fontSize: 14, letterSpacing: 1 }}>🎯 傷害測試 · 練功房</strong>
+        <strong style={{ fontSize: 14, letterSpacing: 1 }}>🎯 傷害測試 · 木人樁 (hitR={stats.hitR})</strong>
         <button style={btnGhost} onClick={(e) => { blur(e); controller.quitTraining(); }}>離開</button>
       </div>
 
@@ -55,10 +56,23 @@ export function TrainingOverlay({ stats, controller }: Props) {
         <select
           style={select}
           value={stats.charId}
-          onChange={(e) => controller.startTraining(e.target.value)}
+          onChange={(e) => controller.startTraining(e.target.value, { hitR: stats.hitR })}
         >
           {chars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+      </label>
+      <label style={row}>
+        <span style={{ opacity: 0.7, fontSize: 12 }}>hitR</span>
+        <input
+          type="range"
+          min={10}
+          max={200}
+          step={5}
+          value={stats.hitR}
+          onChange={(e) => controller.startTraining(stats.charId, { hitR: Number(e.target.value) })}
+          style={{ flex: 1, accentColor: '#ffd166' }}
+        />
+        <span style={{ minWidth: 28, textAlign: 'right', fontSize: 13, fontWeight: 600 }}>{stats.hitR}</span>
       </label>
 
       <div style={dpsBox}>
@@ -92,7 +106,7 @@ export function TrainingOverlay({ stats, controller }: Props) {
       </div>
 
       <div style={{ fontSize: 10.5, opacity: 0.55, marginTop: 8, lineHeight: 1.5 }}>
-        移動貼近木人，J 普攻／K L 技能／; 大招。換角會重開測試。
+        移動貼近目標，J 普攻／K L 技能／; 大招。換角或切換目標會重開測試。
       </div>
 
       {charMeta && (

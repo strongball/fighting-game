@@ -633,11 +633,13 @@ function createController(): GameController {
       ...view,
       charId: selectedChar,
       charName: (meP && meP.name) || '',
+      targetName: (dummy && dummy.name) || '木人樁',
+      hitR: (dummy && dummy.hitR) || 18,
       retaliate: !!(dummy && dummy.isNpc),
     } as any);
   }
 
-  function startTraining(charId?: string, opts: { retaliate?: boolean } = {}) {
+  function startTraining(charId?: string, opts: { retaliate?: boolean; hitR?: number } = {}) {
     myName = '練習';
     role = 'host';
     selfId = 'train-' + Math.random().toString(36).slice(2, 9);
@@ -648,11 +650,12 @@ function createController(): GameController {
 
     gameState = createInitialState([{ id: selfId, name: myName, charId: me, team: 1 }], gameFlags, { mode: 'training' });
 
-    // 木人樁：team 2、巨血、置於玩家右側。預設靜止承傷；retaliate=true 交給 NPC AI 還手。
+    // 木人樁：team 2、巨血、置於玩家右側。可調 hitR（碰撞半徑）模擬不同體積目標。
     const cx = ARENA.width / 2, cy = ARENA.height / 2;
     const dummy = makePlayer(TRAIN_DUMMY_ID, '木人樁', trainingDummyChar(), cx + 170, cy, 2);
     dummy.maxHp = TRAIN_DUMMY_HP; dummy.hp = TRAIN_DUMMY_HP;
     dummy.isDummy = true;
+    dummy.hitR = opts.hitR || 18;
     if (opts.retaliate) dummy.isNpc = true;
     gameState.players[TRAIN_DUMMY_ID] = dummy;
     gameState.trainingDummyId = TRAIN_DUMMY_ID;

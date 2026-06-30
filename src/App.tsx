@@ -131,7 +131,7 @@ export function App() {
             status={menuStatus}
             onCreate={(name) => controller.createRoom(name)}
             onJoin={(name, code) => controller.joinRoom(name, code)}
-            onTraining={(charId) => controller.startTraining(charId)}
+            onTraining={(charId, hitR) => controller.startTraining(charId, { hitR })}
           />
         );
       case 'lobby':
