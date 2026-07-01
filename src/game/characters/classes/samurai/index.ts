@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { BaseCharacter } from '../../BaseCharacter.ts';
 import { characterSprite } from '../../textureSprite.ts';
-import { drawSamuraiTexture } from './texture.ts';
+import { drawSamuraiTexture, drawSamuraiMaterialTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { tickSamuraiIaijutsu } from './iaijutsu.ts';
 import './vfx.ts';
@@ -27,6 +27,7 @@ export class SamuraiCharacter extends BaseCharacter {
       buildModel,
       buildWeapon,
       paintTexture: drawSamuraiTexture,
+      paintMaterialTexture: drawSamuraiMaterialTexture,
       loadVfx: () => undefined,
       tick: tickSamuraiIaijutsu,
     });
