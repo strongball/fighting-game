@@ -2,6 +2,8 @@ import { FURY_MAX } from '../../../constants.js';
 import { pct, setStyle, setText } from '../dom.js';
 import { registerHudResourceBar } from '../resourceBars.js';
 
+import.meta.glob('../../../characters/classes/*/hudResourceBar.js', { eager: true });
+
 registerHudResourceBar({
   id: 'fury',
   order: 10,

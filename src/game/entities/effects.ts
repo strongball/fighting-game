@@ -152,6 +152,23 @@ const EFFECT_DEFS: Record<string, EffectDef> = {
       };
     },
   },
+  glassmark: {
+    cleanseable: true,
+    hud: { icon: '◇', name: '鏡痕', buff: false },
+    apply: (p, _k, data, srcId) => {
+      const cur = p.effects.glassmark;
+      const max = data.max || 3;
+      const addStacks = data.stacks != null ? data.stacks : 1;
+      const sameSource = !cur || cur.srcId === srcId;
+      p.effects.glassmark = {
+        remaining: data.duration || 5,
+        stacks: Math.min(max, (sameSource && cur ? cur.stacks || 0 : 0) + addStacks),
+        max,
+        srcId: srcId != null ? srcId : (cur ? cur.srcId : undefined),
+        srcSlot: data.srcSlot != null ? data.srcSlot : (cur ? cur.srcSlot : undefined),
+      };
+    },
+  },
   chill: {
     cleanseable: true,
     hud: { icon: '❄️', name: '冰寒', buff: false },

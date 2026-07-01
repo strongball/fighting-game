@@ -8,7 +8,10 @@ import { applyHeal } from '../entities/heal.ts';
 import { applyEffect } from '../entities/effects.ts';
 import { applyEffectFrom, bodyR } from '../actions/combat.ts';
 import { checkProjectileHit, damageDestructible } from './destructibles.ts';
+import { runProjectileAfterMoveHooks, runProjectileHitHooks } from './projectileHooks.ts';
 import type { GameState, Projectile, Player } from '../types';
+
+import.meta.glob('../characters/classes/*/projectileHooks.ts', { eager: true });
 
 function splitProjectile(state: GameState, projectile: Projectile, out: Projectile[]) {
   const s = projectile.split;
@@ -66,9 +69,12 @@ export function updateProjectiles(state: GameState, dt: number) {
       }
     }
 
+    const prevX = projectile.x;
+    const prevY = projectile.y;
     projectile.x += projectile.vx * dt;
     projectile.y += projectile.vy * dt;
     projectile.lifetime -= dt;
+    runProjectileAfterMoveHooks({ state, projectile, prevX, prevY, spawned });
     const oob = projectile.x < 0 || projectile.y < 0 || projectile.x > ARENA.width || projectile.y > ARENA.height;
     if (projectile.lifetime <= 0 || oob) {
       if (projectile.split && !oob) splitProjectile(state, projectile, spawned);
@@ -120,6 +126,7 @@ export function updateProjectiles(state: GameState, dt: number) {
           }
         }
         if (projectile.effect) applyEffectFrom(state, o, projectile.effect, projectile.owner, projectile.srcSlot);
+        runProjectileHitHooks({ state, projectile, target: o });
         // 時厄術士 K/L：命中引爆目標時咒層數 —— 傷害／暈眩／緩速「全部隨層數放大」，可選擇是否消耗層數。
         if (projectile.detonate) {
           const det = projectile.detonate;

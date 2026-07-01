@@ -34,10 +34,19 @@ describe('character registry', () => {
 
   it('resolves players (slug), bosses (>=100) and minions (<0) through getCharacter', () => {
     expect(getCharacter('star-orbit')?.name).toBe('星環使');
+    expect(getCharacter('glass-astrologer')?.name).toBe('玻璃占星師');
     expect(getCharacter('warrior')?.id).toBe('warrior');
     expect(getCharacter(100)?.id).toBe(100);
     expect(getCharacter(-1)).toBeTruthy();
     expect(getCharacter(-2)).toBeTruthy();
+  });
+
+  it('registers glass astrologer with complete skill actions', () => {
+    const c = getCharacter('glass-astrologer') as any;
+    expect(c.basic.type).toBe('glass_shard');
+    expect(c.skill1.type).toBe('glass_mirror');
+    expect(c.skill2.type).toBe('glass_beam');
+    expect(c.ultimate.type).toBe('glass_kaleidoscope');
   });
 });
 

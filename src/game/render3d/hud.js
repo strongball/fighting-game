@@ -1137,7 +1137,7 @@ function buildBuffHtml(p) {
     const remaining = data.remaining;
     if (remaining != null && remaining <= 0) continue;
     let extra = null;
-    if (key === 'chill' && data.stacks) extra = `x${data.stacks}`;
+    if ((key === 'chill' || key === 'glassmark') && data.stacks) extra = `x${data.stacks}`;
     else if ((key === 'burn' || key === 'bleed') && data.dmg) extra = `${Math.round(data.dmg)}/s`;
     list.push({ buff: meta.buff, icon: meta.icon, name: meta.name, extra, time: remaining });
   }

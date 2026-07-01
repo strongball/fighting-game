@@ -30,6 +30,7 @@ export type ActionType =
   | 'grapple' | 'multiblink' | 'channel' | 'zone' | 'buff' | 'summon'
   | 'samurai_iaijutsu'
   | 'star_orbit_guard' | 'star_orbit_cannon' | 'star_orbit_burst'
+  | 'glass_shard' | 'glass_mirror' | 'glass_ray' | 'glass_beam' | 'glass_kaleidoscope'
   // 闖關魔王專屬
   | 'summon_clones' | 'summon_minions' | 'apply_scramble' | 'time_rewind'
   | 'soul_bind' | 'light_dark' | 'mirror_players' | 'steal_ultimate'
