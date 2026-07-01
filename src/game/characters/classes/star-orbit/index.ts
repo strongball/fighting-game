@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { BaseCharacter } from '../../BaseCharacter.ts';
 import { characterSprite } from '../../textureSprite.ts';
-import { drawStarOrbitTexture } from './texture.ts';
+import { drawStarOrbitTexture, drawStarOrbitMaterialTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import { tickStarOrbit } from './orbit.ts';
 import './vfx.ts';
@@ -26,6 +26,7 @@ export class StarOrbitCharacter extends BaseCharacter {
       buildModel,
       buildWeapon,
       paintTexture: drawStarOrbitTexture,
+      paintMaterialTexture: drawStarOrbitMaterialTexture,
       loadVfx: () => undefined,
       tick: tickStarOrbit,
     });
