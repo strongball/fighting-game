@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { BaseCharacter } from '../../BaseCharacter.ts';
 import { characterSprite } from '../../textureSprite.ts';
-import { drawGunnerTexture } from './texture.ts';
+import { drawGunnerTexture, drawGunnerMaterialTexture } from './texture.ts';
 import { modelConfig, buildModel, buildWeapon } from './model.ts';
 import './vfx.ts';
 import './talent.ts';
@@ -26,6 +26,7 @@ export class GunnerCharacter extends BaseCharacter {
       buildModel,
       buildWeapon,
       paintTexture: drawGunnerTexture,
+      paintMaterialTexture: drawGunnerMaterialTexture,
       loadVfx: () => undefined,
     });
   }
